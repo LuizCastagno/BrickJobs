@@ -1,0 +1,6 @@
+{
+  "name": "BrickJobs",
+  "description": "Plataforma mobile multiplataforma que conecta construtoras (contratantes) e trabalhadores da construção civil (contratados) em Rondonópolis, Mato Grosso.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
