@@ -1,37 +1,96 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import {
+  Bell,
+  BellRing,
   Briefcase,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Clock,
+  Download,
   FileText,
   HardHat,
   MapPin,
+  MessageSquare,
   Phone,
   Plus,
+  SlidersHorizontal,
+  Star,
   Trash2,
   Upload,
 } from 'lucide-react';
 import {
   AVAILABILITY_OPTIONS,
   CONSTRUCTION_ROLES,
+  CONTRACT_TYPE_OPTIONS,
+  EXPERIENCE_LEVEL_OPTIONS,
   RONDONOPOLIS_NEIGHBORHOODS,
   RONDONOPOLIS_REGIONS,
 } from '../data/rondonopolisSeed';
 import type {
+  ChatMessage,
+  CompanyRating,
   JobApplication,
   JobPosting,
   WorkExperience,
+  WorkerNotification,
   WorkerProfile,
+  WorkScheduleReminder,
 } from '../types/brickjobs';
+import { countUnreadMessagesForApplication } from '../utils/chat';
 import {
   calculateExperienceMonths,
   calculateTotalExperienceMonths,
+  countActiveAdvancedFilters,
   filterJobsByLocationAndQuery,
   formatDurationPtBr,
   formatFileSizePtBr,
   formatMonthYearPtBr,
 } from '../utils/duration';
+import { countUnreadNotifications } from '../utils/notifications';
+import {
+  filterAndSortJobsByProximity,
+  formatDistanceKmPtBr,
+  updateProximityRadius,
+  type ProximityFilterState,
+} from '../utils/geolocation';
+import {
+  shouldShowPushPromptBanner,
+  type NativePushPermission,
+  type NativePushPreference,
+} from '../utils/nativeNotifications';
+import {
+  canCompleteWork,
+  canRateCompanyForApplication,
+  computeCompanyRatingSummary,
+  getRatingForApplication,
+} from '../utils/ratings';
+import { exportWorkerResumePdf } from '../utils/resumePdf';
+import {
+  formatReminderSchedulePtBr,
+  formatReminderTimeOnlyPtBr,
+  getVisibleWorkerReminders,
+} from '../utils/workReminders';
+import {
+  JOB_CARD_TRANSITION,
+  JOB_CARD_VARIANTS,
+  PANEL_REVEAL_TRANSITION,
+  PANEL_REVEAL_VARIANTS,
+  TAB_TRANSITION_CONFIG,
+  TAB_TRANSITION_VARIANTS,
+} from '../utils/motionPresets';
+import {
+  buildSkillTagSummaries,
+  filterJobsBySkillTags,
+  formatSkillTagLabel,
+  getJobSkillTags,
+  toggleSkillTagSelection,
+} from '../utils/skillTags';
+import { CareerTipsCard } from './CareerTipsCard';
 import { LocationRegionBar } from './LocationRegionBar';
+import { NativePushPermissionCard } from './NativePushPermissionCard';
+import { SkillTagFilterBar } from './SkillTagFilterBar';
 
 export type WorkerTab = 'vagas' | 'cadastro' | 'perfil';
 
@@ -42,9 +101,29 @@ interface WorkerPortalProps {
   onSaveWorkerProfile: (profile: WorkerProfile) => void;
   jobs: JobPosting[];
   applications: JobApplication[];
+  companyRatings: CompanyRating[];
   onApplyJob: (job: JobPosting) => void;
+  onCompleteApplication: (applicationId: string) => void;
+  onOpenRatingModal: (applicationId: string) => void;
+  chatMessages: ChatMessage[];
+  onOpenChat: (applicationId: string) => void;
+  notifications: WorkerNotification[];
+  onMarkNotificationRead: (notificationId: string) => void;
+  onMarkAllNotificationsRead: () => void;
   selectedRegion: string;
   onChangeRegion: (region: string) => void;
+  initialSearchQuery?: string;
+  initialProximityFilter?: ProximityFilterState | null;
+  pushPermission: NativePushPermission;
+  pushPreference: NativePushPreference;
+  isRequestingPush: boolean;
+  pushFeedback: string;
+  onRequestPushPermission: () => void;
+  onTogglePushEnabled: () => void;
+  onDismissPushBanner: () => void;
+  onTestNativePush: () => void;
+  workReminders: WorkScheduleReminder[];
+  onCancelWorkReminder: (reminderId: string) => void;
 }
 
 const WORKER_CRAFT_IMG = '/src/assets/images/brickjobs_worker_craft_1794693694923.jpg';
@@ -68,12 +147,52 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   onSaveWorkerProfile,
   jobs,
   applications,
+  companyRatings,
   onApplyJob,
+  onCompleteApplication,
+  onOpenRatingModal,
+  chatMessages,
+  onOpenChat,
+  notifications,
+  onMarkNotificationRead,
+  onMarkAllNotificationsRead,
   selectedRegion,
   onChangeRegion,
+  initialSearchQuery = '',
+  initialProximityFilter = null,
+  pushPermission,
+  pushPreference,
+  isRequestingPush,
+  pushFeedback,
+  onRequestPushPermission,
+  onTogglePushEnabled,
+  onDismissPushBanner,
+  onTestNativePush,
+  workReminders,
+  onCancelWorkReminder,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const [proximityFilter, setProximityFilter] =
+    useState<ProximityFilterState | null>(initialProximityFilter);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
+  const [filterOccupation, setFilterOccupation] = useState<string>('Todas');
+  const [filterContract, setFilterContract] = useState<string>('Todos');
+  const [filterExperience, setFilterExperience] = useState<string>('Todos');
+  const [selectedSkillTags, setSelectedSkillTags] = useState<string[]>([]);
   const [applyFeedback, setApplyFeedback] = useState<string>('');
+  const [showNotifications, setShowNotifications] = useState<boolean>(false);
+  const [pdfExportFeedback, setPdfExportFeedback] = useState<string>('');
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+
+  const unreadCount = useMemo(
+    () => countUnreadNotifications(notifications),
+    [notifications]
+  );
+
+  const visibleReminders = useMemo(
+    () => getVisibleWorkerReminders(workReminders),
+    [workReminders]
+  );
 
   // Editable worker registration state
   const [form, setForm] = useState<WorkerProfile>(() => ({
@@ -92,20 +211,92 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     workerProfile.nomeCompleto.trim() && workerProfile.telefone.trim()
   );
 
-  const filteredJobs = useMemo(
+  const occupationFilterOptions = useMemo(() => {
+    const set = new Set<string>(CONSTRUCTION_ROLES);
+    for (const j of jobs) {
+      if (j.funcao.trim()) set.add(j.funcao.trim());
+    }
+    return Array.from(set);
+  }, [jobs]);
+
+  const activeAdvancedCount = useMemo(
     () =>
-      filterJobsByLocationAndQuery(jobs, {
-        region: selectedRegion,
-        query: searchQuery,
-        onlyOpen: true,
+      countActiveAdvancedFilters({
+        occupation: filterOccupation,
+        contractType: filterContract,
+        experienceLevel: filterExperience,
       }),
-    [jobs, selectedRegion, searchQuery]
+    [filterOccupation, filterContract, filterExperience]
   );
 
-  const appliedJobIds = useMemo(
-    () => new Set(applications.map((a) => a.jobId)),
-    [applications]
+  const openJobs = useMemo(
+    () => jobs.filter((job) => job.status === 'aberta'),
+    [jobs]
   );
+
+  const { scopedJobsBeforeTags, distanceByJobId } = useMemo(() => {
+    const baseFiltered = filterJobsByLocationAndQuery(jobs, {
+      region: selectedRegion,
+      query: searchQuery,
+      onlyOpen: true,
+      occupation: filterOccupation,
+      contractType: filterContract,
+      experienceLevel: filterExperience,
+    });
+
+    if (!proximityFilter?.active) {
+      return {
+        scopedJobsBeforeTags: baseFiltered,
+        distanceByJobId: new Map<string, number>(),
+      };
+    }
+
+    const nearby = filterAndSortJobsByProximity(
+      baseFiltered,
+      { lat: proximityFilter.userLat, lng: proximityFilter.userLng },
+      proximityFilter.radiusKm
+    );
+    const map = new Map<string, number>();
+    for (const item of nearby) {
+      map.set(item.job.id, item.distanceKm);
+    }
+    return {
+      scopedJobsBeforeTags: nearby.map((item) => item.job),
+      distanceByJobId: map,
+    };
+  }, [
+    jobs,
+    selectedRegion,
+    searchQuery,
+    filterOccupation,
+    filterContract,
+    filterExperience,
+    proximityFilter,
+  ]);
+
+  const skillTagSummaries = useMemo(
+    () => buildSkillTagSummaries(openJobs, scopedJobsBeforeTags),
+    [openJobs, scopedJobsBeforeTags]
+  );
+
+  const filteredJobs = useMemo(
+    () => filterJobsBySkillTags(scopedJobsBeforeTags, selectedSkillTags),
+    [scopedJobsBeforeTags, selectedSkillTags]
+  );
+
+  const clearAdvancedFilters = () => {
+    setFilterOccupation('Todas');
+    setFilterContract('Todos');
+    setFilterExperience('Todos');
+  };
+
+  const applicationsByJobId = useMemo(() => {
+    const map = new Map<string, JobApplication>();
+    for (const app of applications) {
+      map.set(app.jobId, app);
+    }
+    return map;
+  }, [applications]);
 
   const currentExp = form.experiencias[activeExpIndex] || form.experiencias[0];
 
@@ -260,27 +451,68 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     [workerProfile.experiencias]
   );
 
+  const handleExportResumePdf = () => {
+    setPdfExportFeedback('');
+    setIsExportingPdf(true);
+    try {
+      const result = exportWorkerResumePdf(workerProfile);
+      if (result.ok) {
+        setPdfExportFeedback(`Currículo exportado: ${result.fileName}`);
+      } else {
+        setPdfExportFeedback(result.error);
+      }
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const inputClass =
+    'w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] placeholder:text-[#6B7280] dark:placeholder:text-[#94A3B8] focus:outline-none focus:border-[#C93B1E]';
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-12">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-nav-safe md:pb-12">
       {/* Header Context */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#E5E7EB] pb-5">
-        <div>
-          <p className="text-xs font-semibold text-[#C93B1E]">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-5">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
             Área do Contratado · Rondonópolis-MT
           </p>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#111827] mt-1">
+          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
             {isWorkerRegistered
               ? `Olá, ${workerProfile.nomeCompleto.split(' ')[0]}`
               : 'Vagas e Perfil Profissional'}
           </h1>
-          <p className="text-sm text-[#4B5563] mt-1">
+          <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1 break-words">
             {isWorkerRegistered
               ? `${workerProfile.funcaoPrincipal} · Região de interesse: ${workerProfile.regiaoInteresse}`
               : 'Busque vagas por região em Rondonópolis-MT ou monte seu perfil com PDF ou experiências.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowNotifications((prev) => !prev)}
+            aria-expanded={showNotifications}
+            data-testid="worker-notifications-toggle"
+            className={`min-h-[44px] px-4 py-2 rounded-xl border text-sm font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer ${
+              unreadCount > 0
+                ? 'border-[#C93B1E] dark:border-[#F06449] bg-[#C93B1E]/10 dark:bg-[#C93B1E]/20 text-[#111827] dark:text-[#F8FAFC]'
+                : 'border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#111827] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC]'
+            }`}
+          >
+            <Bell
+              className={`w-4 h-4 ${
+                unreadCount > 0
+                  ? 'text-[#C93B1E] dark:text-[#F06449]'
+                  : 'text-[#4B5563] dark:text-[#94A3B8]'
+              }`}
+              aria-hidden="true"
+            />
+            <span>Notificações</span>
+            <span className="font-mono text-xs tabular-nums">({unreadCount})</span>
+          </button>
+
           {!isWorkerRegistered && activeTab !== 'cadastro' && (
             <button
               type="button"
@@ -294,7 +526,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             <button
               type="button"
               onClick={() => onChangeTab('perfil')}
-              className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] bg-white hover:bg-[#F9FAFB] text-sm font-semibold text-[#111827] transition-colors cursor-pointer"
+              className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#111827] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] transition-colors cursor-pointer"
             >
               Ver perfil gerado
             </button>
@@ -302,9 +534,253 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
         </div>
       </div>
 
-      {/* TAB 1: Vagas Disponíveis */}
-      {activeTab === 'vagas' && (
-        <div className="mt-6 space-y-5">
+      {/* Inline Native Push Prompt Banner when notifications panel is closed */}
+      {!(showNotifications || unreadCount > 0) &&
+        shouldShowPushPromptBanner(pushPermission, pushPreference) && (
+          <div className="mt-5">
+            <NativePushPermissionCard
+              permission={pushPermission}
+              preference={pushPreference}
+              isRequesting={isRequestingPush}
+              statusFeedback={pushFeedback}
+              onRequestPermission={onRequestPushPermission}
+              onToggleEnabled={onTogglePushEnabled}
+              onDismissBanner={onDismissPushBanner}
+              onSendTestNotification={onTestNativePush}
+            />
+          </div>
+        )}
+
+      {/* Worker Notifications Center */}
+      {(showNotifications || unreadCount > 0) && (
+        <section
+          aria-label="Notificações do trabalhador"
+          data-testid="worker-notifications-panel"
+          className="mt-5 bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-4 sm:p-5 space-y-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#F3F4F6] dark:border-[#1E293B]">
+            <div className="flex items-center gap-2">
+              <Bell className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+              <h2 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
+                Avisos recentes ({notifications.length})
+              </h2>
+            </div>
+
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={onMarkAllNotificationsRead}
+                className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 rounded-lg border border-[#D1D5DB] dark:border-[#334155] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Marcar todas como lidas</span>
+              </button>
+            )}
+          </div>
+
+          <NativePushPermissionCard
+            variant="settings"
+            permission={pushPermission}
+            preference={pushPreference}
+            isRequesting={isRequestingPush}
+            statusFeedback={pushFeedback}
+            onRequestPermission={onRequestPushPermission}
+            onToggleEnabled={onTogglePushEnabled}
+            onSendTestNotification={onTestNativePush}
+          />
+
+          {notifications.length === 0 ? (
+            <p className="text-sm text-[#4B5563] dark:text-[#94A3B8]">
+              Você não tem notificações no momento. Avisaremos aqui quando uma candidatura for aceita ou quando surgirem novas vagas na sua região.
+            </p>
+          ) : (
+            <ul className="divide-y divide-[#F3F4F6] dark:divide-[#1E293B]">
+              {notifications.map((notif) => {
+                const matchedApp =
+                  (notif.applicationId
+                    ? applications.find((a) => a.id === notif.applicationId)
+                    : undefined) ??
+                  (notif.jobId ? applicationsByJobId.get(notif.jobId) : undefined);
+                const canChatFromNotif =
+                  Boolean(matchedApp) &&
+                  (matchedApp!.status === 'aceita' || matchedApp!.status === 'concluida') &&
+                  (notif.type === 'candidatura_aceita' ||
+                    notif.type === 'lembrete_trabalho');
+                return (
+                  <li
+                    key={notif.id}
+                    className="py-3.5 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
+                  >
+                    <div className="min-w-0 w-full sm:flex-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs font-semibold ${
+                            notif.type === 'candidatura_aceita'
+                              ? 'text-[#047857] dark:text-[#34D399]'
+                              : notif.type === 'lembrete_trabalho'
+                                ? 'text-[#B45309] dark:text-[#FBBF24]'
+                                : 'text-[#C93B1E] dark:text-[#F06449]'
+                          }`}
+                        >
+                          {notif.type === 'candidatura_aceita'
+                            ? 'Candidatura aceita'
+                            : notif.type === 'lembrete_trabalho'
+                              ? 'Lembrete 30 min antes'
+                              : 'Nova vaga na região'}
+                        </span>
+                        {!notif.read && (
+                          <span className="text-xs font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                            · Nova
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-bold text-[#111827] dark:text-[#F8FAFC] mt-0.5">
+                        {notif.title}
+                      </p>
+                      <p className="text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8] mt-0.5">
+                        {notif.message}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      {canChatFromNotif && matchedApp && (
+                        <button
+                          type="button"
+                          data-testid={`notification-open-chat-${notif.id}`}
+                          onClick={() => {
+                            if (!notif.read) onMarkNotificationRead(notif.id);
+                            onOpenChat(matchedApp.id);
+                          }}
+                          className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 rounded-lg bg-[#C93B1E] hover:bg-[#B23319] text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                          <span>Abrir chat</span>
+                        </button>
+                      )}
+                      {notif.type === 'nova_vaga_regiao' && activeTab !== 'vagas' && (
+                        <button
+                          type="button"
+                          onClick={() => onChangeTab('vagas')}
+                          className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 rounded-lg bg-[#111827] dark:bg-[#F8FAFC] text-white dark:text-[#0F172A] text-xs font-semibold cursor-pointer"
+                        >
+                          Ver vaga
+                        </button>
+                      )}
+                      {!notif.read && (
+                        <button
+                          type="button"
+                          onClick={() => onMarkNotificationRead(notif.id)}
+                          className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 rounded-lg border border-[#D1D5DB] dark:border-[#334155] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] cursor-pointer"
+                        >
+                          Marcar como lida
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {/* Scheduled Work Reminders (30 min before start) */}
+      {visibleReminders.length > 0 && (
+        <section
+          aria-label="Lembretes de início de trabalho"
+          data-testid="worker-reminders-section"
+          className="mt-5 bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-4 sm:p-5 space-y-3"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-[#F3F4F6] dark:border-[#1E293B]">
+            <div className="flex items-center gap-2">
+              <BellRing
+                className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0"
+                aria-hidden="true"
+              />
+              <h2 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
+                Lembretes de início agendados ({visibleReminders.length})
+              </h2>
+            </div>
+            <span className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
+              Aviso automático 30 min antes
+            </span>
+          </div>
+
+          <ul className="divide-y divide-[#F3F4F6] dark:divide-[#1E293B]">
+            {visibleReminders.map((rem) => {
+              const startText = formatReminderSchedulePtBr(rem.scheduledStartAt);
+              const triggerTime = formatReminderTimeOnlyPtBr(rem.reminderAt);
+              const relatedApp = applications.find((a) => a.id === rem.applicationId);
+              const isNotified = rem.status === 'notificado';
+              return (
+                <li
+                  key={rem.id}
+                  data-testid={`worker-reminder-item-${rem.applicationId}`}
+                  className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                >
+                  <div className="min-w-0 w-full sm:flex-1">
+                    <p className="text-sm font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
+                      {rem.jobRole} · {rem.companyName}
+                    </p>
+                    <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mt-0.5 tabular-nums break-words">
+                      Início em {startText} · {rem.neighborhood}
+                      {rem.locationNote ? ` · ${rem.locationNote}` : ''}
+                    </p>
+                    <p
+                      className={`text-xs font-semibold mt-1 tabular-nums ${
+                        isNotified
+                          ? 'text-[#047857] dark:text-[#34D399]'
+                          : 'text-[#B45309] dark:text-[#FBBF24]'
+                      }`}
+                    >
+                      {isNotified
+                        ? `Lembrete de 30 min antes enviado (às ${triggerTime})`
+                        : `Alerta programado para as ${triggerTime} (30 min antes)`}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {relatedApp &&
+                      (relatedApp.status === 'aceita' ||
+                        relatedApp.status === 'concluida') && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenChat(relatedApp.id)}
+                          data-testid={`worker-reminder-chat-${rem.applicationId}`}
+                          className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 rounded-lg bg-[#C93B1E] hover:bg-[#B23319] text-white text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                          <span>Abrir chat</span>
+                        </button>
+                      )}
+                    <button
+                      type="button"
+                      onClick={() => onCancelWorkReminder(rem.id)}
+                      data-testid={`worker-reminder-cancel-${rem.id}`}
+                      className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 rounded-lg border border-[#D1D5DB] dark:border-[#334155] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      <AnimatePresence mode="wait" initial={false}>
+        {/* TAB 1: Vagas Disponíveis */}
+        {activeTab === 'vagas' && (
+          <motion.div
+            key="worker-tab-vagas"
+            variants={TAB_TRANSITION_VARIANTS}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={TAB_TRANSITION_CONFIG}
+            className="mt-6 space-y-5"
+          >
           <LocationRegionBar
             selectedRegion={selectedRegion}
             onChangeRegion={onChangeRegion}
@@ -312,19 +788,147 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             onChangeSearchQuery={setSearchQuery}
             searchPlaceholder="Buscar por função ou construtora (ex: Pedreiro)"
             regionLabel="Onde você deseja ver vagas disponíveis?"
+            proximityFilter={proximityFilter}
+            onApplyProximity={(next) => setProximityFilter(next)}
+            onClearProximity={() => setProximityFilter(null)}
+            enableVoiceSearch={true}
           />
+
+          <SkillTagFilterBar
+            summaries={skillTagSummaries}
+            selectedTags={selectedSkillTags}
+            onToggleTag={(tag) =>
+              setSelectedSkillTags((prev) => toggleSkillTagSelection(prev, tag))
+            }
+            onClearTags={() => setSelectedSkillTags([])}
+          />
+
+          {/* Advanced Filters Menu */}
+          <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                aria-expanded={showAdvancedFilters}
+                data-testid="worker-advanced-filters-toggle"
+                className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] hover:bg-[#F3F4F6] dark:hover:bg-[#334155] text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <SlidersHorizontal className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+                <span>
+                  Filtros avançados
+                  {activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ''}
+                </span>
+                <ChevronDown
+                  className={`w-4 h-4 text-[#4B5563] dark:text-[#94A3B8] transition-transform ${
+                    showAdvancedFilters ? 'rotate-180' : ''
+                  }`}
+                  aria-hidden="true"
+                />
+              </button>
+
+              {activeAdvancedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearAdvancedFilters}
+                  className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 text-xs font-semibold text-[#C93B1E] dark:text-[#F06449] hover:underline cursor-pointer"
+                >
+                  Limpar filtros avançados
+                </button>
+              )}
+            </div>
+
+            <AnimatePresence initial={false}>
+              {showAdvancedFilters && (
+                <motion.div
+                  key="worker-advanced-filters"
+                  data-testid="worker-advanced-filters-menu"
+                  initial={PANEL_REVEAL_VARIANTS.initial}
+                  animate={PANEL_REVEAL_VARIANTS.animate}
+                  exit={PANEL_REVEAL_VARIANTS.exit}
+                  transition={PANEL_REVEAL_TRANSITION}
+                  className="mt-4 pt-4 border-t border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 md:grid-cols-3 gap-4"
+                >
+                <div>
+                  <label
+                    htmlFor="filter-occupation"
+                    className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                  >
+                    Ocupação específica
+                  </label>
+                  <select
+                    id="filter-occupation"
+                    value={filterOccupation}
+                    onChange={(e) => setFilterOccupation(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="Todas">Todas as ocupações</option>
+                    {occupationFilterOptions.map((occ) => (
+                      <option key={occ} value={occ}>
+                        {occ}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="filter-contract"
+                    className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                  >
+                    Tipo de contrato
+                  </label>
+                  <select
+                    id="filter-contract"
+                    value={filterContract}
+                    onChange={(e) => setFilterContract(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="Todos">Todos os contratos</option>
+                    {CONTRACT_TYPE_OPTIONS.map((ct) => (
+                      <option key={ct} value={ct}>
+                        {ct}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="filter-experience"
+                    className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                  >
+                    Nível de experiência
+                  </label>
+                  <select
+                    id="filter-experience"
+                    value={filterExperience}
+                    onChange={(e) => setFilterExperience(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="Todos">Todos os níveis</option>
+                    {EXPERIENCE_LEVEL_OPTIONS.map((lvl) => (
+                      <option key={lvl} value={lvl}>
+                        {lvl}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {applyFeedback && (
             <div
               role="status"
-              className="p-4 rounded-xl bg-white border border-[#E5E7EB] flex flex-wrap items-center justify-between gap-3"
+              className="p-4 rounded-xl bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] flex flex-wrap items-center justify-between gap-3"
             >
-              <p className="text-sm font-medium text-[#111827]">{applyFeedback}</p>
+              <p className="text-sm font-medium text-[#111827] dark:text-[#F8FAFC]">{applyFeedback}</p>
               {!isWorkerRegistered && (
                 <button
                   type="button"
                   onClick={() => onChangeTab('cadastro')}
-                  className="min-h-[40px] px-4 py-1.5 rounded-lg bg-[#C93B1E] text-white text-xs font-semibold cursor-pointer"
+                  className="min-h-[44px] sm:min-h-[40px] px-4 py-1.5 rounded-lg bg-[#C93B1E] text-white text-xs font-semibold cursor-pointer"
                 >
                   Ir para Meu Cadastro
                 </button>
@@ -332,111 +936,294 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="font-display text-lg font-bold text-[#111827]">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]">
               Vagas disponíveis ({filteredJobs.length})
             </h2>
-            <span className="text-xs text-[#4B5563]">
-              Região: {selectedRegion}
+            <span className="text-xs text-[#4B5563] dark:text-[#94A3B8] tabular-nums">
+              {proximityFilter?.active
+                ? `Proximidade: ${proximityFilter.detectedCity} (até ${proximityFilter.radiusKm} km)`
+                : `Região: ${selectedRegion}`}
             </span>
           </div>
 
-          {filteredJobs.length === 0 ? (
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 text-center">
-              <Briefcase className="w-8 h-8 text-[#6B7280] mx-auto mb-2" aria-hidden="true" />
-              <p className="text-sm font-semibold text-[#111827]">
-                Nenhuma vaga aberta para esse filtro
-              </p>
-              <p className="text-sm text-[#4B5563] mt-1">
-                Tente limpar a busca ou selecionar todas as regiões de Rondonópolis-MT.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  onChangeRegion('Toda Rondonópolis e Região');
-                  setSearchQuery('');
-                }}
-                className="mt-4 min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] text-white text-sm font-medium cursor-pointer"
+          <AnimatePresence mode="wait" initial={false}>
+            {filteredJobs.length === 0 ? (
+              <motion.div
+                key="jobs-empty"
+                initial={PANEL_REVEAL_VARIANTS.initial}
+                animate={PANEL_REVEAL_VARIANTS.animate}
+                exit={PANEL_REVEAL_VARIANTS.exit}
+                transition={PANEL_REVEAL_TRANSITION}
+                className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-8 text-center"
               >
-                Ver todas as regiões
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="available-jobs-list">
-              {filteredJobs.map((job) => {
-                const alreadyApplied = appliedJobIds.has(job.id);
-                return (
-                  <article
-                    key={job.id}
-                    className="bg-white border border-[#E5E7EB] rounded-2xl p-5 flex flex-col justify-between"
+                <Briefcase className="w-8 h-8 text-[#6B7280] dark:text-[#94A3B8] mx-auto mb-2" aria-hidden="true" />
+                <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                  {proximityFilter?.active
+                    ? `Nenhuma vaga encontrada num raio de ${proximityFilter.radiusKm} km da sua localização`
+                    : 'Nenhuma vaga aberta para esse filtro'}
+                </p>
+                <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
+                  {proximityFilter?.active
+                    ? `Sua cidade foi detectada como ${proximityFilter.detectedCity}. Amplie a distância máxima ou limpe o filtro de distância para visualizar todas as vagas.`
+                    : 'Tente limpar os filtros avançados, a busca ou selecionar todas as regiões de Rondonópolis-MT.'}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                  {proximityFilter?.active && proximityFilter.radiusKm < 50 && (
+                    <button
+                      type="button"
+                      data-testid="expand-proximity-50km-button"
+                      onClick={() =>
+                        setProximityFilter(updateProximityRadius(proximityFilter, 50))
+                      }
+                      className="min-h-[44px] px-4 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-sm font-medium cursor-pointer"
+                    >
+                      Ampliar para 50 km
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChangeRegion('Toda Rondonópolis e Região');
+                      setSearchQuery('');
+                      setProximityFilter(null);
+                      setSelectedSkillTags([]);
+                      clearAdvancedFilters();
+                    }}
+                    className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] dark:bg-[#F8FAFC] text-white dark:text-[#0F172A] text-sm font-medium cursor-pointer"
                   >
+                    Ver todas as vagas
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="jobs-grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.16 }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                data-testid="available-jobs-list"
+              >
+                <AnimatePresence mode="popLayout" initial={true}>
+                  {filteredJobs.map((job, index) => {
+                    const existingApplication = applicationsByJobId.get(job.id);
+                    const isAccepted = existingApplication?.status === 'aceita';
+                    const isCompleted = existingApplication?.status === 'concluida';
+                    const canOpenChat = isAccepted || isCompleted;
+                    const existingRating = existingApplication
+                      ? getRatingForApplication(companyRatings, existingApplication.id)
+                      : undefined;
+                    const companyRatingSummary = computeCompanyRatingSummary(
+                      companyRatings,
+                      job.companyId,
+                      job.companyName
+                    );
+                    const distKm = distanceByJobId.get(job.id);
+                    const unreadChatCount =
+                      existingApplication && canOpenChat
+                        ? countUnreadMessagesForApplication(
+                            chatMessages,
+                            existingApplication.id,
+                            'contratado'
+                          )
+                        : 0;
+                    return (
+                      <motion.article
+                        key={job.id}
+                        layout="position"
+                        initial={JOB_CARD_VARIANTS.initial}
+                        animate={JOB_CARD_VARIANTS.animate}
+                        exit={JOB_CARD_VARIANTS.exit}
+                        transition={JOB_CARD_TRANSITION(index)}
+                        className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 flex flex-col justify-between"
+                      >
                     <div>
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h3 className="font-display text-lg font-bold text-[#111827]">
+                        <div className="min-w-0">
+                          <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
                             {job.funcao}
                           </h3>
-                          <p className="text-sm font-medium text-[#4B5563]">
+                          <p className="text-sm font-medium text-[#4B5563] dark:text-[#94A3B8] break-words">
                             {job.companyName}
+                          </p>
+                          <p
+                            className="mt-1 text-xs text-[#4B5563] dark:text-[#94A3B8] inline-flex items-center gap-1.5 tabular-nums"
+                            data-testid={`job-company-rating-${job.id}`}
+                          >
+                            <Star
+                              className={`w-3.5 h-3.5 shrink-0 ${
+                                companyRatingSummary.count > 0
+                                  ? 'text-amber-500 fill-amber-500 dark:text-amber-400 dark:fill-amber-400'
+                                  : 'text-[#9CA3AF] dark:text-[#64748B]'
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                              {companyRatingSummary.count > 0
+                                ? companyRatingSummary.formattedAverage
+                                : 'Nova'}
+                            </span>
+                            <span aria-hidden="true">·</span>
+                            <span>
+                              {companyRatingSummary.count > 0
+                                ? `${companyRatingSummary.count} ${
+                                    companyRatingSummary.count === 1
+                                      ? 'avaliação'
+                                      : 'avaliações'
+                                  }`
+                                : 'Sem avaliações ainda'}
+                            </span>
                           </p>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="font-display text-lg font-bold text-[#C93B1E] tabular-nums">
+                          <span className="font-display text-lg font-bold text-[#C93B1E] dark:text-[#F06449] tabular-nums">
                             {job.quantidadeVagas}
                           </span>
-                          <span className="text-xs text-[#4B5563] ml-1">
+                          <span className="text-xs text-[#4B5563] dark:text-[#94A3B8] ml-1">
                             {job.quantidadeVagas === 1 ? 'vaga' : 'vagas'}
                           </span>
                         </div>
                       </div>
 
-                      <p className="mt-2.5 text-xs text-[#4B5563]">
-                        {job.bairro} · {job.turno} · {job.salarioOuDiaria}
+                      <p className="mt-2.5 text-xs text-[#4B5563] dark:text-[#94A3B8] tabular-nums">
+                        {job.bairro}
+                        {distKm !== undefined ? ` · a ~${formatDistanceKmPtBr(distKm)}` : ''} ·{' '}
+                        {job.tipoContrato ?? 'CLT'} ·{' '}
+                        {job.nivelExperiencia ?? 'Intermediário (1 a 3 anos)'} · {job.turno} ·{' '}
+                        {job.salarioOuDiaria}
                       </p>
 
-                      <p className="mt-3 text-sm text-[#374151] leading-relaxed">
+                      <p className="mt-3 text-sm text-[#374151] dark:text-[#CBD5E1] leading-relaxed whitespace-pre-line">
                         {job.descricao}
+                      </p>
+
+                      {job.beneficios && (
+                        <p className="mt-2 text-xs text-[#4B5563] dark:text-[#94A3B8]">
+                          <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">Benefícios:</span>{' '}
+                          {job.beneficios}
+                        </p>
+                      )}
+
+                      <p
+                        className="mt-2 text-xs text-[#4B5563] dark:text-[#94A3B8]"
+                        data-testid={`job-skill-tags-${job.id}`}
+                      >
+                        <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                          Habilidades:
+                        </span>{' '}
+                        {getJobSkillTags(job).map(formatSkillTagLabel).join(' · ')}
                       </p>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-[#F3F4F6] flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-xs text-[#4B5563] inline-flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-[#6B7280]" aria-hidden="true" />
+                    <div className="mt-4 pt-3 border-t border-[#F3F4F6] dark:border-[#1E293B] flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-xs text-[#4B5563] dark:text-[#94A3B8] inline-flex items-center gap-1.5">
+                        <Phone className="w-3.5 h-3.5 text-[#6B7280] dark:text-[#94A3B8]" aria-hidden="true" />
                         <span>{job.telefoneContato}</span>
                       </span>
 
-                      {alreadyApplied ? (
-                        <span className="min-h-[44px] px-4 py-2 rounded-xl bg-[#ECFDF5] text-[#047857] text-xs font-semibold inline-flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-                          <span>Candidatura enviada</span>
-                        </span>
+                      {existingApplication ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-semibold text-[#047857] dark:text-[#34D399] inline-flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+                            <span>
+                              {isCompleted
+                                ? 'Trabalho concluído'
+                                : isAccepted
+                                  ? 'Candidatura aceita'
+                                  : 'Candidatura enviada'}
+                            </span>
+                          </span>
+
+                          {canOpenChat && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenChat(existingApplication.id)}
+                              data-testid={`worker-open-chat-${job.id}`}
+                              className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <MessageSquare className="w-3.5 h-3.5 shrink-0 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+                              <span>
+                                Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+                              </span>
+                            </button>
+                          )}
+
+                          {canCompleteWork(existingApplication) && (
+                            <button
+                              type="button"
+                              onClick={() => onCompleteApplication(existingApplication.id)}
+                              data-testid={`worker-complete-work-${job.id}`}
+                              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-1.5 active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                              <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                              <span>Concluir trabalho</span>
+                            </button>
+                          )}
+
+                          {canRateCompanyForApplication(existingApplication, companyRatings) && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenRatingModal(existingApplication.id)}
+                              data-testid={`worker-rate-company-${job.id}`}
+                              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-xs font-semibold inline-flex items-center gap-1.5 active:scale-[0.98] transition-all cursor-pointer"
+                            >
+                              <Star className="w-3.5 h-3.5 shrink-0 fill-current" aria-hidden="true" />
+                              <span>Avaliar empresa</span>
+                            </button>
+                          )}
+
+                          {existingRating && (
+                            <span
+                              className="text-xs font-semibold text-amber-700 dark:text-amber-400 inline-flex items-center gap-1 tabular-nums"
+                              data-testid={`worker-rated-badge-${job.id}`}
+                            >
+                              <Star className="w-3.5 h-3.5 fill-current shrink-0" aria-hidden="true" />
+                              <span>Sua nota: {existingRating.stars}/5</span>
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <button
                           type="button"
                           onClick={() => handleApplyClick(job)}
-                          className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-white text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+                          className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
                         >
                           Candidatar-se
                         </button>
                       )}
                     </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                      </motion.article>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* TAB 2: Meu Cadastro (Dados Gerais + Opção PDF ou Sub-abas de Experiências) */}
-      {activeTab === 'cadastro' && (
-        <form onSubmit={handleSaveWorker} className="mt-6 space-y-6 max-w-4xl">
+            <CareerTipsCard workerProfile={workerProfile} />
+          </motion.div>
+        )}
+
+        {/* TAB 2: Meu Cadastro */}
+        {activeTab === 'cadastro' && (
+          <motion.form
+            key="worker-tab-cadastro"
+            variants={TAB_TRANSITION_VARIANTS}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={TAB_TRANSITION_CONFIG}
+            onSubmit={handleSaveWorker}
+            className="mt-6 space-y-6 max-w-4xl"
+          >
           {/* General Personal Information */}
-          <section className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6">
-            <h2 className="font-display text-xl font-bold text-[#111827]">
+          <section className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-6">
+            <h2 className="font-display text-xl font-bold text-[#111827] dark:text-[#F8FAFC]">
               1. Dados gerais do colaborador
             </h2>
-            <p className="text-sm text-[#4B5563] mt-1">
+            <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
               Esses dados formam a identificação do seu perfil profissional para as construtoras.
             </p>
 
@@ -444,7 +1231,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               <div>
                 <label
                   htmlFor="worker-nome"
-                  className="block text-xs font-semibold text-[#374151] mb-1.5"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
                   Nome completo *
                 </label>
@@ -454,14 +1241,14 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   value={form.nomeCompleto}
                   onChange={(e) => setForm({ ...form, nomeCompleto: e.target.value })}
                   placeholder="Ex: João Carlos Silva"
-                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                  className={inputClass}
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="worker-telefone"
-                  className="block text-xs font-semibold text-[#374151] mb-1.5"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
                   Telefone / WhatsApp *
                 </label>
@@ -471,14 +1258,14 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   value={form.telefone}
                   onChange={(e) => setForm({ ...form, telefone: e.target.value })}
                   placeholder="(66) 99999-0000"
-                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                  className={inputClass}
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="worker-email"
-                  className="block text-xs font-semibold text-[#374151] mb-1.5"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
                   E-mail (opcional)
                 </label>
@@ -488,14 +1275,14 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="seuemail@exemplo.com"
-                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                  className={inputClass}
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="worker-funcao"
-                  className="block text-xs font-semibold text-[#374151] mb-1.5"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
                   Ocupação principal *
                 </label>
@@ -503,7 +1290,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   id="worker-funcao"
                   value={form.funcaoPrincipal}
                   onChange={(e) => setForm({ ...form, funcaoPrincipal: e.target.value })}
-                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] bg-white text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                  className={inputClass}
                 >
                   {CONSTRUCTION_ROLES.map((roleName) => (
                     <option key={roleName} value={roleName}>
@@ -516,7 +1303,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               <div>
                 <label
                   htmlFor="worker-bairro"
-                  className="block text-xs font-semibold text-[#374151] mb-1.5"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
                   Bairro onde mora em Rondonópolis-MT
                 </label>
@@ -524,7 +1311,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   id="worker-bairro"
                   value={form.bairro}
                   onChange={(e) => setForm({ ...form, bairro: e.target.value })}
-                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] bg-white text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                  className={inputClass}
                 >
                   {RONDONOPOLIS_NEIGHBORHOODS.map((b) => (
                     <option key={b} value={b}>
@@ -537,7 +1324,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               <div>
                 <label
                   htmlFor="worker-regiao"
-                  className="block text-xs font-semibold text-[#374151] mb-1.5"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
                   Região de interesse para trabalhar
                 </label>
@@ -545,7 +1332,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   id="worker-regiao"
                   value={form.regiaoInteresse}
                   onChange={(e) => setForm({ ...form, regiaoInteresse: e.target.value })}
-                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] bg-white text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                  className={inputClass}
                 >
                   {RONDONOPOLIS_REGIONS.map((r) => (
                     <option key={r} value={r}>
@@ -558,7 +1345,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               <div>
                 <label
                   htmlFor="worker-disponibilidade"
-                  className="block text-xs font-semibold text-[#374151] mb-1.5"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
                   Disponibilidade de início
                 </label>
@@ -566,7 +1353,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   id="worker-disponibilidade"
                   value={form.disponibilidade}
                   onChange={(e) => setForm({ ...form, disponibilidade: e.target.value })}
-                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] bg-white text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                  className={inputClass}
                 >
                   {AVAILABILITY_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -579,7 +1366,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               <div>
                 <label
                   htmlFor="worker-resumo"
-                  className="block text-xs font-semibold text-[#374151] mb-1.5"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
                   Observação profissional (opcional)
                 </label>
@@ -591,18 +1378,18 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     setForm({ ...form, resumoProfissional: e.target.value })
                   }
                   placeholder="Ex: Possuo ferramentas próprias e CNH B"
-                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                  className={inputClass}
                 />
               </div>
             </div>
           </section>
 
           {/* Option Selector: PDF vs Experiences Sub-tabs */}
-          <section className="bg-white border border-[#E5E7EB] rounded-2xl p-5 sm:p-6">
-            <h2 className="font-display text-xl font-bold text-[#111827]">
+          <section className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-6">
+            <h2 className="font-display text-xl font-bold text-[#111827] dark:text-[#F8FAFC]">
               2. Currículo em PDF ou Experiências Profissionais
             </h2>
-            <p className="text-sm text-[#4B5563] mt-1">
+            <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
               Escolha anexar seu currículo pronto em PDF ou preencher suas experiências nas sub-abas abaixo.
             </p>
 
@@ -615,21 +1402,23 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 onClick={() => setForm({ ...form, tipoHistorico: 'pdf' })}
                 className={`min-h-[52px] px-4 py-3 rounded-xl border text-left transition-colors cursor-pointer flex items-center gap-3 ${
                   form.tipoHistorico === 'pdf'
-                    ? 'border-[#C93B1E] bg-[#C93B1E]/5 text-[#111827]'
-                    : 'border-[#E5E7EB] bg-white text-[#4B5563] hover:border-[#111827]'
+                    ? 'border-[#C93B1E] dark:border-[#F06449] bg-[#C93B1E]/5 dark:bg-[#C93B1E]/15 text-[#111827] dark:text-[#F8FAFC]'
+                    : 'border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-[#4B5563] dark:text-[#94A3B8] hover:border-[#111827] dark:hover:border-[#64748B]'
                 }`}
               >
                 <FileText
                   className={`w-5 h-5 shrink-0 ${
-                    form.tipoHistorico === 'pdf' ? 'text-[#C93B1E]' : 'text-[#6B7280]'
+                    form.tipoHistorico === 'pdf'
+                      ? 'text-[#C93B1E] dark:text-[#F06449]'
+                      : 'text-[#6B7280] dark:text-[#94A3B8]'
                   }`}
                   aria-hidden="true"
                 />
                 <div>
-                  <p className="text-sm font-semibold text-[#111827]">
+                  <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
                     Anexar currículo em PDF
                   </p>
-                  <p className="text-xs text-[#4B5563]">
+                  <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
                     Envie seu arquivo .pdf diretamente
                   </p>
                 </div>
@@ -642,23 +1431,23 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 onClick={() => setForm({ ...form, tipoHistorico: 'experiencias' })}
                 className={`min-h-[52px] px-4 py-3 rounded-xl border text-left transition-colors cursor-pointer flex items-center gap-3 ${
                   form.tipoHistorico === 'experiencias'
-                    ? 'border-[#C93B1E] bg-[#C93B1E]/5 text-[#111827]'
-                    : 'border-[#E5E7EB] bg-white text-[#4B5563] hover:border-[#111827]'
+                    ? 'border-[#C93B1E] dark:border-[#F06449] bg-[#C93B1E]/5 dark:bg-[#C93B1E]/15 text-[#111827] dark:text-[#F8FAFC]'
+                    : 'border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-[#4B5563] dark:text-[#94A3B8] hover:border-[#111827] dark:hover:border-[#64748B]'
                 }`}
               >
                 <Briefcase
                   className={`w-5 h-5 shrink-0 ${
                     form.tipoHistorico === 'experiencias'
-                      ? 'text-[#C93B1E]'
-                      : 'text-[#6B7280]'
+                      ? 'text-[#C93B1E] dark:text-[#F06449]'
+                      : 'text-[#6B7280] dark:text-[#94A3B8]'
                   }`}
                   aria-hidden="true"
                 />
                 <div>
-                  <p className="text-sm font-semibold text-[#111827]">
+                  <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
                     Preencher experiências (sem PDF)
                   </p>
-                  <p className="text-xs text-[#4B5563]">
+                  <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
                     Sub-abas com local, função, datas e duração
                   </p>
                 </div>
@@ -667,7 +1456,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
 
             {/* Option (i): PDF Upload */}
             {form.tipoHistorico === 'pdf' && (
-              <div className="mt-5 p-5 rounded-xl border border-dashed border-[#D1D5DB] bg-[#F9FAFB]">
+              <div className="mt-5 p-5 rounded-xl border border-dashed border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B]">
                 <input
                   ref={pdfInputRef}
                   id="worker-pdf-input"
@@ -679,17 +1468,17 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
 
                 {!form.pdfCurriculo ? (
                   <div className="text-center py-4">
-                    <Upload className="w-8 h-8 text-[#C93B1E] mx-auto mb-2" aria-hidden="true" />
-                    <p className="text-sm font-semibold text-[#111827]">
+                    <Upload className="w-8 h-8 text-[#C93B1E] dark:text-[#F06449] mx-auto mb-2" aria-hidden="true" />
+                    <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
                       Selecione seu currículo em PDF
                     </p>
-                    <p className="text-xs text-[#4B5563] mt-1">
+                    <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mt-1">
                       Formato .pdf até 1,5 MB. O arquivo ficará anexado ao seu perfil gerado.
                     </p>
                     <button
                       type="button"
                       onClick={() => pdfInputRef.current?.click()}
-                      className="mt-4 min-h-[44px] px-5 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-white text-sm font-medium cursor-pointer"
+                      className="mt-4 min-h-[44px] px-5 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-sm font-medium cursor-pointer"
                     >
                       Escolher arquivo PDF
                     </button>
@@ -697,14 +1486,14 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 ) : (
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-10 h-10 rounded-xl bg-[#C93B1E]/10 text-[#C93B1E] flex items-center justify-center shrink-0">
+                      <span className="w-10 h-10 rounded-xl bg-[#C93B1E]/10 dark:bg-[#C93B1E]/20 text-[#C93B1E] dark:text-[#F06449] flex items-center justify-center shrink-0">
                         <FileText className="w-5 h-5" aria-hidden="true" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[#111827] truncate">
+                        <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] truncate">
                           {form.pdfCurriculo.fileName}
                         </p>
-                        <p className="text-xs text-[#4B5563]">
+                        <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
                           {formatFileSizePtBr(form.pdfCurriculo.fileSizeBytes)} · Anexado em{' '}
                           {form.pdfCurriculo.uploadedAt}
                         </p>
@@ -715,7 +1504,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                       <button
                         type="button"
                         onClick={() => pdfInputRef.current?.click()}
-                        className="min-h-[44px] px-3.5 py-2 rounded-lg border border-[#D1D5DB] bg-white text-xs font-semibold text-[#111827] cursor-pointer"
+                        className="min-h-[44px] px-3.5 py-2 rounded-lg border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] cursor-pointer"
                       >
                         Trocar PDF
                       </button>
@@ -723,7 +1512,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         type="button"
                         onClick={() => setForm({ ...form, pdfCurriculo: null })}
                         aria-label="Remover currículo PDF"
-                        className="min-h-[44px] px-3.5 py-2 rounded-lg border border-[#FECACA] bg-white text-xs font-semibold text-[#B91C1C] cursor-pointer"
+                        className="min-h-[44px] px-3.5 py-2 rounded-lg border border-[#FECACA] dark:border-[#991B1B] bg-white dark:bg-[#0F172A] text-xs font-semibold text-[#B91C1C] dark:text-[#F87171] cursor-pointer"
                       >
                         Remover
                       </button>
@@ -737,7 +1526,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             {form.tipoHistorico === 'experiencias' && (
               <div className="mt-5">
                 {/* Sub-tabs header */}
-                <div className="flex flex-wrap items-center gap-2 border-b border-[#E5E7EB] pb-3">
+                <div className="flex flex-wrap items-center gap-2 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-3">
                   {form.experiencias.map((exp, idx) => {
                     const active = idx === activeExpIndex;
                     return (
@@ -745,10 +1534,10 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         key={exp.id}
                         type="button"
                         onClick={() => setActiveExpIndex(idx)}
-                        className={`min-h-[44px] px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer ${
+                        className={`min-h-[44px] max-w-full truncate px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap cursor-pointer ${
                           active
-                            ? 'bg-[#111827] text-white'
-                            : 'bg-[#F3F4F6] text-[#374151] hover:bg-[#E5E7EB]'
+                            ? 'bg-[#111827] dark:bg-[#F8FAFC] text-white dark:text-[#0F172A]'
+                            : 'bg-[#F3F4F6] dark:bg-[#1E293B] text-[#374151] dark:text-[#CBD5E1] hover:bg-[#E5E7EB] dark:hover:bg-[#334155]'
                         }`}
                       >
                         Experiência {idx + 1}
@@ -760,7 +1549,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   <button
                     type="button"
                     onClick={handleAddExperienceTab}
-                    className="min-h-[44px] px-3.5 py-2 rounded-lg border border-dashed border-[#9CA3AF] hover:border-[#111827] text-xs sm:text-sm font-semibold text-[#111827] inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+                    className="min-h-[44px] px-3.5 py-2 rounded-lg border border-dashed border-[#9CA3AF] dark:border-[#475569] hover:border-[#111827] dark:hover:border-[#94A3B8] text-xs sm:text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
                   >
                     <Plus className="w-4 h-4" aria-hidden="true" />
                     <span>Adicionar experiência</span>
@@ -774,7 +1563,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                       <div>
                         <label
                           htmlFor="exp-empresa"
-                          className="block text-xs font-semibold text-[#374151] mb-1.5"
+                          className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                         >
                           Empresa / Local da obra *
                         </label>
@@ -788,14 +1577,14 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                             })
                           }
                           placeholder="Ex: Construtora Norte Sul · Rondonópolis"
-                          className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                          className={inputClass}
                         />
                       </div>
 
                       <div>
                         <label
                           htmlFor="exp-funcao"
-                          className="block text-xs font-semibold text-[#374151] mb-1.5"
+                          className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                         >
                           Função exercida *
                         </label>
@@ -809,7 +1598,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                             })
                           }
                           placeholder="Ex: Pedreiro, Armador, Servente"
-                          className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                          className={inputClass}
                         />
                       </div>
                     </div>
@@ -818,7 +1607,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                       <div>
                         <label
                           htmlFor="exp-inicio"
-                          className="block text-xs font-semibold text-[#374151] mb-1.5"
+                          className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                         >
                           Data de início (mês/ano) *
                         </label>
@@ -831,14 +1620,14 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                               dataInicio: e.target.value,
                             })
                           }
-                          className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm font-mono text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                          className={`${inputClass} font-mono`}
                         />
                       </div>
 
                       <div>
                         <label
                           htmlFor="exp-fim"
-                          className="block text-xs font-semibold text-[#374151] mb-1.5"
+                          className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                         >
                           Data de término
                         </label>
@@ -852,12 +1641,12 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                               dataFim: e.target.value,
                             })
                           }
-                          className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm font-mono text-[#111827] disabled:bg-[#F3F4F6] disabled:text-[#6B7280] focus:outline-none focus:border-[#C93B1E]"
+                          className={`${inputClass} font-mono disabled:bg-[#F3F4F6] dark:disabled:bg-[#1E293B] disabled:text-[#6B7280] dark:disabled:text-[#64748B]`}
                         />
                       </div>
 
                       <div className="flex items-center min-h-[44px]">
-                        <label className="inline-flex items-center gap-2.5 text-sm text-[#111827] cursor-pointer">
+                        <label className="inline-flex items-center gap-2.5 text-sm text-[#111827] dark:text-[#F8FAFC] cursor-pointer">
                           <input
                             type="checkbox"
                             checked={currentExp.atual}
@@ -881,14 +1670,16 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         currentExp.atual
                       );
                       return (
-                        <div className="p-3.5 rounded-xl bg-[#F9FAFB] border border-[#E5E7EB] flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs font-semibold text-[#374151] inline-flex items-center gap-1.5">
-                            <Clock className="w-4 h-4 text-[#C93B1E]" aria-hidden="true" />
+                        <div className="p-3.5 rounded-xl bg-[#F9FAFB] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] inline-flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
                             <span>Tempo de atuação calculado:</span>
                           </span>
                           <span
                             className={`text-sm font-bold tabular-nums ${
-                              calc.valid ? 'text-[#111827]' : 'text-[#B91C1C]'
+                              calc.valid
+                                ? 'text-[#111827] dark:text-[#F8FAFC]'
+                                : 'text-[#B91C1C] dark:text-[#F87171]'
                             }`}
                           >
                             {calc.valid ? formatDurationPtBr(calc.months) : calc.error}
@@ -900,7 +1691,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     <div>
                       <label
                         htmlFor="exp-atividades"
-                        className="block text-xs font-semibold text-[#374151] mb-1.5"
+                        className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                       >
                         Atividades realizadas (opcional)
                       </label>
@@ -914,7 +1705,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                           })
                         }
                         placeholder="Ex: Reboco, assentamento de tijolos, concretagem de lajes"
-                        className="w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] text-sm text-[#111827] focus:outline-none focus:border-[#C93B1E]"
+                        className={inputClass}
                       />
                     </div>
 
@@ -923,7 +1714,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         <button
                           type="button"
                           onClick={() => handleRemoveExperienceTab(activeExpIndex)}
-                          className="min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-semibold text-[#B91C1C] hover:bg-[#FEF2F2] inline-flex items-center gap-1.5 cursor-pointer"
+                          className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 rounded-lg text-xs font-semibold text-[#B91C1C] dark:text-[#F87171] hover:bg-[#FEF2F2] dark:hover:bg-[#7F1D1D]/30 inline-flex items-center gap-1.5 cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" aria-hidden="true" />
                           <span>Remover Experiência {activeExpIndex + 1}</span>
@@ -932,8 +1723,8 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     )}
 
                     {form.experiencias.length > 1 && (
-                      <div className="pt-3 border-t border-[#E5E7EB]">
-                        <p className="text-xs font-semibold text-[#374151] mb-2">
+                      <div className="pt-3 border-t border-[#E5E7EB] dark:border-[#1E293B]">
+                        <p className="text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-2">
                           Resumo das experiências preenchidas ({form.experiencias.length})
                         </p>
                         <ul className="space-y-1.5">
@@ -946,16 +1737,16 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                             return (
                               <li
                                 key={exp.id}
-                                className="text-xs text-[#4B5563] flex items-center justify-between gap-2"
+                                className="text-xs text-[#4B5563] dark:text-[#94A3B8] flex items-center justify-between gap-2"
                               >
                                 <span className="truncate">
                                   {idx + 1}.{' '}
-                                  <strong className="text-[#111827]">
+                                  <strong className="text-[#111827] dark:text-[#F8FAFC]">
                                     {exp.funcao.trim() || 'Função não informada'}
                                   </strong>{' '}
                                   — {exp.empresaLocal.trim() || 'Local pendente'}
                                 </span>
-                                <span className="font-semibold text-[#111827] tabular-nums shrink-0">
+                                <span className="font-semibold text-[#111827] dark:text-[#F8FAFC] tabular-nums shrink-0">
                                   {dur.valid ? formatDurationPtBr(dur.months) : 'Datas pendentes'}
                                 </span>
                               </li>
@@ -971,36 +1762,44 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
           </section>
 
           {formError && (
-            <p role="alert" className="text-sm font-semibold text-[#B91C1C]">
+            <p role="alert" className="text-sm font-semibold text-[#B91C1C] dark:text-[#F87171]">
               {formError}
             </p>
           )}
 
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="text-xs text-[#4B5563]">
+            <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
               Ao salvar, o BrickJobs gera automaticamente seu perfil para as construtoras.
             </p>
             <button
               type="submit"
               data-testid="save-worker-profile"
-              className="w-full sm:w-auto min-h-[48px] px-7 py-3 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-sm font-semibold transition-colors cursor-pointer"
+              className="w-full sm:w-auto min-h-[48px] px-7 py-3 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
             >
               Salvar e gerar perfil
             </button>
           </div>
-        </form>
-      )}
+          </motion.form>
+        )}
 
-      {/* TAB 3: Perfil Gerado automaticamente */}
-      {activeTab === 'perfil' && (
-        <div className="mt-6 space-y-6">
+        {/* TAB 3: Perfil Gerado automaticamente */}
+        {activeTab === 'perfil' && (
+          <motion.div
+            key="worker-tab-perfil"
+            variants={TAB_TRANSITION_VARIANTS}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={TAB_TRANSITION_CONFIG}
+            className="mt-6 space-y-6"
+          >
           {!isWorkerRegistered ? (
-            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-8 text-center max-w-2xl mx-auto">
-              <HardHat className="w-9 h-9 text-[#C93B1E] mx-auto mb-3" aria-hidden="true" />
-              <h2 className="font-display text-xl font-bold text-[#111827]">
+            <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-8 text-center max-w-2xl mx-auto">
+              <HardHat className="w-9 h-9 text-[#C93B1E] dark:text-[#F06449] mx-auto mb-3" aria-hidden="true" />
+              <h2 className="font-display text-xl font-bold text-[#111827] dark:text-[#F8FAFC]">
                 Seu perfil ainda não foi gerado
               </h2>
-              <p className="text-sm text-[#4B5563] mt-1.5">
+              <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1.5">
                 Preencha seus dados gerais e anexe um currículo em PDF ou informe suas experiências profissionais para gerar o perfil.
               </p>
               <button
@@ -1014,56 +1813,84 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" data-testid="generated-worker-profile">
               {/* Main Profile Card */}
-              <section className="lg:col-span-8 bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden">
+              <section className="lg:col-span-8 bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl overflow-hidden">
                 {/* Profile Header */}
-                <div className="p-5 sm:p-6 border-b border-[#E5E7EB] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-[#C93B1E]">
-                      Perfil Profissional Gerado · {workerProfile.disponibilidade}
-                    </p>
-                    <h2 className="font-display text-2xl font-bold text-[#111827] mt-1">
-                      {workerProfile.nomeCompleto}
-                    </h2>
-                    <p className="text-base font-medium text-[#374151]">
-                      {workerProfile.funcaoPrincipal}
-                    </p>
-                    <div className="mt-2 text-xs sm:text-sm text-[#4B5563] flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-y-0.5 sm:gap-x-3">
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-[#C93B1E] shrink-0" aria-hidden="true" />
-                        Bairro {workerProfile.bairro}, {workerProfile.cidade}
-                      </span>
-                      <span className="hidden sm:inline" aria-hidden="true">·</span>
-                      <span>Região de interesse: {workerProfile.regiaoInteresse}</span>
+                <div className="p-5 sm:p-6 border-b border-[#E5E7EB] dark:border-[#1E293B]">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
+                        Perfil Profissional Gerado · {workerProfile.disponibilidade}
+                      </p>
+                      <h2 className="font-display text-2xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
+                        {workerProfile.nomeCompleto}
+                      </h2>
+                      <p className="text-base font-medium text-[#374151] dark:text-[#CBD5E1]">
+                        {workerProfile.funcaoPrincipal}
+                      </p>
+                      <div className="mt-2 text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8] flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-y-0.5 sm:gap-x-3">
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                          Bairro {workerProfile.bairro}, {workerProfile.cidade}
+                        </span>
+                        <span className="hidden sm:inline" aria-hidden="true">·</span>
+                        <span>Região de interesse: {workerProfile.regiaoInteresse}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleExportResumePdf}
+                        disabled={isExportingPdf}
+                        data-testid="export-resume-pdf-button"
+                        className="min-h-[44px] px-4 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] disabled:opacity-60 text-white text-sm font-semibold inline-flex items-center gap-2 whitespace-nowrap active:scale-[0.98] transition-all cursor-pointer"
+                      >
+                        <Download className="w-4 h-4 shrink-0" aria-hidden="true" />
+                        <span>
+                          {isExportingPdf ? 'Gerando PDF...' : 'Exportar Currículo em PDF'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onChangeTab('cadastro')}
+                        className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] whitespace-nowrap cursor-pointer"
+                      >
+                        Editar cadastro
+                      </button>
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onChangeTab('cadastro')}
-                    className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] hover:bg-[#F9FAFB] text-sm font-semibold text-[#111827] whitespace-nowrap self-start cursor-pointer"
-                  >
-                    Editar cadastro
-                  </button>
+                  {pdfExportFeedback && (
+                    <p
+                      role="status"
+                      data-testid="export-resume-pdf-feedback"
+                      className="mt-3 text-xs sm:text-sm font-medium text-[#047857] dark:text-[#34D399] inline-flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>{pdfExportFeedback}</span>
+                    </p>
+                  )}
                 </div>
 
                 {/* General Data & Contact */}
-                <div className="p-5 sm:p-6 border-b border-[#E5E7EB] grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F9FAFB]">
+                <div className="p-5 sm:p-6 border-b border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F9FAFB] dark:bg-[#1E293B]">
                   <div>
-                    <p className="text-xs font-semibold text-[#6B7280]">Telefone / WhatsApp</p>
-                    <p className="text-sm font-semibold text-[#111827] mt-0.5">
+                    <p className="text-xs font-semibold text-[#6B7280] dark:text-[#94A3B8]">Telefone / WhatsApp</p>
+                    <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] mt-0.5">
                       {workerProfile.telefone}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-[#6B7280]">E-mail</p>
-                    <p className="text-sm font-medium text-[#111827] mt-0.5">
+                    <p className="text-xs font-semibold text-[#6B7280] dark:text-[#94A3B8]">E-mail</p>
+                    <p className="text-sm font-medium text-[#111827] dark:text-[#F8FAFC] mt-0.5">
                       {workerProfile.email || 'Não informado'}
                     </p>
                   </div>
                   {workerProfile.resumoProfissional && (
                     <div className="sm:col-span-2">
-                      <p className="text-xs font-semibold text-[#6B7280]">Observações</p>
-                      <p className="text-sm text-[#374151] mt-0.5">
+                      <p className="text-xs font-semibold text-[#6B7280] dark:text-[#94A3B8]">Observações</p>
+                      <p className="text-sm text-[#374151] dark:text-[#CBD5E1] mt-0.5">
                         {workerProfile.resumoProfissional}
                       </p>
                     </div>
@@ -1074,17 +1901,17 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 <div className="p-5 sm:p-6">
                   {workerProfile.tipoHistorico === 'pdf' && workerProfile.pdfCurriculo ? (
                     <div>
-                      <h3 className="font-display text-lg font-bold text-[#111827]">
+                      <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]">
                         Currículo anexado em PDF
                       </h3>
-                      <div className="mt-3 p-4 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] flex flex-wrap items-center justify-between gap-4">
+                      <div className="mt-3 p-4 rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3 min-w-0">
-                          <FileText className="w-6 h-6 text-[#C93B1E] shrink-0" aria-hidden="true" />
+                          <FileText className="w-6 h-6 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-[#111827] truncate">
+                            <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] truncate">
                               {workerProfile.pdfCurriculo.fileName}
                             </p>
-                            <p className="text-xs text-[#4B5563]">
+                            <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
                               {formatFileSizePtBr(workerProfile.pdfCurriculo.fileSizeBytes)} · Enviado em{' '}
                               {workerProfile.pdfCurriculo.uploadedAt}
                             </p>
@@ -1094,7 +1921,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         <a
                           href={workerProfile.pdfCurriculo.dataUrl}
                           download={workerProfile.pdfCurriculo.fileName}
-                          className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-white text-xs sm:text-sm font-semibold inline-flex items-center"
+                          className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs sm:text-sm font-semibold inline-flex items-center"
                         >
                           Baixar currículo PDF
                         </a>
@@ -1103,15 +1930,15 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   ) : (
                     <div>
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h3 className="font-display text-lg font-bold text-[#111827]">
+                        <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]">
                           Experiências profissionais ({workerProfile.experiencias.length})
                         </h3>
-                        <p className="text-sm font-bold text-[#C93B1E] tabular-nums">
+                        <p className="text-sm font-bold text-[#C93B1E] dark:text-[#F06449] tabular-nums">
                           Tempo total de atuação: {formatDurationPtBr(profileTotalMonths)}
                         </p>
                       </div>
 
-                      <div className="mt-4 divide-y divide-[#E5E7EB]">
+                      <div className="mt-4 divide-y divide-[#E5E7EB] dark:divide-[#1E293B]">
                         {workerProfile.experiencias.map((exp) => {
                           const dur = calculateExperienceMonths(
                             exp.dataInicio,
@@ -1122,25 +1949,25 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                             <div key={exp.id} className="py-4 first:pt-1 last:pb-1">
                               <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0 flex-1">
-                                  <h4 className="text-base font-bold text-[#111827]">
+                                  <h4 className="text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
                                     {exp.funcao}
                                   </h4>
-                                  <p className="text-sm text-[#4B5563] break-words">
+                                  <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] break-words">
                                     {exp.empresaLocal}
                                   </p>
                                 </div>
                                 <div className="shrink-0 text-right">
-                                  <p className="text-sm font-bold text-[#111827] tabular-nums whitespace-nowrap">
+                                  <p className="text-sm font-bold text-[#111827] dark:text-[#F8FAFC] tabular-nums whitespace-nowrap">
                                     {dur.valid ? formatDurationPtBr(dur.months) : '—'}
                                   </p>
-                                  <p className="text-xs text-[#6B7280] font-mono whitespace-nowrap">
+                                  <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] font-mono whitespace-nowrap">
                                     {formatMonthYearPtBr(exp.dataInicio)} –{' '}
                                     {exp.atual ? 'Atual' : formatMonthYearPtBr(exp.dataFim)}
                                   </p>
                                 </div>
                               </div>
                               {exp.atividades && (
-                                <p className="mt-2 text-sm text-[#374151]">{exp.atividades}</p>
+                                <p className="mt-2 text-sm text-[#374151] dark:text-[#CBD5E1]">{exp.atividades}</p>
                               )}
                             </div>
                           );
@@ -1153,7 +1980,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
 
               {/* Right Column: Visual Craft Card + Applications */}
               <aside className="lg:col-span-4 space-y-5">
-                <div className="bg-white border border-[#E5E7EB] rounded-2xl overflow-hidden">
+                <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl overflow-hidden">
                   <div className="h-44 bg-[#1F2937] relative">
                     {!imgFailed ? (
                       <img
@@ -1175,25 +2002,72 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     </div>
                   </div>
                   <div className="p-4">
-                    <p className="text-sm font-semibold text-[#111827]">
+                    <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
                       Candidaturas enviadas ({applications.length})
                     </p>
                     {applications.length === 0 ? (
-                      <p className="text-xs text-[#4B5563] mt-1">
+                      <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mt-1">
                         Você ainda não se candidatou a nenhuma vaga. Veja as oportunidades na sua região.
                       </p>
                     ) : (
-                      <ul className="mt-2.5 space-y-2">
+                      <ul className="mt-2.5 space-y-2.5">
                         {applications.map((app) => {
                           const job = jobs.find((j) => j.id === app.jobId);
                           if (!job) return null;
+                          const appRating = getRatingForApplication(companyRatings, app.id);
                           return (
                             <li
                               key={app.id}
-                              className="text-xs text-[#374151] border-t border-[#F3F4F6] pt-2"
+                              className="text-xs text-[#374151] dark:text-[#CBD5E1] border-t border-[#F3F4F6] dark:border-[#1E293B] pt-2.5 space-y-2"
                             >
-                              <span className="font-semibold text-[#111827]">{job.funcao}</span> ·{' '}
-                              {job.companyName} ({job.bairro})
+                              <div>
+                                <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">{job.funcao}</span> ·{' '}
+                                {job.companyName} ({job.bairro}) ·{' '}
+                                <span
+                                  className={
+                                    app.status === 'aceita' || app.status === 'concluida'
+                                      ? 'font-semibold text-[#047857] dark:text-[#34D399]'
+                                      : 'font-medium text-[#6B7280] dark:text-[#94A3B8]'
+                                  }
+                                >
+                                  {app.status === 'concluida'
+                                    ? 'Concluída'
+                                    : app.status === 'aceita'
+                                      ? 'Aceita'
+                                      : 'Aguardando'}
+                                </span>
+                              </div>
+
+                              {(app.status === 'aceita' || app.status === 'concluida') && (
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {canCompleteWork(app) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onCompleteApplication(app.id)}
+                                      className="min-h-[40px] px-3 py-1.5 rounded-lg border border-[#D1D5DB] dark:border-[#334155] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Check className="w-3.5 h-3.5" aria-hidden="true" />
+                                      <span>Concluir trabalho</span>
+                                    </button>
+                                  )}
+                                  {canRateCompanyForApplication(app, companyRatings) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => onOpenRatingModal(app.id)}
+                                      className="min-h-[40px] px-3 py-1.5 rounded-lg bg-[#C93B1E] hover:bg-[#B23319] text-white text-xs font-semibold inline-flex items-center gap-1 cursor-pointer"
+                                    >
+                                      <Star className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                                      <span>Avaliar empresa</span>
+                                    </button>
+                                  )}
+                                  {appRating && (
+                                    <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 inline-flex items-center gap-1 tabular-nums">
+                                      <Star className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                                      <span>Avaliado: {appRating.stars}/5</span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </li>
                           );
                         })}
@@ -1203,7 +2077,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     <button
                       type="button"
                       onClick={() => onChangeTab('vagas')}
-                      className="mt-4 w-full min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] text-white text-xs sm:text-sm font-semibold cursor-pointer"
+                      className="mt-4 w-full min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
                     >
                       Explorar vagas na região
                     </button>
@@ -1212,8 +2086,9 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               </aside>
             </div>
           )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

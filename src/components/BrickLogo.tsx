@@ -11,7 +11,7 @@ export const BrickLogo: React.FC<BrickLogoProps> = ({ size = 'md' }) => {
   return (
     <span className="inline-flex items-center gap-2.5 whitespace-nowrap shrink-0">
       <svg
-        className={`${iconSize} shrink-0`}
+        className={`${iconSize} shrink-0 dark:ring-1 dark:ring-white/15 dark:rounded-[7px]`}
         viewBox="0 0 32 32"
         fill="none"
         aria-hidden="true"
@@ -24,8 +24,8 @@ export const BrickLogo: React.FC<BrickLogoProps> = ({ size = 'md' }) => {
         <rect x="6" y="20" width="11" height="5" rx="1" fill="#E5E7EB" />
         <rect x="19" y="20" width="7" height="5" rx="1" fill="#C93B1E" />
       </svg>
-      <span className={`font-display font-bold tracking-tight text-[#111827] ${textSize}`}>
-        Brick<span className="text-[#C93B1E]">Jobs</span>
+      <span className={`font-display font-bold tracking-tight text-[#111827] dark:text-[#F8FAFC] ${textSize}`}>
+        Brick<span className="text-[#C93B1E] dark:text-[#F06449]">Jobs</span>
       </span>
     </span>
   );

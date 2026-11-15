@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   calculateExperienceMonths,
   calculateTotalExperienceMonths,
+  countActiveAdvancedFilters,
   filterJobsByLocationAndQuery,
+  filterJobsByTitleOrDescription,
   formatDurationPtBr,
   resolveNearestRondonopolisRegion,
 } from './duration';
@@ -45,7 +47,7 @@ test('calculateTotalExperienceMonths sums valid experiences', () => {
   assert.equal(total, 18);
 });
 
-test('filterJobsByLocationAndQuery filters by Rondonópolis region, status, and keyword', () => {
+test('filterJobsByLocationAndQuery filters by region, keyword, occupation, contractType, and experienceLevel', () => {
   const sampleJobs: JobPosting[] = [
     {
       id: '1',
@@ -56,6 +58,8 @@ test('filterJobsByLocationAndQuery filters by Rondonópolis region, status, and 
       bairro: 'Vila Aurora',
       regiaoInteresse: 'Vila Aurora',
       salarioOuDiaria: 'R$ 190/dia',
+      tipoContrato: 'Autônomo',
+      nivelExperiencia: 'Intermediário (1 a 3 anos)',
       turno: 'Comercial',
       descricao: 'Alvenaria estrutural',
       telefoneContato: '(66) 99911-1111',
@@ -71,11 +75,30 @@ test('filterJobsByLocationAndQuery filters by Rondonópolis region, status, and 
       bairro: 'Cidade Salmen',
       regiaoInteresse: 'Cidade Salmen',
       salarioOuDiaria: 'R$ 3.400/mês',
+      tipoContrato: 'CLT',
+      nivelExperiencia: 'Experiente (3+ anos)',
       turno: 'Comercial',
       descricao: 'Infraestrutura elétrica',
       telefoneContato: '(66) 99922-2222',
       status: 'encerrada',
       createdAt: '2026-10-15',
+    },
+    {
+      id: '3',
+      companyId: 'c3',
+      companyName: 'Infra Sul',
+      funcao: 'Servente de Obras',
+      quantidadeVagas: 6,
+      bairro: 'Centro',
+      regiaoInteresse: 'Centro',
+      salarioOuDiaria: 'R$ 135/dia',
+      tipoContrato: 'Temporário',
+      nivelExperiencia: 'Sem experiência / Auxiliar',
+      turno: 'Comercial',
+      descricao: 'Apoio geral',
+      telefoneContato: '(66) 99933-3333',
+      status: 'aberta',
+      createdAt: '2026-11-12',
     },
   ];
 
@@ -94,6 +117,75 @@ test('filterJobsByLocationAndQuery filters by Rondonópolis region, status, and 
   });
   assert.equal(byQuery.length, 1);
   assert.equal(byQuery[0].id, '2');
+
+  const byAdvanced = filterJobsByLocationAndQuery(sampleJobs, {
+    region: 'Toda Rondonópolis e Região',
+    query: '',
+    onlyOpen: true,
+    occupation: 'Servente de Obras',
+    contractType: 'Temporário',
+    experienceLevel: 'Sem experiência / Auxiliar',
+  });
+  assert.equal(byAdvanced.length, 1);
+  assert.equal(byAdvanced[0].id, '3');
+
+  const bySkillTags = filterJobsByLocationAndQuery(sampleJobs, {
+    region: 'Toda Rondonópolis e Região',
+    query: '',
+    onlyOpen: true,
+    skillTags: ['alvenaria'],
+  });
+  assert.equal(bySkillTags.length, 1);
+  assert.equal(bySkillTags[0].id, '1');
+
+  assert.equal(
+    countActiveAdvancedFilters({
+      occupation: 'Todas',
+      contractType: 'CLT',
+      experienceLevel: 'Experiente (3+ anos)',
+    }),
+    2
+  );
+});
+
+test('filterJobsByTitleOrDescription filters open jobs by title or description', () => {
+  const sampleJobs: JobPosting[] = [
+    {
+      id: '1',
+      companyId: 'c1',
+      companyName: 'Construtora Pantanal Sul',
+      funcao: 'Pedreiro',
+      quantidadeVagas: 4,
+      bairro: 'Vila Aurora',
+      regiaoInteresse: 'Vila Aurora',
+      salarioOuDiaria: 'R$ 190/dia',
+      turno: 'Comercial',
+      descricao: 'Alvenaria estrutural e reboco interno',
+      telefoneContato: '(66) 99911-1111',
+      status: 'aberta',
+      createdAt: '2026-11-01',
+    },
+    {
+      id: '2',
+      companyId: 'c2',
+      companyName: 'Engenharia Mato Grosso',
+      funcao: 'Armador de Ferragem',
+      quantidadeVagas: 2,
+      bairro: 'Cidade Salmen',
+      regiaoInteresse: 'Cidade Salmen',
+      salarioOuDiaria: 'R$ 3.400/mês',
+      turno: 'Comercial',
+      descricao: 'Montagem de pilares e vigas de galpão',
+      telefoneContato: '(66) 99922-2222',
+      status: 'aberta',
+      createdAt: '2026-10-15',
+    },
+  ];
+
+  assert.equal(filterJobsByTitleOrDescription(sampleJobs, 'pedreiro').length, 1);
+  assert.equal(filterJobsByTitleOrDescription(sampleJobs, 'galpão').length, 1);
+  assert.equal(filterJobsByTitleOrDescription(sampleJobs, 'galpão')[0].id, '2');
+  assert.equal(filterJobsByTitleOrDescription(sampleJobs, '').length, 2);
 });
 
 test('resolveNearestRondonopolisRegion maps local coordinates and handles distant coordinates', () => {

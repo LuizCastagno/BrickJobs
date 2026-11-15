@@ -1,4 +1,5 @@
 import type { JobPosting, WorkExperience } from '../types/brickjobs';
+import { filterJobsBySkillTags, getJobSkillTags } from './skillTags';
 
 export interface DurationCalculation {
   months: number;
@@ -104,13 +105,24 @@ export function formatMonthYearPtBr(value: string): string {
 
 export function filterJobsByLocationAndQuery(
   jobs: JobPosting[],
-  filters: { region: string; query: string; onlyOpen?: boolean }
+  filters: {
+    region: string;
+    query: string;
+    onlyOpen?: boolean;
+    occupation?: string;
+    contractType?: string;
+    experienceLevel?: string;
+    skillTags?: string[];
+  }
 ): JobPosting[] {
   const normalizedQuery = filters.query.trim().toLowerCase();
   const normalizedRegion = filters.region.trim();
+  const normalizedOccupation = (filters.occupation ?? '').trim().toLowerCase();
+  const normalizedContract = (filters.contractType ?? '').trim().toLowerCase();
+  const normalizedExperience = (filters.experienceLevel ?? '').trim().toLowerCase();
   const allRegionsLabel = 'Toda Rondonópolis e Região';
 
-  return jobs.filter((job) => {
+  const baseFiltered = jobs.filter((job) => {
     if (filters.onlyOpen && job.status !== 'aberta') {
       return false;
     }
@@ -125,13 +137,39 @@ export function filterJobsByLocationAndQuery(
       }
     }
 
+    if (normalizedOccupation && normalizedOccupation !== 'todas') {
+      if (job.funcao.trim().toLowerCase() !== normalizedOccupation) {
+        return false;
+      }
+    }
+
+    if (normalizedContract && normalizedContract !== 'todos') {
+      const jobContract = (job.tipoContrato ?? 'CLT').trim().toLowerCase();
+      if (jobContract !== normalizedContract) {
+        return false;
+      }
+    }
+
+    if (normalizedExperience && normalizedExperience !== 'todos') {
+      const jobExp = (job.nivelExperiencia ?? 'Intermediário (1 a 3 anos)')
+        .trim()
+        .toLowerCase();
+      if (jobExp !== normalizedExperience) {
+        return false;
+      }
+    }
+
     if (normalizedQuery) {
       const haystack = [
         job.funcao,
         job.companyName,
         job.bairro,
         job.descricao,
+        job.beneficios ?? '',
+        job.tipoContrato ?? '',
+        job.nivelExperiencia ?? '',
         job.turno,
+        ...getJobSkillTags(job),
       ]
         .join(' ')
         .toLowerCase();
@@ -141,6 +179,39 @@ export function filterJobsByLocationAndQuery(
     }
 
     return true;
+  });
+
+  if (filters.skillTags && filters.skillTags.length > 0) {
+    return filterJobsBySkillTags(baseFiltered, filters.skillTags);
+  }
+
+  return baseFiltered;
+}
+
+export function countActiveAdvancedFilters(filters: {
+  occupation: string;
+  contractType: string;
+  experienceLevel: string;
+}): number {
+  let count = 0;
+  if (filters.occupation && filters.occupation !== 'Todas') count += 1;
+  if (filters.contractType && filters.contractType !== 'Todos') count += 1;
+  if (filters.experienceLevel && filters.experienceLevel !== 'Todos') count += 1;
+  return count;
+}
+
+export function filterJobsByTitleOrDescription(
+  jobs: JobPosting[],
+  query: string
+): JobPosting[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  const openJobs = jobs.filter((job) => job.status === 'aberta');
+  if (!normalizedQuery) return openJobs;
+
+  return openJobs.filter((job) => {
+    const title = job.funcao.toLowerCase();
+    const description = job.descricao.toLowerCase();
+    return title.includes(normalizedQuery) || description.includes(normalizedQuery);
   });
 }
 

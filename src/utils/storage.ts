@@ -23,12 +23,42 @@ export function loadBrickJobsState(): BrickJobsAppState {
           ? parsed.workerProfile.experiencias
           : DEFAULT_APP_STATE.workerProfile.experiencias,
       },
-      jobs: Array.isArray(parsed.jobs) && parsed.jobs.length > 0 ? parsed.jobs : DEFAULT_APP_STATE.jobs,
+      jobs:
+        Array.isArray(parsed.jobs) && parsed.jobs.length > 0
+          ? parsed.jobs.map((job) => {
+              if (job.status === 'encerrada' && !job.closedAt) {
+                const seedMatch = DEFAULT_APP_STATE.jobs.find(
+                  (seedJob) => seedJob.id === job.id
+                );
+                if (seedMatch?.closedAt) {
+                  return { ...job, closedAt: seedMatch.closedAt };
+                }
+              }
+              return job;
+            })
+          : DEFAULT_APP_STATE.jobs,
       seedWorkers:
         Array.isArray(parsed.seedWorkers) && parsed.seedWorkers.length > 0
           ? parsed.seedWorkers
           : DEFAULT_APP_STATE.seedWorkers,
-      applications: Array.isArray(parsed.applications) ? parsed.applications : [],
+      applications: Array.isArray(parsed.applications)
+        ? parsed.applications.map((app) => ({
+            ...app,
+            status:
+              app.status === 'concluida'
+                ? 'concluida'
+                : app.status === 'aceita'
+                  ? 'aceita'
+                  : 'pendente',
+          }))
+        : [],
+      companyRatings:
+        Array.isArray(parsed.companyRatings)
+          ? parsed.companyRatings
+          : DEFAULT_APP_STATE.companyRatings,
+      notifications: Array.isArray(parsed.notifications) ? parsed.notifications : [],
+      chatMessages: Array.isArray(parsed.chatMessages) ? parsed.chatMessages : [],
+      workReminders: Array.isArray(parsed.workReminders) ? parsed.workReminders : [],
       selectedRegion: parsed.selectedRegion || DEFAULT_APP_STATE.selectedRegion,
     };
   } catch {

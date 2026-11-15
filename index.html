@@ -2,9 +2,13 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>BrickJobs — Construtoras e Trabalhadores em Rondonópolis-MT</title>
     <meta name="description" content="Aplicativo multiplataforma que conecta construtoras e trabalhadores da construção civil em Rondonópolis, Mato Grosso." />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta property="og:title" content="BrickJobs — Construtoras e Trabalhadores em Rondonópolis-MT" />
     <meta property="og:description" content="Cadastro de construtoras, busca de profissionais, currículos em PDF ou experiências e vagas por região em Rondonópolis-MT." />
     <meta property="og:type" content="website" />
@@ -12,10 +16,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      try {
+        if (localStorage.getItem('brickjobs_theme_v1') === 'dark') {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+          var metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) metaTheme.setAttribute('content', '#111827');
+        }
+      } catch (e) {}
+    </script>
   </head>
-  <body class="bg-[#F4F5F7] text-[#111827] antialiased selection:bg-[#C93B1E]/15 selection:text-[#C93B1E]">
+  <body class="bg-[#F4F5F7] dark:bg-[#0B1120] text-[#111827] dark:text-[#F8FAFC] antialiased selection:bg-[#C93B1E]/15 selection:text-[#C93B1E]">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
