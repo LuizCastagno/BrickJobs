@@ -8,12 +8,49 @@ import {
   parseCareerTipsPayload,
   type CareerTipFocus,
 } from './src/utils/careerTips.ts';
+import { RONDONOPOLIS_CENTER } from './src/utils/geolocation.ts';
+import {
+  buildCombinedRainAlertMessage,
+  parseOpenMeteoForecast,
+  resolveConstructionSiteLocation,
+  type RainAlertsPayload,
+} from './src/utils/rainAlerts.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = Number(process.env.PORT) || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
+
+const RAIN_CACHE_TTL_MS = 10 * 60 * 1000;
+const rainAlertCache = new Map<
+  string,
+  { expiresAt: number; payload: RainAlertsPayload }
+>();
+
+async function fetchOpenMeteoWeather(lat: number, lng: number): Promise<unknown> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}` +
+      `&longitude=${encodeURIComponent(lng)}` +
+      `&current=temperature_2m,precipitation,rain,weather_code,wind_speed_10m` +
+      `&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m` +
+      `&daily=weather_code,precipitation_sum,precipitation_probability_max,wind_speed_10m_max` +
+      `&forecast_days=3&timezone=America%2FCuiaba`;
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) {
+      throw new Error(`Open-Meteo HTTP ${res.status}`);
+    }
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 function getGeminiClient(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -33,6 +70,93 @@ function getGeminiClient(): GoogleGenAI | null {
 async function startServer() {
   const app = express();
   app.use(express.json());
+
+  app.get('/api/rain-alerts', async (req: Request, res: Response) => {
+    try {
+      const regionParam =
+        typeof req.query.region === 'string'
+          ? req.query.region
+          : 'Toda Rondonópolis e Região';
+      const latParam =
+        typeof req.query.lat === 'string' ? Number(req.query.lat) : NaN;
+      const lngParam =
+        typeof req.query.lng === 'string' ? Number(req.query.lng) : NaN;
+
+      const customCoords =
+        Number.isFinite(latParam) &&
+        Number.isFinite(lngParam) &&
+        Math.abs(latParam) <= 90 &&
+        Math.abs(lngParam) <= 180
+          ? { lat: latParam, lng: lngParam }
+          : null;
+
+      const siteLoc = resolveConstructionSiteLocation(regionParam, customCoords);
+      const cacheKey = `${siteLoc.label}:${siteLoc.coordinates.lat.toFixed(3)},${siteLoc.coordinates.lng.toFixed(3)}`;
+      const cached = rainAlertCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        res.json(cached.payload);
+        return;
+      }
+
+      const samePointAsCity =
+        Math.abs(siteLoc.coordinates.lat - RONDONOPOLIS_CENTER.lat) < 0.004 &&
+        Math.abs(siteLoc.coordinates.lng - RONDONOPOLIS_CENTER.lng) < 0.004;
+
+      const [siteRaw, cityRaw] = await Promise.all([
+        fetchOpenMeteoWeather(siteLoc.coordinates.lat, siteLoc.coordinates.lng),
+        samePointAsCity
+          ? Promise.resolve(null)
+          : fetchOpenMeteoWeather(
+              RONDONOPOLIS_CENTER.lat,
+              RONDONOPOLIS_CENTER.lng
+            ),
+      ]);
+
+      const now = new Date();
+      const siteForecast = parseOpenMeteoForecast(
+        siteRaw,
+        'canteiro',
+        siteLoc.label,
+        siteLoc.coordinates,
+        now
+      );
+      const cityForecast = parseOpenMeteoForecast(
+        cityRaw ?? siteRaw,
+        'cidade',
+        'Rondonópolis - MT',
+        RONDONOPOLIS_CENTER,
+        now
+      );
+
+      const payload: RainAlertsPayload = {
+        updatedAt: now.toISOString(),
+        source: 'open-meteo',
+        siteRegionName: siteLoc.label,
+        cityName: 'Rondonópolis - MT',
+        siteForecast,
+        cityForecast,
+        combinedAlertMessage: buildCombinedRainAlertMessage(
+          siteForecast,
+          cityForecast
+        ),
+      };
+
+      rainAlertCache.set(cacheKey, {
+        expiresAt: Date.now() + RAIN_CACHE_TTL_MS,
+        payload,
+      });
+
+      res.json(payload);
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Falha ao consultar previsão meteorológica.';
+      res.status(503).json({
+        error: `Não foi possível atualizar os avisos de chuva agora (${message}).`,
+      });
+    }
+  });
 
   app.post('/api/career-tips', async (req: Request, res: Response) => {
     try {

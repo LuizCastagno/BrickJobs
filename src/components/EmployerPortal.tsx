@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Building2,
+  Calculator,
   Check,
   CheckCircle2,
   FileText,
@@ -12,6 +13,7 @@ import {
   Plus,
   Star,
   Users,
+  X,
 } from 'lucide-react';
 import {
   CONSTRUCTION_ROLES,
@@ -54,6 +56,8 @@ import { EmployerStatisticsTab } from './EmployerStatisticsTab';
 import { JobDescriptionSuggestions } from './JobDescriptionSuggestions';
 import { LocationRegionBar } from './LocationRegionBar';
 import { PerformanceSummaryCard } from './PerformanceSummaryCard';
+import { RainAlertsPanel } from './RainAlertsPanel';
+import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 
 export type EmployerTab = 'vagas' | 'estatisticas' | 'cadastro' | 'profissionais';
 
@@ -121,6 +125,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
 
   // Workers search state
   const [workerSearch, setWorkerSearch] = useState<string>('');
+  const [employerModalMode, setEmployerModalMode] = useState<'severance' | 'rain' | null>(null);
 
   const isCompanyRegistered = Boolean(
     companyProfile.nomeFantasia.trim() && companyProfile.telefone.trim()
@@ -334,6 +339,16 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                 : 'Nota da empresa'}
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setEmployerModalMode('severance')}
+            data-testid="employer-open-severance-button"
+            className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F9FAFB] dark:hover:bg-[#334155] text-xs sm:text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+          >
+            <Calculator className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+            <span>Calculadora de rescisão</span>
+          </button>
         </div>
       </div>
 
@@ -636,6 +651,16 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
 
           {/* Company Job List & Performance Summary Column */}
           <section className="lg:col-span-7 space-y-5 min-w-0">
+            <RainAlertsPanel
+              variant="compact"
+              siteRegion={jobBairro || selectedRegion}
+              onChangeSiteRegion={(region) => {
+                setJobBairro(region);
+                onChangeRegion(region);
+              }}
+              onOpenFullPanel={() => setEmployerModalMode('rain')}
+            />
+
             <EmployerMonthlyDashboard
               jobs={jobs}
               companyId={companyProfile.id}
@@ -1350,6 +1375,79 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Employer Tools Modal (Calculadora de Rescisão / Avisos de Chuva Completos) */}
+      {employerModalMode && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={
+            employerModalMode === 'severance'
+              ? 'Calculadora de Rescisão Trabalhista'
+              : 'Avisos de Chuva no Canteiro e na Cidade'
+          }
+          data-testid="employer-tools-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/55 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#F4F5F7] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] p-4 sm:p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div
+                role="group"
+                aria-label="Ferramentas da construtora"
+                className="inline-flex items-center gap-1 p-1 rounded-xl bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B]"
+              >
+                <button
+                  type="button"
+                  onClick={() => setEmployerModalMode('severance')}
+                  aria-pressed={employerModalMode === 'severance'}
+                  className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                    employerModalMode === 'severance'
+                      ? 'bg-[#C93B1E] text-white'
+                      : 'text-[#374151] dark:text-[#CBD5E1] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
+                  }`}
+                >
+                  Calculadora de Rescisão
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEmployerModalMode('rain')}
+                  aria-pressed={employerModalMode === 'rain'}
+                  className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                    employerModalMode === 'rain'
+                      ? 'bg-[#C93B1E] text-white'
+                      : 'text-[#374151] dark:text-[#CBD5E1] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
+                  }`}
+                >
+                  Avisos de Chuva
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEmployerModalMode(null)}
+                aria-label="Fechar ferramenta"
+                data-testid="employer-tools-modal-close"
+                className="min-w-[44px] min-h-[44px] rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#111827] text-[#111827] dark:text-[#F8FAFC] flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
+            </div>
+
+            {employerModalMode === 'severance' ? (
+              <SeveranceCalculatorPanel />
+            ) : (
+              <RainAlertsPanel
+                variant="full"
+                siteRegion={jobBairro || selectedRegion}
+                onChangeSiteRegion={(region) => {
+                  setJobBairro(region);
+                  onChangeRegion(region);
+                }}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

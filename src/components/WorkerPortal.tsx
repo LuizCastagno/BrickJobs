@@ -90,9 +90,11 @@ import {
 import { CareerTipsCard } from './CareerTipsCard';
 import { LocationRegionBar } from './LocationRegionBar';
 import { NativePushPermissionCard } from './NativePushPermissionCard';
+import { RainAlertsPanel } from './RainAlertsPanel';
+import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
 
-export type WorkerTab = 'vagas' | 'cadastro' | 'perfil';
+export type WorkerTab = 'vagas' | 'cadastro' | 'perfil' | 'utilidades';
 
 interface WorkerPortalProps {
   activeTab: WorkerTab;
@@ -792,6 +794,18 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             onApplyProximity={(next) => setProximityFilter(next)}
             onClearProximity={() => setProximityFilter(null)}
             enableVoiceSearch={true}
+          />
+
+          <RainAlertsPanel
+            variant="compact"
+            siteRegion={selectedRegion}
+            onChangeSiteRegion={onChangeRegion}
+            gpsCoordinates={
+              proximityFilter?.active
+                ? { lat: proximityFilter.userLat, lng: proximityFilter.userLng }
+                : null
+            }
+            onOpenFullPanel={() => onChangeTab('utilidades')}
           />
 
           <SkillTagFilterBar
@@ -2086,6 +2100,32 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               </aside>
             </div>
           )}
+          </motion.div>
+        )}
+
+        {/* TAB 4: Rescisão CLT e Avisos de Chuva */}
+        {activeTab === 'utilidades' && (
+          <motion.div
+            key="worker-tab-utilidades"
+            variants={TAB_TRANSITION_VARIANTS}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={TAB_TRANSITION_CONFIG}
+            className="mt-6 space-y-6"
+          >
+            <SeveranceCalculatorPanel />
+
+            <RainAlertsPanel
+              variant="full"
+              siteRegion={selectedRegion}
+              onChangeSiteRegion={onChangeRegion}
+              gpsCoordinates={
+                proximityFilter?.active
+                  ? { lat: proximityFilter.userLat, lng: proximityFilter.userLng }
+                  : null
+              }
+            />
           </motion.div>
         )}
       </AnimatePresence>
