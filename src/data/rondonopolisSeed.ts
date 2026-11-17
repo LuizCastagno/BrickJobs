@@ -430,6 +430,7 @@ export const SEED_WORKERS: WorkerProfile[] = [
   {
     id: 'worker-roo-1',
     nomeCompleto: 'Marcos Antônio Pereira',
+    sexo: 'masculino',
     telefone: '(66) 99641-2280',
     email: 'marcos.pedreiro@exemplo.com.br',
     bairro: 'Vila Operária',
@@ -465,6 +466,7 @@ export const SEED_WORKERS: WorkerProfile[] = [
   {
     id: 'worker-roo-2',
     nomeCompleto: 'Claudinei Rocha dos Santos',
+    sexo: 'masculino',
     telefone: '(66) 99918-5503',
     email: 'claudinei.armador@exemplo.com.br',
     bairro: 'Parque Sagrada Família',
@@ -491,6 +493,7 @@ export const SEED_WORKERS: WorkerProfile[] = [
   {
     id: 'worker-roo-3',
     nomeCompleto: 'Fernanda Oliveira Mendes',
+    sexo: 'feminino',
     telefone: '(66) 99712-9014',
     email: 'fernanda.tst@exemplo.com.br',
     bairro: 'Vila Aurora',
@@ -522,17 +525,20 @@ export const EMPTY_COMPANY_PROFILE: CompanyProfile = {
   razaoSocial: '',
   cnpj: '',
   responsavel: '',
+  sexoResponsavel: '',
   telefone: '',
   email: '',
   bairro: 'Centro',
   endereco: '',
   especialidade: 'Obras Residenciais e Comerciais',
+  documentosAnexos: {},
   updatedAt: '',
 };
 
 export const EMPTY_WORKER_PROFILE: WorkerProfile = {
   id: 'my-worker',
   nomeCompleto: '',
+  sexo: '',
   telefone: '',
   email: '',
   bairro: 'Centro',
@@ -544,6 +550,7 @@ export const EMPTY_WORKER_PROFILE: WorkerProfile = {
   pdfCurriculo: null,
   experiencias: [],
   resumoProfissional: '',
+  documentosAnexos: {},
   updatedAt: '',
 };
 

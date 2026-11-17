@@ -1,16 +1,37 @@
 export type UserRole = 'contratante' | 'contratado';
 
+export type RegistrantSex = 'masculino' | 'feminino' | 'outro';
+
+export type RequiredDocumentKey =
+  | 'historicoCriminal'
+  | 'tituloEleitor'
+  | 'reservistaOuCdi';
+
+export interface DocumentAttachment {
+  fileName: string;
+  fileSizeBytes: number;
+  mimeType: string;
+  uploadedAt: string;
+  dataUrl: string;
+}
+
+export type RequiredDocumentsMap = Partial<
+  Record<RequiredDocumentKey, DocumentAttachment | null>
+>;
+
 export interface CompanyProfile {
   id: string;
   nomeFantasia: string;
   razaoSocial: string;
   cnpj: string;
   responsavel: string;
+  sexoResponsavel?: RegistrantSex | '';
   telefone: string;
   email: string;
   bairro: string;
   endereco: string;
   especialidade: string;
+  documentosAnexos?: RequiredDocumentsMap;
   updatedAt: string;
 }
 
@@ -64,6 +85,7 @@ export type ResumeMode = 'pdf' | 'experiencias';
 export interface WorkerProfile {
   id: string;
   nomeCompleto: string;
+  sexo?: RegistrantSex | '';
   telefone: string;
   email: string;
   bairro: string;
@@ -75,6 +97,7 @@ export interface WorkerProfile {
   pdfCurriculo: PdfResume | null;
   experiencias: WorkExperience[];
   resumoProfissional: string;
+  documentosAnexos?: RequiredDocumentsMap;
   updatedAt: string;
 }
 

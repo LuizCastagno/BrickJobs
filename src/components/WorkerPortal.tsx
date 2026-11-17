@@ -97,11 +97,18 @@ import { CareerTipsCard } from './CareerTipsCard';
 import { LocationRegionBar } from './LocationRegionBar';
 import { NativePushPermissionCard } from './NativePushPermissionCard';
 import { RainAlertsPanel } from './RainAlertsPanel';
+import { RequiredDocumentsSection } from './RequiredDocumentsSection';
 import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
 import { SafetyTipsCard } from './SafetyTipsCard';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
 import { WorkerProductivityPanel } from './WorkerProductivityPanel';
+import {
+  formatRegistrantSexLabel,
+  getResolvedDocumentRequirements,
+  REGISTRANT_SEX_OPTIONS,
+  validateRequiredRegistrationDocuments,
+} from '../utils/requiredDocuments';
 import workerCraftImg from '../assets/images/brickjobs_worker_craft_1794693694923.jpg';
 
 export type WorkerTab = 'vagas' | 'cadastro' | 'perfil' | 'utilidades';
@@ -429,6 +436,16 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
       }
     }
 
+    const docsValidation = validateRequiredRegistrationDocuments(
+      form.sexo,
+      form.documentosAnexos,
+      'contratado'
+    );
+    if (!docsValidation.valid) {
+      setFormError(docsValidation.errorMessage);
+      return;
+    }
+
     const sanitizedExperiences =
       form.tipoHistorico === 'experiencias'
         ? form.experiencias.map((exp) => ({
@@ -442,10 +459,12 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     const savedProfile: WorkerProfile = {
       ...form,
       nomeCompleto: form.nomeCompleto.trim(),
+      sexo: form.sexo || '',
       telefone: form.telefone.trim(),
       email: form.email.trim(),
       resumoProfissional: form.resumoProfissional.trim(),
       experiencias: sanitizedExperiences,
+      documentosAnexos: form.documentosAnexos ?? {},
       updatedAt: new Date().toISOString().slice(0, 10),
     };
 
@@ -1295,6 +1314,35 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
 
               <div>
                 <label
+                  htmlFor="worker-sexo"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                >
+                  Sexo *
+                </label>
+                <select
+                  id="worker-sexo"
+                  data-testid="worker-sex-select"
+                  value={form.sexo ?? ''}
+                  onChange={(e) => {
+                    setFormError('');
+                    setForm({
+                      ...form,
+                      sexo: e.target.value as WorkerProfile['sexo'],
+                    });
+                  }}
+                  className={inputClass}
+                >
+                  <option value="">Selecione...</option>
+                  {REGISTRANT_SEX_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
                   htmlFor="worker-telefone"
                   className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
@@ -1809,6 +1857,17 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             )}
           </section>
 
+          <RequiredDocumentsSection
+            category="contratado"
+            sectionTitle="3. Documentos necessários para anexo"
+            sex={form.sexo ?? ''}
+            documents={form.documentosAnexos ?? {}}
+            onChangeDocuments={(next) => {
+              setFormError('');
+              setForm((prev) => ({ ...prev, documentosAnexos: next }));
+            }}
+          />
+
           {formError && (
             <p role="alert" className="text-sm font-semibold text-[#B91C1C] dark:text-[#F87171]">
               {formError}
@@ -1922,7 +1981,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 </div>
 
                 {/* General Data & Contact */}
-                <div className="p-5 sm:p-6 border-b border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F9FAFB] dark:bg-[#1E293B]">
+                <div className="p-5 sm:p-6 border-b border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 sm:grid-cols-3 gap-4 bg-[#F9FAFB] dark:bg-[#1E293B]">
                   <div>
                     <p className="text-xs font-semibold text-[#6B7280] dark:text-[#94A3B8]">Telefone / WhatsApp</p>
                     <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] mt-0.5">
@@ -1935,14 +1994,68 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                       {workerProfile.email || 'Não informado'}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-xs font-semibold text-[#6B7280] dark:text-[#94A3B8]">Sexo</p>
+                    <p className="text-sm font-medium text-[#111827] dark:text-[#F8FAFC] mt-0.5">
+                      {formatRegistrantSexLabel(workerProfile.sexo)}
+                    </p>
+                  </div>
                   {workerProfile.resumoProfissional && (
-                    <div className="sm:col-span-2">
+                    <div className="sm:col-span-3">
                       <p className="text-xs font-semibold text-[#6B7280] dark:text-[#94A3B8]">Observações</p>
                       <p className="text-sm text-[#374151] dark:text-[#CBD5E1] mt-0.5">
                         {workerProfile.resumoProfissional}
                       </p>
                     </div>
                   )}
+                </div>
+
+                {/* Attached Required Documents Summary */}
+                <div
+                  className="p-5 sm:p-6 border-b border-[#E5E7EB] dark:border-[#1E293B]"
+                  data-testid="worker-profile-documents-summary"
+                >
+                  <h3 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
+                    Documentos obrigatórios anexados
+                  </h3>
+                  <ul className="mt-3 divide-y divide-[#F3F4F6] dark:divide-[#1E293B]">
+                    {getResolvedDocumentRequirements(
+                      workerProfile.sexo,
+                      workerProfile.documentosAnexos
+                    )
+                      .filter((req) => req.required || req.attachment)
+                      .map((req) => (
+                        <li
+                          key={req.key}
+                          className="py-2.5 first:pt-0 last:pb-0 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm"
+                        >
+                          <div className="min-w-0">
+                            <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                              {req.label}
+                            </span>
+                            {req.attachment ? (
+                              <span className="block text-xs text-[#047857] dark:text-[#34D399]">
+                                Anexado: {req.attachment.fileName} (
+                                {formatFileSizePtBr(req.attachment.fileSizeBytes)})
+                              </span>
+                            ) : (
+                              <span className="block text-xs text-[#6B7280] dark:text-[#94A3B8]">
+                                Pendente de anexo
+                              </span>
+                            )}
+                          </div>
+                          {req.attachment && (
+                            <a
+                              href={req.attachment.dataUrl}
+                              download={req.attachment.fileName}
+                              className="min-h-[36px] px-3 py-1.5 rounded-lg border border-[#D1D5DB] dark:border-[#334155] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] inline-flex items-center"
+                            >
+                              Baixar
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                  </ul>
                 </div>
 
                 {/* Resume Mode Output: PDF or Generated Experiences */}

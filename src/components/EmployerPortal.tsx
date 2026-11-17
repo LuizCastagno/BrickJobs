@@ -51,12 +51,17 @@ import {
   TAB_TRANSITION_CONFIG,
   TAB_TRANSITION_VARIANTS,
 } from '../utils/motionPresets';
+import {
+  REGISTRANT_SEX_OPTIONS,
+  validateRequiredRegistrationDocuments,
+} from '../utils/requiredDocuments';
 import { EmployerMonthlyDashboard } from './EmployerMonthlyDashboard';
 import { EmployerStatisticsTab } from './EmployerStatisticsTab';
 import { JobDescriptionSuggestions } from './JobDescriptionSuggestions';
 import { LocationRegionBar } from './LocationRegionBar';
 import { PerformanceSummaryCard } from './PerformanceSummaryCard';
 import { RainAlertsPanel } from './RainAlertsPanel';
+import { RequiredDocumentsSection } from './RequiredDocumentsSection';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 
 export type EmployerTab = 'vagas' | 'estatisticas' | 'cadastro' | 'profissionais';
@@ -210,21 +215,33 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
       return;
     }
 
+    const docsValidation = validateRequiredRegistrationDocuments(
+      companyForm.sexoResponsavel,
+      companyForm.documentosAnexos,
+      'contratante'
+    );
+    if (!docsValidation.valid) {
+      setCompanyError(docsValidation.errorMessage);
+      return;
+    }
+
     const updated: CompanyProfile = {
       ...companyForm,
       nomeFantasia: companyForm.nomeFantasia.trim(),
       razaoSocial: companyForm.razaoSocial.trim(),
       cnpj: companyForm.cnpj.trim(),
       responsavel: companyForm.responsavel.trim(),
+      sexoResponsavel: companyForm.sexoResponsavel || '',
       telefone: companyForm.telefone.trim(),
       email: companyForm.email.trim(),
       endereco: companyForm.endereco.trim(),
       especialidade: companyForm.especialidade.trim() || 'Construção Civil',
+      documentosAnexos: companyForm.documentosAnexos ?? {},
       updatedAt: new Date().toISOString().slice(0, 10),
     };
     onSaveCompanyProfile(updated);
     setJobBairro(updated.bairro || 'Centro');
-    setCompanySavedMsg('Dados da construtora salvos com sucesso.');
+    setCompanySavedMsg('Dados da construtora e documentos salvos com sucesso.');
   };
 
   const handleJobSubmit = (e: React.FormEvent) => {
@@ -998,6 +1015,35 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
+                  htmlFor="comp-sexo-responsavel"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                >
+                  Sexo do responsável *
+                </label>
+                <select
+                  id="comp-sexo-responsavel"
+                  data-testid="company-sex-select"
+                  value={companyForm.sexoResponsavel ?? ''}
+                  onChange={(e) => {
+                    setCompanyError('');
+                    setCompanyForm({
+                      ...companyForm,
+                      sexoResponsavel: e.target.value as CompanyProfile['sexoResponsavel'],
+                    });
+                  }}
+                  className={inputClass}
+                >
+                  <option value="">Selecione...</option>
+                  {REGISTRANT_SEX_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
                   htmlFor="comp-telefone"
                   className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
@@ -1014,7 +1060,9 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                   className={inputClass}
                 />
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
                   htmlFor="comp-email"
@@ -1030,6 +1078,25 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                     setCompanyForm({ ...companyForm, email: e.target.value })
                   }
                   placeholder="contato@construtora.com.br"
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="comp-especialidade"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                >
+                  Ramo / Especialidade
+                </label>
+                <input
+                  id="comp-especialidade"
+                  type="text"
+                  value={companyForm.especialidade}
+                  onChange={(e) =>
+                    setCompanyForm({ ...companyForm, especialidade: e.target.value })
+                  }
+                  placeholder="Ex: Obras residenciais, galpões, pavimentação"
                   className={inputClass}
                 />
               </div>
@@ -1061,42 +1128,33 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
 
               <div>
                 <label
-                  htmlFor="comp-especialidade"
+                  htmlFor="comp-endereco"
                   className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
-                  Ramo / Especialidade
+                  Endereço da sede ou canteiro principal
                 </label>
                 <input
-                  id="comp-especialidade"
+                  id="comp-endereco"
                   type="text"
-                  value={companyForm.especialidade}
+                  value={companyForm.endereco}
                   onChange={(e) =>
-                    setCompanyForm({ ...companyForm, especialidade: e.target.value })
+                    setCompanyForm({ ...companyForm, endereco: e.target.value })
                   }
-                  placeholder="Ex: Obras residenciais, galpões, pavimentação"
+                  placeholder="Ex: Av. Lions Internacional, 1450"
                   className={inputClass}
                 />
               </div>
             </div>
 
-            <div>
-              <label
-                htmlFor="comp-endereco"
-                className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
-              >
-                Endereço da sede ou canteiro principal
-              </label>
-              <input
-                id="comp-endereco"
-                type="text"
-                value={companyForm.endereco}
-                onChange={(e) =>
-                  setCompanyForm({ ...companyForm, endereco: e.target.value })
-                }
-                placeholder="Ex: Av. Lions Internacional, 1450"
-                className={inputClass}
-              />
-            </div>
+            <RequiredDocumentsSection
+              category="contratante"
+              sex={companyForm.sexoResponsavel ?? ''}
+              documents={companyForm.documentosAnexos ?? {}}
+              onChangeDocuments={(next) => {
+                setCompanyError('');
+                setCompanyForm({ ...companyForm, documentosAnexos: next });
+              }}
+            />
 
             {companyError && (
               <p role="alert" className="text-sm font-medium text-[#B91C1C] dark:text-[#F87171]">

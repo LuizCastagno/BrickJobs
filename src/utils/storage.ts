@@ -1,4 +1,8 @@
 import { DEFAULT_APP_STATE, type BrickJobsAppState } from '../data/rondonopolisSeed';
+import {
+  normalizeRegistrantSex,
+  sanitizeRequiredDocumentsMap,
+} from './requiredDocuments';
 
 const STORAGE_KEY = 'brickjobs_rondonopolis_state_v1';
 
@@ -15,10 +19,20 @@ export function loadBrickJobsState(): BrickJobsAppState {
       companyProfile: {
         ...DEFAULT_APP_STATE.companyProfile,
         ...(parsed.companyProfile ?? {}),
+        sexoResponsavel: normalizeRegistrantSex(
+          parsed.companyProfile?.sexoResponsavel
+        ),
+        documentosAnexos: sanitizeRequiredDocumentsMap(
+          parsed.companyProfile?.documentosAnexos
+        ),
       },
       workerProfile: {
         ...DEFAULT_APP_STATE.workerProfile,
         ...(parsed.workerProfile ?? {}),
+        sexo: normalizeRegistrantSex(parsed.workerProfile?.sexo),
+        documentosAnexos: sanitizeRequiredDocumentsMap(
+          parsed.workerProfile?.documentosAnexos
+        ),
         experiencias: Array.isArray(parsed.workerProfile?.experiencias)
           ? parsed.workerProfile.experiencias
           : DEFAULT_APP_STATE.workerProfile.experiencias,
