@@ -62,6 +62,8 @@ import { EmployerStatisticsTab } from './EmployerStatisticsTab';
 import { JobDescriptionSuggestions } from './JobDescriptionSuggestions';
 import { LocationRegionBar } from './LocationRegionBar';
 import { PerformanceSummaryCard } from './PerformanceSummaryCard';
+import { ProfileAvatar } from './ProfileAvatar';
+import { ProfilePhotoField } from './ProfilePhotoField';
 import { RainAlertsPanel } from './RainAlertsPanel';
 import { RequiredDocumentsSection } from './RequiredDocumentsSection';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
@@ -305,6 +307,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
     onCreateJob({
       companyId: companyProfile.id,
       companyName: companyProfile.nomeFantasia,
+      companyPhotoUrl: companyProfile.fotoPerfilUrl ?? '',
       funcao: finalFuncao,
       quantidadeVagas: Math.floor(quantidadeVagas),
       bairro: jobBairro,
@@ -336,18 +339,31 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-nav-safe md:pb-12">
       {/* Header Context */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-5">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
-            Área do Contratante · Rondonópolis-MT
-          </p>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
-            {isCompanyRegistered ? companyProfile.nomeFantasia : 'Painel da Construtora'}
-          </h1>
-          <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1 break-words">
-            {isCompanyRegistered
-              ? `${companyProfile.bairro} · Resp.: ${companyProfile.responsavel} · ${companyProfile.telefone}`
-              : 'Cadastre os dados gerais da empresa e publique buscas por função e número de vagas.'}
-          </p>
+        <div className="flex items-center gap-3.5 min-w-0">
+          <ProfileAvatar
+            name={
+              isCompanyRegistered
+                ? companyProfile.nomeFantasia
+                : 'BrickJobs Construtora'
+            }
+            photoUrl={companyProfile.fotoPerfilUrl}
+            entityType="company"
+            size="lg"
+            testId="employer-header-avatar"
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
+              Área do Contratante · Rondonópolis-MT
+            </p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
+              {isCompanyRegistered ? companyProfile.nomeFantasia : 'Painel da Construtora'}
+            </h1>
+            <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1 break-words">
+              {isCompanyRegistered
+                ? `${companyProfile.bairro} · Resp.: ${companyProfile.responsavel} · ${companyProfile.telefone}`
+                : 'Cadastre os dados gerais da empresa e publique buscas por função e número de vagas.'}
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-4 sm:gap-6 shrink-0">
@@ -853,14 +869,25 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                         key={app.id}
                         className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4"
                       >
-                        <div>
-                          <h3 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
-                            {app.workerName || 'Colaborador interessado'}
-                          </h3>
-                          <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mt-0.5">
-                            Vaga: <strong className="text-[#111827] dark:text-[#F8FAFC]">{relatedJob.funcao}</strong> ·{' '}
-                            {relatedJob.companyName} · {relatedJob.bairro} · Enviada em {app.appliedAt}
-                          </p>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <ProfileAvatar
+                            name={app.workerName || 'Colaborador'}
+                            photoUrl={
+                              workers.find((w) => w.id === app.workerId)?.fotoPerfilUrl
+                            }
+                            entityType="worker"
+                            size="md"
+                            testId={`employer-application-avatar-${app.id}`}
+                          />
+                          <div className="min-w-0">
+                            <h3 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
+                              {app.workerName || 'Colaborador interessado'}
+                            </h3>
+                            <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mt-0.5">
+                              Vaga: <strong className="text-[#111827] dark:text-[#F8FAFC]">{relatedJob.funcao}</strong> ·{' '}
+                              {relatedJob.companyName} · {relatedJob.bairro} · Enviada em {app.appliedAt}
+                            </p>
+                          </div>
                         </div>
 
                         {canOpenChat ? (
@@ -961,6 +988,16 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
           </p>
 
           <form onSubmit={handleCompanySubmit} className="mt-6 space-y-4">
+            <ProfilePhotoField
+              name={companyForm.nomeFantasia || 'Construtora'}
+              photoUrl={companyForm.fotoPerfilUrl}
+              entityType="company"
+              testIdPrefix="company"
+              onChangePhotoUrl={(nextUrl) =>
+                setCompanyForm({ ...companyForm, fotoPerfilUrl: nextUrl })
+              }
+            />
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label
@@ -1396,13 +1433,22 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                   >
                     <div>
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
-                            {worker.nomeCompleto}
-                          </h3>
-                          <p className="text-sm font-medium text-[#C93B1E] dark:text-[#F06449]">
-                            {worker.funcaoPrincipal}
-                          </p>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <ProfileAvatar
+                            name={worker.nomeCompleto}
+                            photoUrl={worker.fotoPerfilUrl}
+                            entityType="worker"
+                            size="md"
+                            testId={`worker-directory-avatar-${worker.id}`}
+                          />
+                          <div className="min-w-0">
+                            <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
+                              {worker.nomeCompleto}
+                            </h3>
+                            <p className="text-sm font-medium text-[#C93B1E] dark:text-[#F06449]">
+                              {worker.funcaoPrincipal}
+                            </p>
+                          </div>
                         </div>
                         <span className="text-xs font-medium text-[#4B5563] dark:text-[#94A3B8] whitespace-nowrap shrink-0">
                           {worker.disponibilidade}

@@ -7,6 +7,7 @@ import {
   type SafetyLeaderboardEntry,
   type WorkerSafetyQuizStats,
 } from '../utils/safetyTips';
+import { ProfileAvatar } from './ProfileAvatar';
 
 interface SafetyLeaderboardCardProps {
   workerProfile: WorkerProfile;
@@ -158,13 +159,22 @@ export const SafetyLeaderboardCard: React.FC<SafetyLeaderboardCardProps> = ({
                 </span>
               </div>
 
-              <div className="min-w-0">
-                <h3 className="font-display text-sm sm:text-base font-bold text-[#111827] dark:text-[#F8FAFC] truncate">
-                  {entry.name}
-                </h3>
-                <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] truncate mt-0.5">
-                  {entry.role} · {entry.neighborhood}
-                </p>
+              <div className="flex items-center gap-3 min-w-0">
+                <ProfileAvatar
+                  name={entry.name}
+                  photoUrl={entry.isCurrentUser ? workerProfile.fotoPerfilUrl : undefined}
+                  entityType="worker"
+                  size="sm"
+                  testId={`safety-leaderboard-avatar-${entry.rank}`}
+                />
+                <div className="min-w-0">
+                  <h3 className="font-display text-sm sm:text-base font-bold text-[#111827] dark:text-[#F8FAFC] truncate">
+                    {entry.name}
+                  </h3>
+                  <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] truncate mt-0.5">
+                    {entry.role} · {entry.neighborhood}
+                  </p>
+                </div>
               </div>
 
               <div className="pt-2.5 border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-2 text-xs text-[#374151] dark:text-[#CBD5E1] tabular-nums">

@@ -30,12 +30,15 @@ import {
   toLocalDateTimeInputValue,
 } from '../utils/workReminders';
 
+import { ProfileAvatar } from './ProfileAvatar';
+
 interface ApplicationChatModalProps {
   isOpen: boolean;
   viewerRole: UserRole;
   application: JobApplication | null;
   job: JobPosting | null;
   companyName: string;
+  counterpartPhotoUrl?: string | null;
   messages: ChatMessage[];
   activeReminder?: WorkScheduleReminder | null;
   onSendMessage: (
@@ -58,6 +61,7 @@ export const ApplicationChatModal: React.FC<ApplicationChatModalProps> = ({
   application,
   job,
   companyName,
+  counterpartPhotoUrl = null,
   messages,
   activeReminder = null,
   onSendMessage,
@@ -237,20 +241,29 @@ export const ApplicationChatModal: React.FC<ApplicationChatModalProps> = ({
 
         {/* Header */}
         <div className="px-4 sm:px-6 pt-3 sm:pt-5 pb-3.5 border-b border-[#E5E7EB] dark:border-[#1E293B] flex items-start justify-between gap-3 shrink-0">
-          <div className="min-w-0 flex-1 overflow-hidden">
-            <div className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-[#047857] dark:text-[#34D399]">
-              <MessageSquare className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">Chat liberado · Candidatura aceita</span>
+          <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+            <ProfileAvatar
+              name={counterpartName}
+              photoUrl={counterpartPhotoUrl}
+              entityType={viewerRole === 'contratante' ? 'worker' : 'company'}
+              size="md"
+              testId="chat-counterpart-avatar"
+            />
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="flex items-center gap-1.5 min-w-0 text-xs font-semibold text-[#047857] dark:text-[#34D399]">
+                <MessageSquare className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                <span className="truncate">Chat liberado · Candidatura aceita</span>
+              </div>
+              <h2
+                id="application-chat-title"
+                className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] mt-0.5 truncate"
+              >
+                {counterpartName}
+              </h2>
+              <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] truncate">
+                {counterpartRoleLabel} · Vaga: {job.funcao} · {job.bairro}
+              </p>
             </div>
-            <h2
-              id="application-chat-title"
-              className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] mt-0.5 truncate"
-            >
-              {counterpartName}
-            </h2>
-            <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] truncate">
-              {counterpartRoleLabel} · Vaga: {job.funcao} · {job.bairro}
-            </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">

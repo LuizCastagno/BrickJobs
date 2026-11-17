@@ -330,6 +330,7 @@ export default function App() {
           ? {
               ...j,
               companyName: profile.nomeFantasia,
+              companyPhotoUrl: profile.fotoPerfilUrl ?? '',
               telefoneContato: profile.telefone,
             }
           : j
@@ -1141,6 +1142,14 @@ export default function App() {
           state.companyProfile.nomeFantasia.trim() ||
           activeChatJob?.companyName ||
           ''
+        }
+        counterpartPhotoUrl={
+          activePortalRole === 'contratante'
+            ? allWorkers.find((w) => w.id === activeChatApplication?.workerId)
+                ?.fotoPerfilUrl
+            : activeChatJob?.companyId === state.companyProfile.id
+              ? state.companyProfile.fotoPerfilUrl
+              : activeChatJob?.companyPhotoUrl
         }
         messages={state.chatMessages}
         activeReminder={activeChatReminder}

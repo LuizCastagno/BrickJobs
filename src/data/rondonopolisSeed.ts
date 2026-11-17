@@ -531,6 +531,7 @@ export const EMPTY_COMPANY_PROFILE: CompanyProfile = {
   bairro: 'Centro',
   endereco: '',
   especialidade: 'Obras Residenciais e Comerciais',
+  fotoPerfilUrl: '',
   documentosAnexos: {},
   updatedAt: '',
 };
@@ -550,6 +551,7 @@ export const EMPTY_WORKER_PROFILE: WorkerProfile = {
   pdfCurriculo: null,
   experiencias: [],
   resumoProfissional: '',
+  fotoPerfilUrl: '',
   documentosAnexos: {},
   updatedAt: '',
 };

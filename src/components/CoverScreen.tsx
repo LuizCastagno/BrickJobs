@@ -28,6 +28,7 @@ import {
 import type { LgpdModalTab } from '../utils/lgpdConsent';
 import coverHeroImg from '../assets/images/brickjobs_cover_hero_1794693694488.jpg';
 import { BrickLogo } from './BrickLogo';
+import { LogoSuggestionSection } from './LogoSuggestionSection';
 
 interface CoverScreenProps {
   onSelectRole: (role: UserRole) => void;
@@ -657,6 +658,8 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
             </div>
           </div>
         </section>
+
+        <LogoSuggestionSection />
       </main>
 
       <footer className="bg-[#F4F5F7] dark:bg-[#0B1120] border-t border-[#E5E7EB] dark:border-[#1E293B] pb-safe">

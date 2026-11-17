@@ -31,6 +31,7 @@ export interface CompanyProfile {
   bairro: string;
   endereco: string;
   especialidade: string;
+  fotoPerfilUrl?: string;
   documentosAnexos?: RequiredDocumentsMap;
   updatedAt: string;
 }
@@ -46,6 +47,7 @@ export interface JobPosting {
   id: string;
   companyId: string;
   companyName: string;
+  companyPhotoUrl?: string;
   funcao: string;
   quantidadeVagas: number;
   bairro: string;
@@ -97,6 +99,7 @@ export interface WorkerProfile {
   pdfCurriculo: PdfResume | null;
   experiencias: WorkExperience[];
   resumoProfissional: string;
+  fotoPerfilUrl?: string;
   documentosAnexos?: RequiredDocumentsMap;
   updatedAt: string;
 }

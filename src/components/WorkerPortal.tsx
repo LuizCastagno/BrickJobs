@@ -103,6 +103,8 @@ import {
 import { CareerTipsCard } from './CareerTipsCard';
 import { LocationRegionBar } from './LocationRegionBar';
 import { NativePushPermissionCard } from './NativePushPermissionCard';
+import { ProfileAvatar } from './ProfileAvatar';
+import { ProfilePhotoField } from './ProfilePhotoField';
 import { RainAlertsPanel } from './RainAlertsPanel';
 import { RequiredDocumentsSection } from './RequiredDocumentsSection';
 import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
@@ -1238,13 +1240,22 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                       >
                     <div>
                       <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
-                            {job.funcao}
-                          </h3>
-                          <p className="text-sm font-medium text-[#4B5563] dark:text-[#94A3B8] break-words">
-                            {job.companyName}
-                          </p>
+                        <div className="flex items-start gap-3 min-w-0">
+                          <ProfileAvatar
+                            name={job.companyName}
+                            photoUrl={job.companyPhotoUrl}
+                            entityType="company"
+                            size="md"
+                            className="mt-0.5"
+                            testId={`job-company-avatar-${job.id}`}
+                          />
+                          <div className="min-w-0">
+                            <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
+                              {job.funcao}
+                            </h3>
+                            <p className="text-sm font-medium text-[#4B5563] dark:text-[#94A3B8] break-words">
+                              {job.companyName}
+                            </p>
                           <p
                             className="mt-1 text-xs text-[#4B5563] dark:text-[#94A3B8] inline-flex items-center gap-1.5 tabular-nums"
                             data-testid={`job-company-rating-${job.id}`}
@@ -1273,6 +1284,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                                 : 'Sem avaliações ainda'}
                             </span>
                           </p>
+                          </div>
                         </div>
                         <div className="text-right shrink-0">
                           <span className="font-display text-lg font-bold text-[#C93B1E] dark:text-[#F06449] tabular-nums">
@@ -1439,6 +1451,18 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
               Esses dados formam a identificação do seu perfil profissional para as construtoras.
             </p>
+
+            <div className="mt-5">
+              <ProfilePhotoField
+                name={form.nomeCompleto || 'Trabalhador BrickJobs'}
+                photoUrl={form.fotoPerfilUrl}
+                entityType="worker"
+                testIdPrefix="worker"
+                onChangePhotoUrl={(nextUrl) =>
+                  setForm({ ...form, fotoPerfilUrl: nextUrl })
+                }
+              />
+            </div>
 
             <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -2156,23 +2180,32 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 {/* Profile Header */}
                 <div className="p-5 sm:p-6 border-b border-[#E5E7EB] dark:border-[#1E293B]">
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
-                        Perfil Profissional Gerado · {workerProfile.disponibilidade}
-                      </p>
-                      <h2 className="font-display text-2xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
-                        {workerProfile.nomeCompleto}
-                      </h2>
-                      <p className="text-base font-medium text-[#374151] dark:text-[#CBD5E1]">
-                        {workerProfile.funcaoPrincipal}
-                      </p>
-                      <div className="mt-2 text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8] flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-y-0.5 sm:gap-x-3">
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
-                          Bairro {workerProfile.bairro}, {workerProfile.cidade}
-                        </span>
-                        <span className="hidden sm:inline" aria-hidden="true">·</span>
-                        <span>Região de interesse: {workerProfile.regiaoInteresse}</span>
+                    <div className="flex items-start gap-4 min-w-0">
+                      <ProfileAvatar
+                        name={workerProfile.nomeCompleto}
+                        photoUrl={workerProfile.fotoPerfilUrl}
+                        entityType="worker"
+                        size="xl"
+                        testId="worker-profile-avatar"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
+                          Perfil Profissional Gerado · {workerProfile.disponibilidade}
+                        </p>
+                        <h2 className="font-display text-2xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
+                          {workerProfile.nomeCompleto}
+                        </h2>
+                        <p className="text-base font-medium text-[#374151] dark:text-[#CBD5E1]">
+                          {workerProfile.funcaoPrincipal}
+                        </p>
+                        <div className="mt-2 text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8] flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-y-0.5 sm:gap-x-3">
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                            Bairro {workerProfile.bairro}, {workerProfile.cidade}
+                          </span>
+                          <span className="hidden sm:inline" aria-hidden="true">·</span>
+                          <span>Região de interesse: {workerProfile.regiaoInteresse}</span>
+                        </div>
                       </div>
                     </div>
 

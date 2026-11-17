@@ -19,6 +19,10 @@ export function loadBrickJobsState(): BrickJobsAppState {
       companyProfile: {
         ...DEFAULT_APP_STATE.companyProfile,
         ...(parsed.companyProfile ?? {}),
+        fotoPerfilUrl:
+          typeof parsed.companyProfile?.fotoPerfilUrl === 'string'
+            ? parsed.companyProfile.fotoPerfilUrl
+            : '',
         sexoResponsavel: normalizeRegistrantSex(
           parsed.companyProfile?.sexoResponsavel
         ),
@@ -29,6 +33,10 @@ export function loadBrickJobsState(): BrickJobsAppState {
       workerProfile: {
         ...DEFAULT_APP_STATE.workerProfile,
         ...(parsed.workerProfile ?? {}),
+        fotoPerfilUrl:
+          typeof parsed.workerProfile?.fotoPerfilUrl === 'string'
+            ? parsed.workerProfile.fotoPerfilUrl
+            : '',
         sexo: normalizeRegistrantSex(parsed.workerProfile?.sexo),
         documentosAnexos: sanitizeRequiredDocumentsMap(
           parsed.workerProfile?.documentosAnexos
