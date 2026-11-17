@@ -101,6 +101,7 @@ export interface WorkerProfile {
   resumoProfissional: string;
   fotoPerfilUrl?: string;
   documentosAnexos?: RequiredDocumentsMap;
+  categoriasNotificacao?: string[];
   updatedAt: string;
 }
 

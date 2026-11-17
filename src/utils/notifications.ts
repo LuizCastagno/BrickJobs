@@ -2,11 +2,58 @@ import type { JobPosting, WorkerNotification } from '../types/brickjobs';
 
 const ALL_REGIONS = 'Toda Rondonópolis e Região';
 
+export function isJobMatchingWorkerCategories(
+  job: JobPosting,
+  preferredCategories?: string[]
+): boolean {
+  if (!preferredCategories || preferredCategories.length === 0) {
+    return true;
+  }
+
+  const cleanCategories = preferredCategories
+    .map((c) => c.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (cleanCategories.length === 0) {
+    return true;
+  }
+
+  const jobFuncaoNorm = job.funcao.trim().toLowerCase();
+  const jobTagsNorm = (job.skillTags ?? []).map((t) => t.trim().toLowerCase());
+  const jobDescNorm = job.descricao.trim().toLowerCase();
+
+  return cleanCategories.some((cat) => {
+    if (
+      jobFuncaoNorm === cat ||
+      jobFuncaoNorm.includes(cat) ||
+      cat.includes(jobFuncaoNorm)
+    ) {
+      return true;
+    }
+
+    if (jobTagsNorm.some((tag) => tag.includes(cat) || cat.includes(tag))) {
+      return true;
+    }
+
+    const root = cat.replace(/ (predial|de obras|civil|\/.*)$/i, '').trim();
+    if (root.length >= 4 && (jobFuncaoNorm.includes(root) || jobDescNorm.includes(root))) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
 export function shouldNotifyWorkerForNewJob(
   job: JobPosting,
-  workerRegion: string
+  workerRegion: string,
+  preferredCategories?: string[]
 ): boolean {
   if (job.status !== 'aberta') return false;
+
+  if (!isJobMatchingWorkerCategories(job, preferredCategories)) {
+    return false;
+  }
 
   const normalizedWorkerRegion = workerRegion.trim().toLowerCase();
   if (!normalizedWorkerRegion || normalizedWorkerRegion === ALL_REGIONS.toLowerCase()) {

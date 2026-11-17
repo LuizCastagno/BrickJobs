@@ -351,7 +351,11 @@ export default function App() {
       state.workerProfile.nomeCompleto.trim() && state.workerProfile.regiaoInteresse
         ? state.workerProfile.regiaoInteresse
         : state.selectedRegion;
-    const shouldNotify = shouldNotifyWorkerForNewJob(newJob, targetRegion);
+    const shouldNotify = shouldNotifyWorkerForNewJob(
+      newJob,
+      targetRegion,
+      state.workerProfile.categoriasNotificacao
+    );
     const createdNotif = shouldNotify ? createNewJobNotification(newJob) : null;
 
     if (createdNotif) {

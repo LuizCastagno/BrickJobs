@@ -553,6 +553,7 @@ export const EMPTY_WORKER_PROFILE: WorkerProfile = {
   resumoProfissional: '',
   fotoPerfilUrl: '',
   documentosAnexos: {},
+  categoriasNotificacao: [],
   updatedAt: '',
 };
 

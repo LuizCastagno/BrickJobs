@@ -44,6 +44,11 @@ export function loadBrickJobsState(): BrickJobsAppState {
         experiencias: Array.isArray(parsed.workerProfile?.experiencias)
           ? parsed.workerProfile.experiencias
           : DEFAULT_APP_STATE.workerProfile.experiencias,
+        categoriasNotificacao: Array.isArray(parsed.workerProfile?.categoriasNotificacao)
+          ? parsed.workerProfile.categoriasNotificacao.filter(
+              (item): item is string => typeof item === 'string' && item.trim().length > 0
+            )
+          : DEFAULT_APP_STATE.workerProfile.categoriasNotificacao ?? [],
       },
       jobs:
         Array.isArray(parsed.jobs) && parsed.jobs.length > 0

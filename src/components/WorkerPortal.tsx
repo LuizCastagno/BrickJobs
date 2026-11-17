@@ -241,6 +241,9 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
       workerProfile.experiencias.length > 0
         ? workerProfile.experiencias
         : [createBlankExperience()],
+    categoriasNotificacao: Array.isArray(workerProfile.categoriasNotificacao)
+      ? workerProfile.categoriasNotificacao
+      : [],
   }));
   const [activeExpIndex, setActiveExpIndex] = useState<number>(0);
   const [formError, setFormError] = useState<string>('');
@@ -604,6 +607,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
       resumoProfissional: form.resumoProfissional.trim(),
       experiencias: sanitizedExperiences,
       documentosAnexos: form.documentosAnexos ?? {},
+      categoriasNotificacao: form.categoriasNotificacao ?? [],
       updatedAt: new Date().toISOString().slice(0, 10),
     };
 
@@ -2124,6 +2128,125 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             }}
           />
 
+          {/* 4. Categorias de interesse para notificações de vagas */}
+          <section
+            aria-labelledby="worker-notifications-categories-title"
+            data-testid="worker-notification-categories-section"
+            className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-6"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-[#E5E7EB] dark:border-[#1E293B]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <BellRing className="w-5 h-5 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                  <h2
+                    id="worker-notifications-categories-title"
+                    className="font-display text-xl font-bold text-[#111827] dark:text-[#F8FAFC]"
+                  >
+                    4. Preferências de notificações de vagas
+                  </h2>
+                </div>
+                <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1 leading-relaxed">
+                  Selecione as funções da construção civil sobre as quais deseja ser avisado quando surgirem novas oportunidades em Rondonópolis.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span
+                  data-testid="worker-notif-categories-count"
+                  className="px-2.5 py-1 rounded-full text-xs font-semibold bg-[#F3F4F6] dark:bg-[#1E293B] text-[#374151] dark:text-[#CBD5E1]"
+                >
+                  {(form.categoriasNotificacao ?? []).length === 0
+                    ? 'Todas ativas (sem filtro)'
+                    : `${form.categoriasNotificacao?.length} selecionada${
+                        form.categoriasNotificacao?.length === 1 ? '' : 's'
+                      }`}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#F9FAFB] dark:bg-[#0F172A] p-3.5 rounded-xl border border-[#E5E7EB] dark:border-[#1E293B]">
+              <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] leading-relaxed">
+                {(form.categoriasNotificacao ?? []).length === 0
+                  ? 'Nenhuma categoria restrita: você receberá alertas de todas as vagas abertas na sua região.'
+                  : 'Filtro ativo: apenas vagas nas categorias marcadas abaixo dispararão alertas para você.'}
+              </p>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      categoriasNotificacao: [...CONSTRUCTION_ROLES],
+                    }))
+                  }
+                  data-testid="worker-notif-select-all"
+                  className="min-h-[36px] px-3 py-1.5 rounded-lg border border-[#D1D5DB] dark:border-[#334155] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] hover:bg-white dark:hover:bg-[#1E293B] cursor-pointer"
+                >
+                  Selecionar todas
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      categoriasNotificacao: [],
+                    }))
+                  }
+                  data-testid="worker-notif-clear-all"
+                  className="min-h-[36px] px-3 py-1.5 rounded-lg border border-[#FECACA] dark:border-[#7F1D1D] text-xs font-semibold text-[#B91C1C] dark:text-[#FCA5A5] hover:bg-[#FEF2F2] dark:hover:bg-[#7F1D1D]/30 cursor-pointer"
+                >
+                  Limpar (todas ativas)
+                </button>
+              </div>
+            </div>
+
+            <div
+              role="group"
+              aria-label="Categorias de construção para receber notificações"
+              className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5"
+            >
+              {CONSTRUCTION_ROLES.map((roleName) => {
+                const isSelected = (form.categoriasNotificacao ?? []).includes(roleName);
+                const roleSlug = roleName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                return (
+                  <button
+                    key={roleName}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={isSelected}
+                    data-testid={`worker-notif-category-${roleSlug}`}
+                    onClick={() => {
+                      setForm((prev) => {
+                        const current = prev.categoriasNotificacao ?? [];
+                        const next = current.includes(roleName)
+                          ? current.filter((r) => r !== roleName)
+                          : [...current, roleName];
+                        return { ...prev, categoriasNotificacao: next };
+                      });
+                    }}
+                    className={`min-h-[46px] p-3 rounded-xl border text-left flex items-center justify-between gap-2.5 transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-[#C93B1E] dark:border-[#F06449] bg-[#C93B1E]/10 dark:bg-[#C93B1E]/20 text-[#111827] dark:text-[#F8FAFC] font-semibold'
+                        : 'border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-[#374151] dark:text-[#CBD5E1] hover:border-[#9CA3AF] dark:hover:border-[#64748B]'
+                    }`}
+                  >
+                    <span className="text-xs sm:text-sm truncate">{roleName}</span>
+                    <span
+                      className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
+                        isSelected
+                          ? 'bg-[#C93B1E] border-[#C93B1E] text-white'
+                          : 'border-[#D1D5DB] dark:border-[#475569] bg-white dark:bg-[#1E293B]'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" aria-hidden="true" />}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
           {formError && (
             <p role="alert" data-testid="worker-form-error" className="text-sm font-semibold text-[#B91C1C] dark:text-[#F87171]">
               {formError}
@@ -2321,6 +2444,44 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         </li>
                       ))}
                   </ul>
+                </div>
+
+                {/* Notification Preferences Summary */}
+                <div
+                  className="p-5 sm:p-6 border-b border-[#E5E7EB] dark:border-[#1E293B]"
+                  data-testid="worker-profile-notification-preferences-summary"
+                >
+                  <div className="flex items-center gap-2">
+                    <BellRing className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+                    <h3 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
+                      Alertas de vagas configurados
+                    </h3>
+                  </div>
+                  {workerProfile.categoriasNotificacao &&
+                  workerProfile.categoriasNotificacao.length > 0 ? (
+                    <div className="mt-3">
+                      <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mb-2">
+                        Recebendo notificações filtradas para {workerProfile.categoriasNotificacao.length}{' '}
+                        {workerProfile.categoriasNotificacao.length === 1
+                          ? 'categoria selecionada'
+                          : 'categorias selecionadas'}:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {workerProfile.categoriasNotificacao.map((cat) => (
+                          <span
+                            key={cat}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[#F3F4F6] dark:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] border border-[#E5E7EB] dark:border-[#334155]"
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8]">
+                      Recebendo notificações para todas as categorias na região ({workerProfile.regiaoInteresse}).
+                    </p>
+                  )}
                 </div>
 
                 {/* Resume Mode Output: PDF or Generated Experiences */}

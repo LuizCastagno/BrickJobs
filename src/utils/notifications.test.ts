@@ -36,6 +36,37 @@ test('shouldNotifyWorkerForNewJob matches exact region or all regions for open j
   );
 });
 
+test('shouldNotifyWorkerForNewJob filters notifications by worker preferred categories', () => {
+  // Base job is "Pedreiro" in "Vila Aurora"
+  // When worker has selected 'Pedreiro'
+  assert.equal(
+    shouldNotifyWorkerForNewJob(baseJob, 'Vila Aurora', ['Pedreiro', 'Servente de Obras']),
+    true
+  );
+
+  // When worker selected only 'Eletricista Predial'
+  assert.equal(
+    shouldNotifyWorkerForNewJob(baseJob, 'Vila Aurora', ['Eletricista Predial']),
+    false
+  );
+
+  // When worker has empty or undefined preferences (receives all for their region)
+  assert.equal(shouldNotifyWorkerForNewJob(baseJob, 'Vila Aurora', []), true);
+  assert.equal(shouldNotifyWorkerForNewJob(baseJob, 'Vila Aurora', undefined), true);
+
+  // When category matches but region is outside
+  assert.equal(
+    shouldNotifyWorkerForNewJob(baseJob, 'Cidade Salmen', ['Pedreiro']),
+    false
+  );
+
+  // Case-insensitive / partial match
+  assert.equal(
+    shouldNotifyWorkerForNewJob(baseJob, 'Vila Aurora', ['pedreiro']),
+    true
+  );
+});
+
 test('notification creation and read-state transitions work cleanly', () => {
   const jobNotif = createNewJobNotification(baseJob, '2026-11-14T14:00:00Z');
   const acceptedNotif = createAcceptedApplicationNotification(baseJob, '2026-11-14T14:05:00Z');
