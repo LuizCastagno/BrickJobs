@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   countAttachedRequiredDocuments,
   formatRegistrantSexLabel,
+  getDocumentFieldErrorMessage,
   getResolvedDocumentRequirements,
+  isValidDocumentAttachment,
   normalizeRegistrantSex,
   sanitizeRequiredDocumentsMap,
   validateDocumentFile,
@@ -38,11 +40,41 @@ test('male registrants additionally require reservistaOuCdi', () => {
   assert.equal(maleReqs.find((r) => r.key === 'reservistaOuCdi')?.required, true);
 });
 
-test('validation fails when sex is not selected', () => {
+test('validation fails with missingSex and missing common document keys when sex is unselected', () => {
   const result = validateRequiredRegistrationDocuments('', {}, 'contratado');
   assert.equal(result.valid, false);
   if (!result.valid) {
+    assert.equal(result.missingSex, true);
+    assert.deepEqual(result.missingKeys, ['historicoCriminal', 'tituloEleitor']);
     assert.match(result.errorMessage, /Selecione o sexo/);
+  }
+});
+
+test('validation rejects empty or zero-byte document attachments', () => {
+  const invalidDocs: RequiredDocumentsMap = {
+    historicoCriminal: {
+      fileName: 'vazio.pdf',
+      fileSizeBytes: 0,
+      mimeType: 'application/pdf',
+      uploadedAt: '2026-11-17',
+      dataUrl: 'data:application/pdf;base64,',
+    },
+    tituloEleitor: {
+      fileName: '   ',
+      fileSizeBytes: 512,
+      mimeType: 'application/pdf',
+      uploadedAt: '2026-11-17',
+      dataUrl: '   ',
+    },
+  };
+  assert.equal(isValidDocumentAttachment(invalidDocs.historicoCriminal), false);
+  assert.equal(isValidDocumentAttachment(invalidDocs.tituloEleitor), false);
+
+  const result = validateRequiredRegistrationDocuments('feminino', invalidDocs, 'contratado');
+  assert.equal(result.valid, false);
+  if (!result.valid) {
+    assert.equal(result.missingSex, false);
+    assert.deepEqual(result.missingKeys, ['historicoCriminal', 'tituloEleitor']);
   }
 });
 
@@ -54,6 +86,7 @@ test('validation fails when male registrant is missing reservistaOuCdi even with
   const maleResult = validateRequiredRegistrationDocuments('masculino', docs, 'contratante');
   assert.equal(maleResult.valid, false);
   if (!maleResult.valid) {
+    assert.equal(maleResult.missingSex, false);
     assert.deepEqual(maleResult.missingKeys, ['reservistaOuCdi']);
     assert.match(maleResult.errorMessage, /Reservista/);
   }
@@ -130,11 +163,28 @@ test('validateDocumentFile checks file format and 1.5 MB limit', () => {
   );
 });
 
-test('normalizeRegistrantSex, formatRegistrantSexLabel, and sanitizeRequiredDocumentsMap handle malformed inputs', () => {
+test('normalizeRegistrantSex, formatRegistrantSexLabel, getDocumentFieldErrorMessage, and sanitizeRequiredDocumentsMap handle inputs cleanly', () => {
   assert.equal(normalizeRegistrantSex('masculino'), 'masculino');
   assert.equal(normalizeRegistrantSex('invalido'), '');
   assert.equal(formatRegistrantSexLabel('feminino'), 'Feminino');
   assert.equal(formatRegistrantSexLabel(''), 'Não informado');
+
+  assert.match(
+    getDocumentFieldErrorMessage({
+      key: 'reservistaOuCdi',
+      label: 'Reservista ou Certificado de Dispensa de Incorporação (CDI)',
+      audienceRule: 'masculino',
+    }),
+    /Obrigatório para homens/
+  );
+  assert.match(
+    getDocumentFieldErrorMessage({
+      key: 'tituloEleitor',
+      label: 'Título de eleitor',
+      audienceRule: 'ambos',
+    }),
+    /Campo obrigatório/
+  );
 
   const sanitized = sanitizeRequiredDocumentsMap({
     historicoCriminal: sampleDoc('ok.pdf'),

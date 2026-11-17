@@ -98,6 +98,28 @@ export function formatRegistrantSexLabel(sex?: string | null): string {
   }
 }
 
+export function isValidDocumentAttachment(
+  attachment?: DocumentAttachment | null
+): boolean {
+  return Boolean(
+    attachment &&
+      typeof attachment.fileName === 'string' &&
+      attachment.fileName.trim().length > 0 &&
+      typeof attachment.dataUrl === 'string' &&
+      attachment.dataUrl.trim().length > 0 &&
+      Number(attachment.fileSizeBytes) > 0
+  );
+}
+
+export function getDocumentFieldErrorMessage(
+  spec: Pick<RequiredDocumentSpec, 'key' | 'label' | 'audienceRule'>
+): string {
+  if (spec.audienceRule === 'masculino') {
+    return `Obrigatório para homens: anexe o ${spec.label} antes de enviar.`;
+  }
+  return `Campo obrigatório: anexe o ${spec.label} antes de enviar.`;
+}
+
 export function sanitizeRequiredDocumentsMap(
   raw?: RequiredDocumentsMap | null
 ): RequiredDocumentsMap {
@@ -113,11 +135,12 @@ export function sanitizeRequiredDocumentsMap(
       typeof item.fileName === 'string' &&
       item.fileName.trim() &&
       typeof item.dataUrl === 'string' &&
-      item.dataUrl.trim()
+      item.dataUrl.trim() &&
+      Number(item.fileSizeBytes) > 0
     ) {
       clean[spec.key] = {
         fileName: item.fileName,
-        fileSizeBytes: Number(item.fileSizeBytes) || 0,
+        fileSizeBytes: Number(item.fileSizeBytes),
         mimeType: item.mimeType || 'application/pdf',
         uploadedAt: item.uploadedAt || '',
         dataUrl: item.dataUrl,
@@ -180,8 +203,8 @@ export function countAttachedRequiredDocuments(
 ): { attachedCount: number; totalRequired: number; isComplete: boolean } {
   const resolved = getResolvedDocumentRequirements(sex, docs);
   const requiredItems = resolved.filter((item) => item.required);
-  const attachedCount = requiredItems.filter(
-    (item) => Boolean(item.attachment?.dataUrl)
+  const attachedCount = requiredItems.filter((item) =>
+    isValidDocumentAttachment(item.attachment)
   ).length;
   const totalRequired = requiredItems.length;
 
@@ -231,14 +254,27 @@ export function validateDocumentFile(file: {
   return { ok: true };
 }
 
+export type RequiredDocumentsValidationResult =
+  | { valid: true }
+  | {
+      valid: false;
+      missingSex: boolean;
+      missingKeys: RequiredDocumentKey[];
+      errorMessage: string;
+    };
+
 export function validateRequiredRegistrationDocuments(
   sex?: RegistrantSex | '' | null,
   docs?: RequiredDocumentsMap | null,
   categoryLabel: 'contratante' | 'contratado' = 'contratado'
-):
-  | { valid: true }
-  | { valid: false; missingKeys: RequiredDocumentKey[]; errorMessage: string } {
+): RequiredDocumentsValidationResult {
   const normalizedSex = normalizeRegistrantSex(sex);
+  const resolved = getResolvedDocumentRequirements(normalizedSex, docs);
+  const missing = resolved.filter(
+    (item) => item.required && !isValidDocumentAttachment(item.attachment)
+  );
+  const missingKeys = missing.map((m) => m.key);
+
   if (!normalizedSex) {
     const personLabel =
       categoryLabel === 'contratante'
@@ -246,21 +282,18 @@ export function validateRequiredRegistrationDocuments(
         : 'do profissional';
     return {
       valid: false,
-      missingKeys: [],
-      errorMessage: `Selecione o sexo ${personLabel} para validar os documentos obrigatórios.`,
+      missingSex: true,
+      missingKeys,
+      errorMessage: `Selecione o sexo ${personLabel} e anexe os documentos obrigatórios antes de enviar.`,
     };
   }
-
-  const resolved = getResolvedDocumentRequirements(normalizedSex, docs);
-  const missing = resolved.filter(
-    (item) => item.required && !item.attachment?.dataUrl
-  );
 
   if (missing.length > 0) {
     const names = missing.map((m) => m.label).join(', ');
     return {
       valid: false,
-      missingKeys: missing.map((m) => m.key),
+      missingSex: false,
+      missingKeys,
       errorMessage: `Anexe todos os documentos obrigatórios antes de salvar: ${names}.`,
     };
   }

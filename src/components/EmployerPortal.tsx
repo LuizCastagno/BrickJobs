@@ -30,6 +30,7 @@ import type {
   ExperienceLevel,
   JobApplication,
   JobPosting,
+  RequiredDocumentKey,
   WorkerProfile,
 } from '../types/brickjobs';
 import { countUnreadMessagesForApplication } from '../utils/chat';
@@ -53,6 +54,7 @@ import {
 } from '../utils/motionPresets';
 import {
   REGISTRANT_SEX_OPTIONS,
+  isValidDocumentAttachment,
   validateRequiredRegistrationDocuments,
 } from '../utils/requiredDocuments';
 import { EmployerMonthlyDashboard } from './EmployerMonthlyDashboard';
@@ -109,6 +111,10 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
   const [companyForm, setCompanyForm] = useState<CompanyProfile>(companyProfile);
   const [companyError, setCompanyError] = useState('');
   const [companySavedMsg, setCompanySavedMsg] = useState('');
+  const [companyMissingDocKeys, setCompanyMissingDocKeys] = useState<
+    RequiredDocumentKey[]
+  >([]);
+  const [companySexError, setCompanySexError] = useState(false);
 
   // Job posting form state
   const [selectedRoleOption, setSelectedRoleOption] = useState<string>('Pedreiro');
@@ -197,21 +203,35 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
     });
   }, [workers, selectedRegion, workerSearch]);
 
+  const focusControlBySelector = (selector: string) => {
+    if (typeof document === 'undefined') return;
+    const el = document.querySelector<HTMLElement>(selector);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus({ preventScroll: true });
+    }
+  };
+
   const handleCompanySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setCompanyError('');
     setCompanySavedMsg('');
+    setCompanyMissingDocKeys([]);
+    setCompanySexError(false);
 
     if (!companyForm.nomeFantasia.trim()) {
       setCompanyError('Informe o nome fantasia ou nome da construtora.');
+      focusControlBySelector('#comp-nome-fantasia');
       return;
     }
     if (!companyForm.responsavel.trim()) {
       setCompanyError('Informe o nome do responsável pelo contato.');
+      focusControlBySelector('#comp-responsavel');
       return;
     }
     if (!companyForm.telefone.trim()) {
       setCompanyError('Informe um telefone ou WhatsApp para contato.');
+      focusControlBySelector('#comp-telefone');
       return;
     }
 
@@ -221,7 +241,16 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
       'contratante'
     );
     if (!docsValidation.valid) {
+      setCompanySexError(docsValidation.missingSex);
+      setCompanyMissingDocKeys(docsValidation.missingKeys);
       setCompanyError(docsValidation.errorMessage);
+      if (docsValidation.missingSex) {
+        focusControlBySelector('#comp-sexo-responsavel');
+      } else if (docsValidation.missingKeys[0]) {
+        focusControlBySelector(
+          `[data-testid="doc-trigger-contratante-${docsValidation.missingKeys[0]}"]`
+        );
+      }
       return;
     }
 
@@ -1023,15 +1052,27 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                 <select
                   id="comp-sexo-responsavel"
                   data-testid="company-sex-select"
+                  aria-invalid={companySexError || undefined}
                   value={companyForm.sexoResponsavel ?? ''}
                   onChange={(e) => {
+                    const nextSex = e.target.value as CompanyProfile['sexoResponsavel'];
                     setCompanyError('');
+                    setCompanySexError(false);
+                    if (nextSex !== 'masculino') {
+                      setCompanyMissingDocKeys((prev) =>
+                        prev.filter((k) => k !== 'reservistaOuCdi')
+                      );
+                    }
                     setCompanyForm({
                       ...companyForm,
-                      sexoResponsavel: e.target.value as CompanyProfile['sexoResponsavel'],
+                      sexoResponsavel: nextSex,
                     });
                   }}
-                  className={inputClass}
+                  className={`${inputClass} ${
+                    companySexError
+                      ? '!border-[#DC2626] dark:!border-[#F87171]'
+                      : ''
+                  }`}
                 >
                   <option value="">Selecione...</option>
                   {REGISTRANT_SEX_OPTIONS.map((opt) => (
@@ -1040,6 +1081,15 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                     </option>
                   ))}
                 </select>
+                {companySexError && (
+                  <p
+                    role="alert"
+                    data-testid="company-sex-error"
+                    className="mt-1 text-xs font-semibold text-[#B91C1C] dark:text-[#F87171]"
+                  >
+                    Selecione o sexo do responsável antes de enviar.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1150,14 +1200,19 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
               category="contratante"
               sex={companyForm.sexoResponsavel ?? ''}
               documents={companyForm.documentosAnexos ?? {}}
+              missingKeys={companyMissingDocKeys}
+              missingSex={companySexError}
               onChangeDocuments={(next) => {
                 setCompanyError('');
+                setCompanyMissingDocKeys((prev) =>
+                  prev.filter((key) => !isValidDocumentAttachment(next[key]))
+                );
                 setCompanyForm({ ...companyForm, documentosAnexos: next });
               }}
             />
 
             {companyError && (
-              <p role="alert" className="text-sm font-medium text-[#B91C1C] dark:text-[#F87171]">
+              <p role="alert" data-testid="company-form-error" className="text-sm font-semibold text-[#B91C1C] dark:text-[#F87171]">
                 {companyError}
               </p>
             )}

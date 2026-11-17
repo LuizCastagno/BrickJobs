@@ -33,6 +33,7 @@ import type {
   CompanyRating,
   JobApplication,
   JobPosting,
+  RequiredDocumentKey,
   WorkExperience,
   WorkerNotification,
   WorkerProfile,
@@ -106,6 +107,7 @@ import { WorkerProductivityPanel } from './WorkerProductivityPanel';
 import {
   formatRegistrantSexLabel,
   getResolvedDocumentRequirements,
+  isValidDocumentAttachment,
   REGISTRANT_SEX_OPTIONS,
   validateRequiredRegistrationDocuments,
 } from '../utils/requiredDocuments';
@@ -233,6 +235,8 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   }));
   const [activeExpIndex, setActiveExpIndex] = useState<number>(0);
   const [formError, setFormError] = useState<string>('');
+  const [missingDocKeys, setMissingDocKeys] = useState<RequiredDocumentKey[]>([]);
+  const [sexMissingError, setSexMissingError] = useState<boolean>(false);
   const [imgFailed, setImgFailed] = useState<boolean>(false);
   const pdfInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -393,16 +397,29 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const focusWorkerControl = (selector: string) => {
+    if (typeof document === 'undefined') return;
+    const el = document.querySelector<HTMLElement>(selector);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus({ preventScroll: true });
+    }
+  };
+
   const handleSaveWorker = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
+    setMissingDocKeys([]);
+    setSexMissingError(false);
 
     if (!form.nomeCompleto.trim()) {
       setFormError('Informe seu nome completo.');
+      focusWorkerControl('#worker-nome');
       return;
     }
     if (!form.telefone.trim()) {
       setFormError('Informe seu telefone ou WhatsApp para contato das construtoras.');
+      focusWorkerControl('#worker-telefone');
       return;
     }
 
@@ -442,7 +459,16 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
       'contratado'
     );
     if (!docsValidation.valid) {
+      setSexMissingError(docsValidation.missingSex);
+      setMissingDocKeys(docsValidation.missingKeys);
       setFormError(docsValidation.errorMessage);
+      if (docsValidation.missingSex) {
+        focusWorkerControl('#worker-sexo');
+      } else if (docsValidation.missingKeys[0]) {
+        focusWorkerControl(
+          `[data-testid="doc-trigger-contratado-${docsValidation.missingKeys[0]}"]`
+        );
+      }
       return;
     }
 
@@ -1322,15 +1348,27 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 <select
                   id="worker-sexo"
                   data-testid="worker-sex-select"
+                  aria-invalid={sexMissingError || undefined}
                   value={form.sexo ?? ''}
                   onChange={(e) => {
+                    const nextSex = e.target.value as WorkerProfile['sexo'];
                     setFormError('');
+                    setSexMissingError(false);
+                    if (nextSex !== 'masculino') {
+                      setMissingDocKeys((prev) =>
+                        prev.filter((k) => k !== 'reservistaOuCdi')
+                      );
+                    }
                     setForm({
                       ...form,
-                      sexo: e.target.value as WorkerProfile['sexo'],
+                      sexo: nextSex,
                     });
                   }}
-                  className={inputClass}
+                  className={`${inputClass} ${
+                    sexMissingError
+                      ? '!border-[#DC2626] dark:!border-[#F87171]'
+                      : ''
+                  }`}
                 >
                   <option value="">Selecione...</option>
                   {REGISTRANT_SEX_OPTIONS.map((opt) => (
@@ -1339,6 +1377,15 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     </option>
                   ))}
                 </select>
+                {sexMissingError && (
+                  <p
+                    role="alert"
+                    data-testid="worker-sex-error"
+                    className="mt-1 text-xs font-semibold text-[#B91C1C] dark:text-[#F87171]"
+                  >
+                    Selecione seu sexo antes de enviar.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1862,14 +1909,19 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             sectionTitle="3. Documentos necessários para anexo"
             sex={form.sexo ?? ''}
             documents={form.documentosAnexos ?? {}}
+            missingKeys={missingDocKeys}
+            missingSex={sexMissingError}
             onChangeDocuments={(next) => {
               setFormError('');
+              setMissingDocKeys((prev) =>
+                prev.filter((key) => !isValidDocumentAttachment(next[key]))
+              );
               setForm((prev) => ({ ...prev, documentosAnexos: next }));
             }}
           />
 
           {formError && (
-            <p role="alert" className="text-sm font-semibold text-[#B91C1C] dark:text-[#F87171]">
+            <p role="alert" data-testid="worker-form-error" className="text-sm font-semibold text-[#B91C1C] dark:text-[#F87171]">
               {formError}
             </p>
           )}
