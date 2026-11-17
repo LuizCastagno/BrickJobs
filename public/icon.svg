@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bj-bg" x1="64" y1="32" x2="448" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D9482B" />
+      <stop offset="100%" stop-color="#A82C14" />
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#bj-bg)" />
+  <rect x="34" y="34" width="444" height="444" rx="98" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="4" />
+
+  <!-- Top row bricks -->
+  <rect x="116" y="136" width="132" height="62" rx="14" fill="#FFFFFF" />
+  <rect x="264" y="136" width="132" height="62" rx="14" fill="#F59E0B" />
+
+  <!-- Middle row bricks (offset architectural bond) -->
+  <rect x="116" y="218" width="66" height="62" rx="14" fill="#FFFFFF" fill-opacity="0.92" />
+  <rect x="198" y="218" width="132" height="62" rx="14" fill="#FFFFFF" />
+  <rect x="346" y="218" width="50" height="62" rx="14" fill="#FFFFFF" fill-opacity="0.92" />
+
+  <!-- Bottom row bricks -->
+  <rect x="116" y="300" width="132" height="62" rx="14" fill="#FFFFFF" />
+  <rect x="264" y="300" width="132" height="62" rx="14" fill="#FFFFFF" />
+</svg>

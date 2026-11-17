@@ -110,6 +110,7 @@ export interface JobApplication {
   workerName: string;
   appliedAt: string;
   status: ApplicationStatus;
+  completedAt?: string;
 }
 
 export interface CompanyRating {

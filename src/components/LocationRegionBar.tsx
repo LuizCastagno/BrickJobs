@@ -3,12 +3,15 @@ import { LocateFixed, MapPin, Mic, Search, Square, X } from 'lucide-react';
 import { RONDONOPOLIS_REGIONS } from '../data/rondonopolisSeed';
 import { resolveNearestRondonopolisRegion } from '../utils/duration';
 import {
-  calculateDistanceKm,
+  buildProximityFilterFromCoords,
   MAX_DISTANCE_OPTIONS_KM,
   PROXIMITY_RADIUS_KM,
+  queryGeolocationPermission,
+  resolveGeolocationErrorMessage,
   reverseGeocodeCity,
-  RONDONOPOLIS_CENTER,
+  shouldAutoDetectGeolocation,
   updateProximityRadius,
+  type GeolocationPermissionState,
   type ProximityFilterState,
 } from '../utils/geolocation';
 import {
@@ -29,6 +32,8 @@ interface LocationRegionBarProps {
   proximityFilter?: ProximityFilterState | null;
   onApplyProximity?: (state: ProximityFilterState) => void;
   onClearProximity?: () => void;
+  onRegionDetected?: (nearestRegion: string, detectedCity: string) => void;
+  autoDetectWhenGranted?: boolean;
   enableVoiceSearch?: boolean;
 }
 
@@ -42,16 +47,22 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
   proximityFilter = null,
   onApplyProximity,
   onClearProximity,
+  onRegionDetected,
+  autoDetectWhenGranted = false,
   enableVoiceSearch = false,
 }) => {
   const [geoError, setGeoError] = useState<string>('');
   const [geoInfo, setGeoInfo] = useState<string>('');
   const [locating, setLocating] = useState(false);
+  const [permissionState, setPermissionState] =
+    useState<GeolocationPermissionState>('prompt');
   const [isListening, setIsListening] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState('');
   const [voiceStatus, setVoiceStatus] = useState('');
   const [voiceError, setVoiceError] = useState('');
   const recognitionRef = useRef<WebSpeechRecognitionInstance | null>(null);
+  const userOptedOutRef = useRef<boolean>(false);
+  const autoDetectTriggeredRef = useRef<boolean>(false);
 
   const supportsProximity = Boolean(onApplyProximity);
 
@@ -64,6 +75,52 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
           // Ignore abort cleanup error
         }
         recognitionRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let permStatusObj: PermissionStatus | null = null;
+
+    const syncPermission = async () => {
+      const nextState = await queryGeolocationPermission();
+      if (!cancelled) {
+        setPermissionState(nextState);
+      }
+
+      if (
+        typeof navigator !== 'undefined' &&
+        typeof navigator.permissions?.query === 'function'
+      ) {
+        try {
+          permStatusObj = await navigator.permissions.query({
+            name: 'geolocation' as PermissionName,
+          });
+          if (!cancelled && permStatusObj) {
+            permStatusObj.onchange = () => {
+              if (cancelled || !permStatusObj) return;
+              const updated =
+                permStatusObj.state === 'granted' ||
+                permStatusObj.state === 'denied' ||
+                permStatusObj.state === 'prompt'
+                  ? permStatusObj.state
+                  : 'prompt';
+              setPermissionState(updated);
+            };
+          }
+        } catch {
+          // Permissions API listener optional
+        }
+      }
+    };
+
+    void syncPermission();
+
+    return () => {
+      cancelled = true;
+      if (permStatusObj) {
+        permStatusObj.onchange = null;
       }
     };
   }, []);
@@ -158,11 +215,16 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
     }
   };
 
-  const triggerGeolocation = (targetRadiusKm: number) => {
+  const triggerGeolocation = (
+    targetRadiusKm: number,
+    options?: { silentOnError?: boolean }
+  ) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGeoError(
-        'Geolocalização indisponível neste dispositivo. Selecione a região manualmente.'
-      );
+      if (!options?.silentOnError) {
+        setGeoError(
+          'Geolocalização indisponível neste dispositivo. Selecione a região manualmente.'
+        );
+      }
       return;
     }
 
@@ -174,55 +236,81 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
       async (position) => {
         const { latitude, longitude } = position.coords;
         const nearestRegion = resolveNearestRondonopolisRegion(latitude, longitude);
-        const distanceToRoo = calculateDistanceKm(
-          latitude,
-          longitude,
-          RONDONOPOLIS_CENTER.lat,
-          RONDONOPOLIS_CENTER.lng
-        );
-        const safeRadius = Math.max(1, Math.min(200, Math.round(targetRadiusKm)));
-        const withinRadius =
-          distanceToRoo <= Math.max(safeRadius, PROXIMITY_RADIUS_KM);
         const detectedCity = await reverseGeocodeCity(latitude, longitude);
+
+        setPermissionState('granted');
+        onRegionDetected?.(nearestRegion, detectedCity);
 
         if (onApplyProximity) {
           onChangeRegion('Toda Rondonópolis e Região');
-          onApplyProximity({
-            active: true,
-            detectedCity,
-            nearestRegion,
-            userLat: latitude,
-            userLng: longitude,
-            distanceToRondonopolisKm: distanceToRoo,
-            withinRadius,
-            radiusKm: safeRadius,
-          });
+          onApplyProximity(
+            buildProximityFilterFromCoords({
+              lat: latitude,
+              lng: longitude,
+              radiusKm: targetRadiusKm,
+              nearestRegion,
+              detectedCity,
+            })
+          );
         } else {
           onChangeRegion(nearestRegion);
           setGeoInfo(`Cidade detectada: ${detectedCity} · Região: ${nearestRegion}`);
         }
         setLocating(false);
       },
-      () => {
-        setGeoError(
-          'Permissão de localização negada ou indisponível. Selecione a região desejada na lista.'
-        );
+      (err) => {
+        if (err?.code === 1) {
+          setPermissionState('denied');
+        }
+        if (!options?.silentOnError) {
+          setGeoError(resolveGeolocationErrorMessage(err?.code));
+        }
         setLocating(false);
       },
       { enableHighAccuracy: false, timeout: 6000 }
     );
   };
 
+  useEffect(() => {
+    if (autoDetectTriggeredRef.current) return;
+    if (
+      shouldAutoDetectGeolocation({
+        permissionState,
+        alreadyActive: Boolean(proximityFilter?.active),
+        userOptedOut: userOptedOutRef.current,
+        autoDetectWhenGranted,
+      })
+    ) {
+      autoDetectTriggeredRef.current = true;
+      triggerGeolocation(PROXIMITY_RADIUS_KM, { silentOnError: true });
+    }
+  }, [permissionState, proximityFilter?.active, autoDetectWhenGranted]);
+
   const handleUseLocation = () => {
+    userOptedOutRef.current = false;
     const activeRadius = proximityFilter?.active
       ? proximityFilter.radiusKm
       : PROXIMITY_RADIUS_KM;
     triggerGeolocation(activeRadius);
   };
 
+  const handleFillRegionFieldFromProximity = () => {
+    if (!proximityFilter?.nearestRegion) return;
+    const targetRegion = proximityFilter.nearestRegion;
+    const detectedCity = proximityFilter.detectedCity;
+    userOptedOutRef.current = true;
+    onClearProximity?.();
+    onChangeRegion(targetRegion);
+    setGeoError('');
+    setGeoInfo(
+      `Região preenchida automaticamente com «${targetRegion}» (${detectedCity}).`
+    );
+  };
+
   const handleMaxDistanceSelectChange = (rawValue: string) => {
     setGeoError('');
     if (!rawValue) {
+      userOptedOutRef.current = true;
       onClearProximity?.();
       return;
     }
@@ -230,6 +318,7 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
     const nextRadius = Number(rawValue);
     if (!Number.isFinite(nextRadius) || nextRadius <= 0) return;
 
+    userOptedOutRef.current = false;
     if (proximityFilter?.active && onApplyProximity) {
       onApplyProximity(updateProximityRadius(proximityFilter, nextRadius));
     } else {
@@ -267,6 +356,7 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
               id="brickjobs-region-select"
               value={selectedRegion}
               onChange={(e) => {
+                userOptedOutRef.current = true;
                 onChangeRegion(e.target.value);
                 onClearProximity?.();
                 setGeoError('');
@@ -443,16 +533,34 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
                 : `· A ${proximityFilter.distanceToRondonopolisKm.toFixed(1).replace('.', ',')} km de Rondonópolis (limite atual: ${proximityFilter.radiusKm} km)`}
             </p>
 
-            {onClearProximity && (
-              <button
-                type="button"
-                onClick={onClearProximity}
-                data-testid="clear-proximity-button"
-                className="min-h-[44px] sm:min-h-[32px] px-2.5 py-1 rounded-lg text-xs font-semibold text-[#C93B1E] dark:text-[#F06449] hover:underline inline-flex items-center cursor-pointer"
-              >
-                Limpar distância
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {proximityFilter.nearestRegion &&
+                proximityFilter.nearestRegion !== 'Toda Rondonópolis e Região' && (
+                  <button
+                    type="button"
+                    onClick={handleFillRegionFieldFromProximity}
+                    data-testid="fill-region-from-location-button"
+                    className="min-h-[44px] sm:min-h-[32px] px-3 py-1 rounded-lg border border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] hover:bg-[#F3F4F6] dark:hover:bg-[#334155] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+                    <span>Preencher região ({proximityFilter.nearestRegion})</span>
+                  </button>
+                )}
+
+              {onClearProximity && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    userOptedOutRef.current = true;
+                    onClearProximity();
+                  }}
+                  data-testid="clear-proximity-button"
+                  className="min-h-[44px] sm:min-h-[32px] px-2.5 py-1 rounded-lg text-xs font-semibold text-[#C93B1E] dark:text-[#F06449] hover:underline inline-flex items-center cursor-pointer"
+                >
+                  Limpar distância
+                </button>
+              )}
+            </div>
           </div>
 
           {onApplyProximity && (

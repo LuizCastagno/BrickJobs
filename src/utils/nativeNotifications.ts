@@ -115,6 +115,10 @@ export async function registerNotificationServiceWorker(): Promise<ServiceWorker
     return null;
   }
   try {
+    const existing = await navigator.serviceWorker.getRegistration('/');
+    if (existing) {
+      return existing;
+    }
     const registration = await navigator.serviceWorker.register('/sw.js', {
       scope: '/',
     });

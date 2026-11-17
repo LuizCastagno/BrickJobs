@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { SEED_JOBS } from '../data/rondonopolisSeed.ts';
 import {
+  buildProximityFilterFromCoords,
   calculateDistanceKm,
   detectCityFallbackFromCoords,
   filterAndSortJobsByProximity,
@@ -9,9 +10,16 @@ import {
   getJobCoordinates,
   parseNominatimCity,
   PROXIMITY_RADIUS_KM,
+  resolveAutoFilledRegionAndNeighborhood,
+  resolveGeolocationErrorMessage,
+  shouldAutoDetectGeolocation,
   updateProximityRadius,
   type ProximityFilterState,
 } from './geolocation.ts';
+import {
+  RONDONOPOLIS_NEIGHBORHOODS,
+  RONDONOPOLIS_REGIONS,
+} from '../data/rondonopolisSeed.ts';
 
 test('calculateDistanceKm computes accurate Haversine distance in kilometers', () => {
   const centerToVilaAurora = calculateDistanceKm(-16.4708, -54.6356, -16.4622, -54.6184);
@@ -121,3 +129,96 @@ test('formatDistanceKmPtBr formats sub-kilometer and kilometer distances natural
   assert.equal(formatDistanceKmPtBr(0.42), '400 m');
   assert.equal(formatDistanceKmPtBr(3.4), '3,4 km');
 });
+
+test('shouldAutoDetectGeolocation triggers only when permission is already granted and user has not opted out', () => {
+  assert.equal(
+    shouldAutoDetectGeolocation({
+      permissionState: 'granted',
+      alreadyActive: false,
+      userOptedOut: false,
+      autoDetectWhenGranted: true,
+    }),
+    true
+  );
+  assert.equal(
+    shouldAutoDetectGeolocation({
+      permissionState: 'prompt',
+      alreadyActive: false,
+      userOptedOut: false,
+      autoDetectWhenGranted: true,
+    }),
+    false
+  );
+  assert.equal(
+    shouldAutoDetectGeolocation({
+      permissionState: 'denied',
+      alreadyActive: false,
+      userOptedOut: false,
+      autoDetectWhenGranted: true,
+    }),
+    false
+  );
+  assert.equal(
+    shouldAutoDetectGeolocation({
+      permissionState: 'granted',
+      alreadyActive: true,
+      userOptedOut: false,
+      autoDetectWhenGranted: true,
+    }),
+    false
+  );
+  assert.equal(
+    shouldAutoDetectGeolocation({
+      permissionState: 'granted',
+      alreadyActive: false,
+      userOptedOut: true,
+      autoDetectWhenGranted: true,
+    }),
+    false
+  );
+});
+
+test('resolveGeolocationErrorMessage returns clear Portuguese guidance by error code', () => {
+  assert.match(resolveGeolocationErrorMessage(1), /Permissão de localização negada/);
+  assert.match(resolveGeolocationErrorMessage(2), /localização atual/);
+  assert.match(resolveGeolocationErrorMessage(3), /Tempo esgotado/);
+});
+
+test('buildProximityFilterFromCoords builds consistent state and radius clamping', () => {
+  const built = buildProximityFilterFromCoords({
+    lat: -16.4622,
+    lng: -54.6184,
+    radiusKm: 15,
+    nearestRegion: 'Vila Aurora',
+    detectedCity: 'Rondonópolis - MT',
+  });
+  assert.equal(built.active, true);
+  assert.equal(built.nearestRegion, 'Vila Aurora');
+  assert.equal(built.withinRadius, true);
+  assert.equal(built.radiusKm, 15);
+});
+
+test('resolveAutoFilledRegionAndNeighborhood populates neighborhood and region when matched', () => {
+  const matched = resolveAutoFilledRegionAndNeighborhood({
+    nearestRegion: 'Distrito Industrial',
+    availableNeighborhoods: RONDONOPOLIS_NEIGHBORHOODS,
+    availableRegions: RONDONOPOLIS_REGIONS,
+    currentNeighborhood: 'Centro',
+    currentRegion: 'Toda Rondonópolis e Região',
+  });
+  assert.equal(matched.bairro, 'Distrito Industrial');
+  assert.equal(matched.regiaoInteresse, 'Distrito Industrial');
+  assert.equal(matched.matchedExactNeighborhood, true);
+
+  const fallback = resolveAutoFilledRegionAndNeighborhood({
+    nearestRegion: 'Toda Rondonópolis e Região',
+    availableNeighborhoods: RONDONOPOLIS_NEIGHBORHOODS,
+    availableRegions: RONDONOPOLIS_REGIONS,
+    currentNeighborhood: 'Vila Operária',
+    currentRegion: 'Centro',
+  });
+  assert.equal(fallback.bairro, 'Vila Operária');
+  assert.equal(fallback.regiaoInteresse, 'Toda Rondonópolis e Região');
+  assert.equal(fallback.matchedExactNeighborhood, false);
+});
+

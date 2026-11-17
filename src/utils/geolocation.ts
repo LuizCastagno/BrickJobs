@@ -238,3 +238,125 @@ export function formatDistanceKmPtBr(distanceKm: number): string {
   }
   return `${distanceKm.toFixed(1).replace('.', ',')} km`;
 }
+
+export type GeolocationPermissionState =
+  | 'granted'
+  | 'prompt'
+  | 'denied'
+  | 'unsupported';
+
+export async function queryGeolocationPermission(): Promise<GeolocationPermissionState> {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return 'unsupported';
+  }
+  if (typeof navigator.permissions?.query !== 'function') {
+    return 'prompt';
+  }
+  try {
+    const status = await navigator.permissions.query({
+      name: 'geolocation' as PermissionName,
+    });
+    if (
+      status.state === 'granted' ||
+      status.state === 'denied' ||
+      status.state === 'prompt'
+    ) {
+      return status.state;
+    }
+    return 'prompt';
+  } catch {
+    return 'prompt';
+  }
+}
+
+export function shouldAutoDetectGeolocation(params: {
+  permissionState: GeolocationPermissionState;
+  alreadyActive: boolean;
+  userOptedOut: boolean;
+  autoDetectWhenGranted: boolean;
+}): boolean {
+  return (
+    params.autoDetectWhenGranted &&
+    params.permissionState === 'granted' &&
+    !params.alreadyActive &&
+    !params.userOptedOut
+  );
+}
+
+export function resolveGeolocationErrorMessage(errorCode?: number): string {
+  switch (errorCode) {
+    case 1:
+      return 'Permissão de localização negada no navegador. Libere o acesso nas configurações do site ou selecione a região manualmente.';
+    case 2:
+      return 'Não foi possível determinar sua localização atual pelo GPS ou rede. Selecione a região desejada na lista.';
+    case 3:
+      return 'Tempo esgotado ao detectar sua localização. Tente novamente ou selecione a região manualmente.';
+    default:
+      return 'Permissão de localização negada ou indisponível. Selecione a região desejada na lista.';
+  }
+}
+
+export function buildProximityFilterFromCoords(params: {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  nearestRegion: string;
+  detectedCity: string;
+}): ProximityFilterState {
+  const distanceToRoo = calculateDistanceKm(
+    params.lat,
+    params.lng,
+    RONDONOPOLIS_CENTER.lat,
+    RONDONOPOLIS_CENTER.lng
+  );
+  const safeRadius = Math.max(1, Math.min(200, Math.round(params.radiusKm)));
+  const withinRadius =
+    distanceToRoo <= Math.max(safeRadius, PROXIMITY_RADIUS_KM);
+
+  return {
+    active: true,
+    detectedCity: params.detectedCity,
+    nearestRegion: params.nearestRegion,
+    userLat: params.lat,
+    userLng: params.lng,
+    distanceToRondonopolisKm: distanceToRoo,
+    withinRadius,
+    radiusKm: safeRadius,
+  };
+}
+
+export function resolveAutoFilledRegionAndNeighborhood(params: {
+  nearestRegion: string;
+  availableNeighborhoods: readonly string[];
+  availableRegions: readonly string[];
+  currentNeighborhood?: string;
+  currentRegion?: string;
+}): {
+  bairro: string;
+  regiaoInteresse: string;
+  matchedExactNeighborhood: boolean;
+} {
+  const {
+    nearestRegion,
+    availableNeighborhoods,
+    availableRegions,
+    currentNeighborhood = '',
+    currentRegion = '',
+  } = params;
+
+  const regiaoInteresse = availableRegions.includes(nearestRegion)
+    ? nearestRegion
+    : currentRegion || availableRegions[0] || 'Toda Rondonópolis e Região';
+
+  const matchedExactNeighborhood = availableNeighborhoods.includes(nearestRegion);
+  const bairro = matchedExactNeighborhood
+    ? nearestRegion
+    : currentNeighborhood || availableNeighborhoods[0] || 'Centro';
+
+  return {
+    bairro,
+    regiaoInteresse,
+    matchedExactNeighborhood,
+  };
+}
+

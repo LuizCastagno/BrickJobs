@@ -56,15 +56,24 @@ export function loadBrickJobsState(): BrickJobsAppState {
           ? parsed.seedWorkers
           : DEFAULT_APP_STATE.seedWorkers,
       applications: Array.isArray(parsed.applications)
-        ? parsed.applications.map((app) => ({
-            ...app,
-            status:
+        ? parsed.applications.map((app) => {
+            const normalizedStatus =
               app.status === 'concluida'
                 ? 'concluida'
                 : app.status === 'aceita'
                   ? 'aceita'
-                  : 'pendente',
-          }))
+                  : 'pendente';
+            return {
+              ...app,
+              status: normalizedStatus,
+              completedAt:
+                typeof app.completedAt === 'string' && app.completedAt.trim()
+                  ? app.completedAt
+                  : normalizedStatus === 'concluida'
+                    ? app.appliedAt
+                    : undefined,
+            };
+          })
         : [],
       companyRatings:
         Array.isArray(parsed.companyRatings)

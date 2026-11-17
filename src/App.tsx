@@ -13,6 +13,7 @@ import { MobileBottomNav, type MobileTabItem } from './components/MobileBottomNa
 import { TopNavBar, type NavTabItem } from './components/TopNavBar';
 import { UserSettingsMenu } from './components/UserSettingsMenu';
 import { WorkerPortal, type WorkerTab } from './components/WorkerPortal';
+import { usePWAInstall } from './hooks/usePWAInstall';
 import type { BrickJobsAppState } from './data/rondonopolisSeed';
 import type {
   CompanyProfile,
@@ -143,6 +144,7 @@ export default function App() {
   );
   const [isLgpdModalOpen, setIsLgpdModalOpen] = useState<boolean>(false);
   const [lgpdModalTab, setLgpdModalTab] = useState<LgpdModalTab>('cookies');
+  const pwaInstall = usePWAInstall();
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -454,10 +456,17 @@ export default function App() {
     if (!canCompleteWork(targetApp)) {
       return;
     }
+    const todayIso = new Date().toISOString().slice(0, 10);
     setState((prev) => ({
       ...prev,
       applications: prev.applications.map((app) =>
-        app.id === applicationId ? { ...app, status: 'concluida' } : app
+        app.id === applicationId
+          ? {
+              ...app,
+              status: 'concluida',
+              completedAt: app.completedAt ?? todayIso,
+            }
+          : app
       ),
     }));
     if (screen === 'contratado') {
@@ -1111,6 +1120,7 @@ export default function App() {
         onTestNativePush={handleTestNativePush}
         lgpdConsent={lgpdConsent}
         onOpenLgpdModal={handleOpenLgpdModal}
+        pwaInstall={pwaInstall}
       />
 
       <GuidedTourModal

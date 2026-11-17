@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Bell,
@@ -11,6 +11,7 @@ import {
   Download,
   FileText,
   HardHat,
+  LocateFixed,
   MapPin,
   MessageSquare,
   Phone,
@@ -48,11 +49,16 @@ import {
   formatDurationPtBr,
   formatFileSizePtBr,
   formatMonthYearPtBr,
+  resolveNearestRondonopolisRegion,
 } from '../utils/duration';
 import { countUnreadNotifications } from '../utils/notifications';
 import {
   filterAndSortJobsByProximity,
   formatDistanceKmPtBr,
+  queryGeolocationPermission,
+  resolveAutoFilledRegionAndNeighborhood,
+  resolveGeolocationErrorMessage,
+  reverseGeocodeCity,
   updateProximityRadius,
   type ProximityFilterState,
 } from '../utils/geolocation';
@@ -103,6 +109,7 @@ import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
 import { SafetyTipsCard } from './SafetyTipsCard';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
+import { WorkerEarningsPanel } from './WorkerEarningsPanel';
 import { WorkerProductivityPanel } from './WorkerProductivityPanel';
 import {
   formatRegistrantSexLabel,
@@ -238,11 +245,115 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   const [missingDocKeys, setMissingDocKeys] = useState<RequiredDocumentKey[]>([]);
   const [sexMissingError, setSexMissingError] = useState<boolean>(false);
   const [imgFailed, setImgFailed] = useState<boolean>(false);
+  const [registrationGeoLocating, setRegistrationGeoLocating] = useState<boolean>(false);
+  const [registrationGeoInfo, setRegistrationGeoInfo] = useState<string>('');
+  const [registrationGeoError, setRegistrationGeoError] = useState<string>('');
   const pdfInputRef = useRef<HTMLInputElement | null>(null);
+  const hasEditedRegionFieldsRef = useRef<boolean>(false);
+  const autoFilledRegistrationRef = useRef<boolean>(false);
 
   const isWorkerRegistered = Boolean(
     workerProfile.nomeCompleto.trim() && workerProfile.telefone.trim()
   );
+
+  const applyDetectedRegionToForm = (
+    nearestRegion: string,
+    detectedCity: string
+  ) => {
+    setForm((prev) => {
+      const resolved = resolveAutoFilledRegionAndNeighborhood({
+        nearestRegion,
+        availableNeighborhoods: RONDONOPOLIS_NEIGHBORHOODS,
+        availableRegions: RONDONOPOLIS_REGIONS,
+        currentNeighborhood: prev.bairro,
+        currentRegion: prev.regiaoInteresse,
+      });
+      return {
+        ...prev,
+        bairro: resolved.bairro,
+        regiaoInteresse: resolved.regiaoInteresse,
+      };
+    });
+    setRegistrationGeoError('');
+    setRegistrationGeoInfo(
+      `Região preenchida automaticamente com «${nearestRegion}» (${detectedCity}).`
+    );
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'cadastro') return;
+    if (isWorkerRegistered) return;
+    if (autoFilledRegistrationRef.current || hasEditedRegionFieldsRef.current) return;
+
+    if (proximityFilter?.active && proximityFilter.nearestRegion) {
+      autoFilledRegistrationRef.current = true;
+      applyDetectedRegionToForm(
+        proximityFilter.nearestRegion,
+        proximityFilter.detectedCity
+      );
+      return;
+    }
+
+    let cancelled = false;
+    const tryAutoFillIfGranted = async () => {
+      const perm = await queryGeolocationPermission();
+      if (cancelled || perm !== 'granted') return;
+      if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+
+      autoFilledRegistrationRef.current = true;
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          if (cancelled || hasEditedRegionFieldsRef.current) return;
+          const { latitude, longitude } = position.coords;
+          const nearestRegion = resolveNearestRondonopolisRegion(latitude, longitude);
+          const detectedCity = await reverseGeocodeCity(latitude, longitude);
+          if (cancelled || hasEditedRegionFieldsRef.current) return;
+          applyDetectedRegionToForm(nearestRegion, detectedCity);
+        },
+        () => {
+          // Silent skip when automatic detection fails
+        },
+        { enableHighAccuracy: false, timeout: 6000 }
+      );
+    };
+
+    void tryAutoFillIfGranted();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, proximityFilter, isWorkerRegistered]);
+
+  const handleDetectRegistrationRegion = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setRegistrationGeoInfo('');
+      setRegistrationGeoError(
+        'Geolocalização indisponível neste dispositivo. Selecione bairro e região manualmente.'
+      );
+      return;
+    }
+
+    setRegistrationGeoLocating(true);
+    setRegistrationGeoError('');
+    setRegistrationGeoInfo('');
+    hasEditedRegionFieldsRef.current = false;
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const nearestRegion = resolveNearestRondonopolisRegion(latitude, longitude);
+        const detectedCity = await reverseGeocodeCity(latitude, longitude);
+        autoFilledRegistrationRef.current = true;
+        applyDetectedRegionToForm(nearestRegion, detectedCity);
+        setRegistrationGeoLocating(false);
+      },
+      (err) => {
+        setRegistrationGeoError(resolveGeolocationErrorMessage(err?.code));
+        setRegistrationGeoLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 6000 }
+    );
+  };
 
   const occupationFilterOptions = useMemo(() => {
     const set = new Set<string>(CONSTRUCTION_ROLES);
@@ -858,6 +969,13 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             proximityFilter={proximityFilter}
             onApplyProximity={(next) => setProximityFilter(next)}
             onClearProximity={() => setProximityFilter(null)}
+            onRegionDetected={(nearestRegion, detectedCity) => {
+              if (!hasEditedRegionFieldsRef.current && !isWorkerRegistered) {
+                autoFilledRegistrationRef.current = true;
+                applyDetectedRegionToForm(nearestRegion, detectedCity);
+              }
+            }}
+            autoDetectWhenGranted={true}
             enableVoiceSearch={true}
           />
 
@@ -1295,6 +1413,8 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
 
             <WorkerProductivityPanel workerRole={workerProfile.funcaoPrincipal} />
 
+            <WorkerEarningsPanel jobs={jobs} applications={applications} />
+
             <CareerTipsCard workerProfile={workerProfile} />
           </motion.div>
         )}
@@ -1443,46 +1563,106 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 </select>
               </div>
 
-              <div>
-                <label
-                  htmlFor="worker-bairro"
-                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
-                >
-                  Bairro onde mora em Rondonópolis-MT
-                </label>
-                <select
-                  id="worker-bairro"
-                  value={form.bairro}
-                  onChange={(e) => setForm({ ...form, bairro: e.target.value })}
-                  className={inputClass}
-                >
-                  {RONDONOPOLIS_NEIGHBORHOODS.map((b) => (
-                    <option key={b} value={b}>
-                      {b}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] dark:border-[#1E293B] bg-[#F9FAFB] dark:bg-[#0F172A] p-3.5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                      Localização no cadastro
+                    </p>
+                    <p className="text-[11px] text-[#4B5563] dark:text-[#94A3B8]">
+                      Preencha bairro e região de interesse automaticamente usando sua localização (a permissão só será solicitada se você ainda não tiver autorizado).
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleDetectRegistrationRegion}
+                    disabled={registrationGeoLocating}
+                    data-testid="worker-registration-geolocate-button"
+                    className="min-h-[44px] sm:min-h-[38px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F3F4F6] dark:hover:bg-[#334155] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    <LocateFixed
+                      className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {registrationGeoLocating
+                        ? 'Detectando região...'
+                        : 'Preencher região pela localização'}
+                    </span>
+                  </button>
+                </div>
 
-              <div>
-                <label
-                  htmlFor="worker-regiao"
-                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
-                >
-                  Região de interesse para trabalhar
-                </label>
-                <select
-                  id="worker-regiao"
-                  value={form.regiaoInteresse}
-                  onChange={(e) => setForm({ ...form, regiaoInteresse: e.target.value })}
-                  className={inputClass}
-                >
-                  {RONDONOPOLIS_REGIONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="worker-bairro"
+                      className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                    >
+                      Bairro onde mora em Rondonópolis-MT
+                    </label>
+                    <select
+                      id="worker-bairro"
+                      value={form.bairro}
+                      onChange={(e) => {
+                        hasEditedRegionFieldsRef.current = true;
+                        setRegistrationGeoInfo('');
+                        setForm({ ...form, bairro: e.target.value });
+                      }}
+                      className={inputClass}
+                    >
+                      {RONDONOPOLIS_NEIGHBORHOODS.map((b) => (
+                        <option key={b} value={b}>
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="worker-regiao"
+                      className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                    >
+                      Região de interesse para trabalhar
+                    </label>
+                    <select
+                      id="worker-regiao"
+                      value={form.regiaoInteresse}
+                      onChange={(e) => {
+                        hasEditedRegionFieldsRef.current = true;
+                        setRegistrationGeoInfo('');
+                        setForm({ ...form, regiaoInteresse: e.target.value });
+                      }}
+                      className={inputClass}
+                    >
+                      {RONDONOPOLIS_REGIONS.map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {registrationGeoInfo && (
+                  <p
+                    role="status"
+                    data-testid="worker-registration-geo-status"
+                    className="text-xs font-medium text-[#047857] dark:text-[#34D399]"
+                  >
+                    {registrationGeoInfo}
+                  </p>
+                )}
+
+                {registrationGeoError && (
+                  <p
+                    role="alert"
+                    data-testid="worker-registration-geo-error"
+                    className="text-xs font-medium text-[#B91C1C] dark:text-[#F87171]"
+                  >
+                    {registrationGeoError}
+                  </p>
+                )}
               </div>
 
               <div>
