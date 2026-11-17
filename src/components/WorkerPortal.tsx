@@ -101,6 +101,7 @@ import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
 import { SafetyTipsCard } from './SafetyTipsCard';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
+import { WorkerProductivityPanel } from './WorkerProductivityPanel';
 import workerCraftImg from '../assets/images/brickjobs_worker_craft_1794693694923.jpg';
 
 export type WorkerTab = 'vagas' | 'cadastro' | 'perfil' | 'utilidades';
@@ -1246,6 +1247,8 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               safetyStats={safetyStats}
               lastPointsEarned={lastPointsEarned}
             />
+
+            <WorkerProductivityPanel workerRole={workerProfile.funcaoPrincipal} />
 
             <CareerTipsCard workerProfile={workerProfile} />
           </motion.div>
