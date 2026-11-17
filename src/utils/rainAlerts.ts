@@ -2,7 +2,7 @@ import {
   NEIGHBORHOOD_COORDINATES,
   RONDONOPOLIS_CENTER,
   type Coordinates,
-} from './geolocation';
+} from './geolocation.ts';
 
 export type RainSeverity =
   | 'sem_risco'
@@ -184,6 +184,7 @@ function formatDayLabelPtBr(dateIso: string, index: number): string {
 
 interface OpenMeteoRaw {
   current?: {
+    time?: string;
     temperature_2m?: number;
     precipitation?: number;
     rain?: number;

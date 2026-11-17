@@ -87,12 +87,21 @@ import {
   getJobSkillTags,
   toggleSkillTagSelection,
 } from '../utils/skillTags';
+import {
+  loadWorkerSafetyStats,
+  recordWorkerQuizAttempt,
+  type SafetyQuizSummary,
+  type WorkerSafetyQuizStats,
+} from '../utils/safetyTips';
 import { CareerTipsCard } from './CareerTipsCard';
 import { LocationRegionBar } from './LocationRegionBar';
 import { NativePushPermissionCard } from './NativePushPermissionCard';
 import { RainAlertsPanel } from './RainAlertsPanel';
+import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
+import { SafetyTipsCard } from './SafetyTipsCard';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
+import workerCraftImg from '../assets/images/brickjobs_worker_craft_1794693694923.jpg';
 
 export type WorkerTab = 'vagas' | 'cadastro' | 'perfil' | 'utilidades';
 
@@ -127,8 +136,6 @@ interface WorkerPortalProps {
   workReminders: WorkScheduleReminder[];
   onCancelWorkReminder: (reminderId: string) => void;
 }
-
-const WORKER_CRAFT_IMG = '/src/assets/images/brickjobs_worker_craft_1794693694923.jpg';
 
 function createBlankExperience(): WorkExperience {
   return {
@@ -185,6 +192,18 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [pdfExportFeedback, setPdfExportFeedback] = useState<string>('');
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const [safetyStats, setSafetyStats] = useState<WorkerSafetyQuizStats>(() =>
+    loadWorkerSafetyStats()
+  );
+  const [lastPointsEarned, setLastPointsEarned] = useState<number | null>(null);
+
+  const handleSafetyQuizComplete = (summary: SafetyQuizSummary) => {
+    setSafetyStats((prev) => {
+      const { nextStats, pointsEarned } = recordWorkerQuizAttempt(prev, summary);
+      setLastPointsEarned(pointsEarned);
+      return nextStats;
+    });
+  };
 
   const unreadCount = useMemo(
     () => countUnreadNotifications(notifications),
@@ -1216,6 +1235,18 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             )}
           </AnimatePresence>
 
+            <SafetyTipsCard
+              workerProfile={workerProfile}
+              onQuizComplete={handleSafetyQuizComplete}
+            />
+
+            <SafetyLeaderboardCard
+              workerProfile={workerProfile}
+              selectedRegion={selectedRegion}
+              safetyStats={safetyStats}
+              lastPointsEarned={lastPointsEarned}
+            />
+
             <CareerTipsCard workerProfile={workerProfile} />
           </motion.div>
         )}
@@ -1998,7 +2029,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   <div className="h-44 bg-[#1F2937] relative">
                     {!imgFailed ? (
                       <img
-                        src={WORKER_CRAFT_IMG}
+                        src={workerCraftImg}
                         alt="Profissional da construção civil alinhando alvenaria em obra"
                         referrerPolicy="no-referrer"
                         onError={() => setImgFailed(true)}

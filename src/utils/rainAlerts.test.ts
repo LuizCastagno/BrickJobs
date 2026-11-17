@@ -5,8 +5,8 @@ import {
   classifyRainSeverity,
   parseOpenMeteoForecast,
   resolveConstructionSiteLocation,
-} from './rainAlerts';
-import { RONDONOPOLIS_CENTER } from './geolocation';
+} from './rainAlerts.ts';
+import { RONDONOPOLIS_CENTER } from './geolocation.ts';
 
 test('resolveConstructionSiteLocation maps Rondonópolis neighborhoods and custom GPS coordinates', () => {
   const vilaAurora = resolveConstructionSiteLocation('Vila Aurora');

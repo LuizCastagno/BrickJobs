@@ -26,6 +26,7 @@ import {
   type ProximityFilterState,
 } from '../utils/geolocation';
 import type { LgpdModalTab } from '../utils/lgpdConsent';
+import coverHeroImg from '../assets/images/brickjobs_cover_hero_1794693694488.jpg';
 import { BrickLogo } from './BrickLogo';
 
 interface CoverScreenProps {
@@ -41,8 +42,6 @@ interface CoverScreenProps {
   companiesCount: number;
   workersCount: number;
 }
-
-const COVER_HERO_SRC = '/src/assets/images/brickjobs_cover_hero_1794693694488.jpg';
 
 export const CoverScreen: React.FC<CoverScreenProps> = ({
   onSelectRole,
@@ -322,7 +321,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
               <div className="h-52 sm:h-64 lg:h-full min-h-[220px] rounded-2xl overflow-hidden border border-[#E5E7EB] dark:border-[#334155] bg-[#1F2937] relative">
                 {!heroImgFailed ? (
                   <img
-                    src={COVER_HERO_SRC}
+                    src={coverHeroImg}
                     alt="Equipe de construção civil analisando projeto arquitetônico em obra de alvenaria estrutural"
                     referrerPolicy="no-referrer"
                     onError={() => setHeroImgFailed(true)}
