@@ -4,6 +4,7 @@ import { SEED_COMPANY_RATINGS, SEED_JOBS } from '../data/rondonopolisSeed.ts';
 import type { CompanyRating, JobPosting } from '../types/brickjobs';
 import {
   buildCategoryFillTimeStats,
+  buildCategoryOpenVsClosedStats,
   buildCategoryRatingStats,
   computeFillTimeDays,
   mapRoleToServiceCategory,
@@ -145,4 +146,71 @@ test('buildCategoryFillTimeStats computes average fill days per service category
   const seedFillTimes = buildCategoryFillTimeStats({ jobs: SEED_JOBS });
   assert.ok(seedRatings.byCategory.length >= 4);
   assert.ok(seedFillTimes.byCategory.length >= 4);
+});
+
+test('buildCategoryOpenVsClosedStats compares open vs closed vacancies per category accurately', () => {
+  const sampleJobs: JobPosting[] = [
+    {
+      id: 'j1',
+      companyId: 'comp-1',
+      companyName: 'Construtora A',
+      funcao: 'Pedreiro',
+      quantidadeVagas: 4,
+      bairro: 'Centro',
+      regiaoInteresse: 'Centro',
+      salarioOuDiaria: 'R$ 195/dia',
+      turno: 'Comercial',
+      descricao: 'Alvenaria',
+      telefoneContato: '(66) 99999-0001',
+      status: 'aberta',
+      createdAt: '2026-11-10',
+    },
+    {
+      id: 'j2',
+      companyId: 'comp-1',
+      companyName: 'Construtora A',
+      funcao: 'Pedreiro',
+      quantidadeVagas: 2,
+      bairro: 'Centro',
+      regiaoInteresse: 'Centro',
+      salarioOuDiaria: 'R$ 195/dia',
+      turno: 'Comercial',
+      descricao: 'Alvenaria',
+      telefoneContato: '(66) 99999-0001',
+      status: 'encerrada',
+      createdAt: '2026-11-01',
+      closedAt: '2026-11-05',
+    },
+    {
+      id: 'j3',
+      companyId: 'comp-2',
+      companyName: 'Construtora B',
+      funcao: 'Eletricista Predial',
+      quantidadeVagas: 3,
+      bairro: 'Centro',
+      regiaoInteresse: 'Centro',
+      salarioOuDiaria: 'R$ 3.900/mês',
+      turno: 'Comercial',
+      descricao: 'Elétrica',
+      telefoneContato: '(66) 99999-0002',
+      status: 'aberta',
+      createdAt: '2026-11-12',
+    },
+  ];
+
+  const results = buildCategoryOpenVsClosedStats({ jobs: sampleJobs });
+  const alvenaria = results.find((r) => r.category === 'Alvenaria');
+  assert.ok(alvenaria);
+  assert.equal(alvenaria.abertas, 4);
+  assert.equal(alvenaria.encerradas, 2);
+  assert.equal(alvenaria.total, 6);
+
+  const eletrica = results.find((r) => r.category === 'Elétrica e Redes');
+  assert.ok(eletrica);
+  assert.equal(eletrica.abertas, 3);
+  assert.equal(eletrica.encerradas, 0);
+
+  const scoped = buildCategoryOpenVsClosedStats({ jobs: sampleJobs, companyId: 'comp-2' });
+  assert.equal(scoped.length, 1);
+  assert.equal(scoped[0].category, 'Elétrica e Redes');
 });

@@ -293,3 +293,47 @@ export function buildCategoryFillTimeStats(params: {
     byCategory,
   };
 }
+
+export interface CategoryOpenVsClosedStat {
+  category: string;
+  abertas: number;
+  encerradas: number;
+  total: number;
+}
+
+export function buildCategoryOpenVsClosedStats(params: {
+  jobs: JobPosting[];
+  companyId?: string;
+}): CategoryOpenVsClosedStat[] {
+  const { jobs, companyId } = params;
+  const scoped = jobs.filter((job) => {
+    if (companyId && job.companyId !== companyId) return false;
+    return true;
+  });
+
+  const map = new Map<string, { abertas: number; encerradas: number }>();
+
+  for (const job of scoped) {
+    const category = mapRoleToServiceCategory(job.funcao);
+    const vagas = Math.max(1, Math.floor(job.quantidadeVagas || 1));
+    const current = map.get(category) ?? { abertas: 0, encerradas: 0 };
+    if (job.status === 'aberta') {
+      current.abertas += vagas;
+    } else {
+      current.encerradas += vagas;
+    }
+    map.set(category, current);
+  }
+
+  return Array.from(map.entries())
+    .map(([category, counts]) => ({
+      category,
+      abertas: counts.abertas,
+      encerradas: counts.encerradas,
+      total: counts.abertas + counts.encerradas,
+    }))
+    .sort(
+      (a, b) =>
+        b.total - a.total || a.category.localeCompare(b.category, 'pt-BR')
+    );
+}

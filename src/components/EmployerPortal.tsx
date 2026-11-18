@@ -962,6 +962,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             <EmployerStatisticsTab
               jobs={jobs}
               companyRatings={companyRatings}
+              companyProfile={companyProfile}
               companyId={companyProfile.id}
               companyName={companyProfile.nomeFantasia}
               onGoToJobsTab={() => onChangeTab('vagas')}

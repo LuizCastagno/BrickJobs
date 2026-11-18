@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Clock, Star, TrendingUp } from 'lucide-react';
+import { BarChart3, Clock, FileText, Star, TrendingUp } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -9,17 +9,21 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { CompanyRating, JobPosting } from '../types/brickjobs';
+import type { CompanyProfile, CompanyRating, JobPosting } from '../types/brickjobs';
 import {
   buildCategoryFillTimeStats,
+  buildCategoryOpenVsClosedStats,
   buildCategoryRatingStats,
   type CategoryFillTimeStat,
+  type CategoryOpenVsClosedStat,
   type CategoryRatingStat,
 } from '../utils/employerStats';
+import { exportEmployerReportPdf } from '../utils/employerReportPdf';
 
 interface EmployerStatisticsTabProps {
   jobs: JobPosting[];
   companyRatings: CompanyRating[];
+  companyProfile: CompanyProfile;
   companyId: string;
   companyName: string;
   onGoToJobsTab: () => void;
@@ -90,9 +94,41 @@ const FillTimeChartTooltip: React.FC<FillTimeTooltipProps> = ({
   );
 };
 
+interface OpenVsClosedTooltipProps {
+  active?: boolean;
+  payload?: ReadonlyArray<{ payload?: CategoryOpenVsClosedStat }>;
+}
+
+const OpenVsClosedChartTooltip: React.FC<OpenVsClosedTooltipProps> = ({
+  active,
+  payload,
+}) => {
+  if (!active || !payload || payload.length === 0) return null;
+  const item = payload[0]?.payload;
+  if (!item) return null;
+
+  return (
+    <div className="rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#0F172A] px-3.5 py-2.5 shadow-md text-xs space-y-1">
+      <p className="font-display font-bold text-[#111827] dark:text-[#F8FAFC]">
+        {item.category}
+      </p>
+      <p className="text-[#047857] dark:text-[#34D399] tabular-nums font-semibold">
+        Vagas abertas: {item.abertas}
+      </p>
+      <p className="text-[#C93B1E] dark:text-[#F06449] tabular-nums font-semibold">
+        Vagas encerradas: {item.encerradas}
+      </p>
+      <p className="text-[11px] text-[#6B7280] dark:text-[#94A3B8] tabular-nums pt-0.5 border-t border-[#E5E7EB] dark:border-[#334155]">
+        Total de vagas: {item.total}
+      </p>
+    </div>
+  );
+};
+
 export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
   jobs,
   companyRatings,
+  companyProfile,
   companyId,
   companyName,
   onGoToJobsTab,
@@ -103,6 +139,23 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
       ? document.documentElement.classList.contains('dark')
       : false
   );
+  const [pdfExportMsg, setPdfExportMsg] = useState<string>('');
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+
+  const handleExportReport = () => {
+    setPdfExportMsg('');
+    setIsExportingPdf(true);
+    setTimeout(() => {
+      const res = exportEmployerReportPdf(companyProfile, jobs, companyRatings);
+      setIsExportingPdf(false);
+      if (res.ok) {
+        setPdfExportMsg(`Relatório ${res.fileName} gerado e baixado com sucesso!`);
+      } else {
+        setPdfExportMsg(res.error);
+      }
+      setTimeout(() => setPdfExportMsg(''), 5000);
+    }, 250);
+  };
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -133,6 +186,15 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
     [jobs, scope, companyId]
   );
 
+  const openVsClosedStats = useMemo(
+    () =>
+      buildCategoryOpenVsClosedStats({
+        jobs,
+        companyId: scope === 'empresa' ? companyId : undefined,
+      }),
+    [jobs, scope, companyId]
+  );
+
   const combinedRows = useMemo(() => {
     const categories = new Set<string>();
     for (const item of ratingStats.byCategory) categories.add(item.category);
@@ -152,11 +214,17 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
   const gridStrokeColor = isDark ? '#1E293B' : '#E5E7EB';
   const ratingBarColor = isDark ? '#FBBF24' : '#D97706';
   const fillTimeBarColor = isDark ? '#F06449' : '#C93B1E';
+  const openBarColor = isDark ? '#34D399' : '#059669';
+  const closedBarColor = isDark ? '#F06449' : '#C93B1E';
 
   const ratingChartHeight = Math.max(220, ratingStats.byCategory.length * 46 + 32);
   const fillTimeChartHeight = Math.max(
     220,
     fillTimeStats.byCategory.length * 46 + 32
+  );
+  const openVsClosedChartHeight = Math.max(
+    240,
+    openVsClosedStats.length * 56 + 48
   );
 
   return (
@@ -166,7 +234,7 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
     >
       {/* Header & Scope Control */}
       <section className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <BarChart3
@@ -183,39 +251,63 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
             </p>
           </div>
 
-          <div
-            role="group"
-            aria-label="Escopo das estatísticas"
-            className="inline-flex self-start sm:self-auto rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#0F172A] p-1 shrink-0"
-          >
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
             <button
               type="button"
-              onClick={() => setScope('rede')}
-              aria-pressed={scope === 'rede'}
-              data-testid="stats-scope-rede"
-              className={`min-h-[44px] sm:min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                scope === 'rede'
-                  ? 'bg-white dark:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] shadow-xs'
-                  : 'text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
-              }`}
+              onClick={handleExportReport}
+              disabled={isExportingPdf}
+              data-testid="download-employer-report-pdf"
+              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
             >
-              Rondonópolis
+              <FileText className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>
+                {isExportingPdf ? 'Gerando PDF...' : 'Baixar Relatório em PDF'}
+              </span>
             </button>
-            <button
-              type="button"
-              onClick={() => setScope('empresa')}
-              aria-pressed={scope === 'empresa'}
-              data-testid="stats-scope-empresa"
-              className={`min-h-[44px] sm:min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-                scope === 'empresa'
-                  ? 'bg-white dark:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] shadow-xs'
-                  : 'text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
-              }`}
+
+            <div
+              role="group"
+              aria-label="Escopo das estatísticas"
+              className="inline-flex rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#0F172A] p-1 shrink-0"
             >
-              Sua construtora
-            </button>
+              <button
+                type="button"
+                onClick={() => setScope('rede')}
+                aria-pressed={scope === 'rede'}
+                data-testid="stats-scope-rede"
+                className={`min-h-[44px] sm:min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                  scope === 'rede'
+                    ? 'bg-white dark:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] shadow-xs'
+                    : 'text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
+                }`}
+              >
+                Rondonópolis
+              </button>
+              <button
+                type="button"
+                onClick={() => setScope('empresa')}
+                aria-pressed={scope === 'empresa'}
+                data-testid="stats-scope-empresa"
+                className={`min-h-[44px] sm:min-h-[36px] px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                  scope === 'empresa'
+                    ? 'bg-white dark:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] shadow-xs'
+                    : 'text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
+                }`}
+              >
+                Sua construtora
+              </button>
+            </div>
           </div>
         </div>
+
+        {pdfExportMsg && (
+          <p
+            className="mt-3 text-xs font-semibold text-[#047857] dark:text-[#34D399]"
+            role="status"
+          >
+            {pdfExportMsg}
+          </p>
+        )}
 
         {/* 4-column KPI strip */}
         <div className="mt-5 pt-5 border-t border-[#F3F4F6] dark:border-[#1E293B] grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -528,6 +620,110 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
           </div>
         </section>
       </div>
+
+      {/* Chart 3: Open vs Closed Jobs by Category */}
+      <section
+        aria-labelledby="stats-open-vs-closed-heading"
+        data-testid="stats-open-vs-closed-chart-card"
+        className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-6"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3
+              id="stats-open-vs-closed-heading"
+              className="font-display text-base sm:text-lg font-bold text-[#111827] dark:text-[#F8FAFC]"
+            >
+              Comparativo de vagas abertas versus encerradas
+            </h3>
+            <p className="text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
+              Volume de vagas ativas (abertas) em comparação com as concluídas (encerradas) agrupadas por categoria de cargo.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 text-xs font-semibold">
+            <span className="inline-flex items-center gap-1.5 text-[#047857] dark:text-[#34D399]">
+              <span className="w-3 h-3 rounded-full bg-[#059669] dark:bg-[#34D399] inline-block" />
+              Abertas
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-[#C93B1E] dark:text-[#F06449]">
+              <span className="w-3 h-3 rounded-full bg-[#C93B1E] dark:bg-[#F06449] inline-block" />
+              Encerradas
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          {openVsClosedStats.length === 0 ? (
+            <div className="py-10 px-4 text-center rounded-xl border border-dashed border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#0F172A]">
+              <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                Nenhuma vaga cadastrada neste escopo ainda
+              </p>
+            </div>
+          ) : (
+            <div
+              className="w-full min-w-0"
+              style={{ height: openVsClosedChartHeight }}
+              role="img"
+              aria-label="Gráfico de barras Recharts comparando vagas abertas versus encerradas por categoria de cargo"
+              data-testid="recharts-open-vs-closed-chart"
+            >
+              <ResponsiveContainer
+                width="100%"
+                height={openVsClosedChartHeight}
+                minWidth={220}
+              >
+                <BarChart
+                  data={openVsClosedStats}
+                  layout="vertical"
+                  margin={{ top: 8, right: 24, left: 4, bottom: 8 }}
+                  barSize={16}
+                  barGap={4}
+                >
+                  <CartesianGrid
+                    horizontal={false}
+                    stroke={gridStrokeColor}
+                    strokeDasharray="3 3"
+                  />
+                  <XAxis
+                    type="number"
+                    allowDecimals={false}
+                    axisLine={{ stroke: gridStrokeColor }}
+                    tickLine={false}
+                    tick={{ fill: axisTickColor, fontSize: 11 }}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="category"
+                    width={136}
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: axisTickColor, fontSize: 12, fontWeight: 500 }}
+                  />
+                  <Tooltip
+                    cursor={{
+                      fill: isDark
+                        ? 'rgba(255,255,255,0.04)'
+                        : 'rgba(17,24,39,0.04)',
+                    }}
+                    content={<OpenVsClosedChartTooltip />}
+                  />
+                  <Bar
+                    dataKey="abertas"
+                    name="Vagas abertas"
+                    fill={openBarColor}
+                    radius={[0, 4, 4, 0]}
+                  />
+                  <Bar
+                    dataKey="encerradas"
+                    name="Vagas encerradas"
+                    fill={closedBarColor}
+                    radius={[0, 4, 4, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Category Breakdown Table */}
       <section
