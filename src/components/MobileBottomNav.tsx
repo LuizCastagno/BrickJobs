@@ -24,11 +24,15 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 }) => {
   const totalCols = onOpenSettings ? items.length + 1 : items.length;
   const gridClass =
-    totalCols === 5
-      ? 'grid-cols-5'
-      : totalCols === 4
-        ? 'grid-cols-4'
-        : 'grid-cols-3';
+    totalCols >= 7
+      ? 'grid-cols-7'
+      : totalCols === 6
+        ? 'grid-cols-6'
+        : totalCols === 5
+          ? 'grid-cols-5'
+          : totalCols === 4
+            ? 'grid-cols-4'
+            : 'grid-cols-3';
 
   return (
     <nav

@@ -16,6 +16,17 @@ import {
   resolveConstructionSiteLocation,
   type RainAlertsPayload,
 } from './src/utils/rainAlerts.ts';
+import {
+  getIsoWeekString,
+  getCuratedSafetyWeeklyReminders,
+  parseSafetyWeeklyTipsPayload,
+  type SafetyWeeklyPayload,
+} from './src/utils/safetyWeeklyTips.ts';
+import {
+  getCuratedConstructionNews,
+  parseConstructionNewsPayload,
+  type ConstructionNewsPayload,
+} from './src/utils/constructionNews.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,6 +39,9 @@ const rainAlertCache = new Map<
   string,
   { expiresAt: number; payload: RainAlertsPayload }
 >();
+
+const NEWS_CACHE_TTL_MS = 15 * 60 * 1000;
+let newsCache: { expiresAt: number; payload: ConstructionNewsPayload } | null = null;
 
 async function fetchOpenMeteoWeather(lat: number, lng: number): Promise<unknown> {
   const controller = new AbortController();
@@ -289,6 +303,194 @@ async function startServer() {
       res.status(502).json({
         error: `Não foi possível gerar as dicas semanais agora: ${message}`,
       });
+    }
+  });
+
+  app.post('/api/safety-weekly-reminders', async (req: Request, res: Response) => {
+    try {
+      const body = (req.body ?? {}) as {
+        weekKey?: string;
+        role?: string;
+        focusEpi?: string;
+      };
+
+      const weekInfo = getIsoWeekString(new Date());
+      const ai = getGeminiClient();
+
+      if (!ai) {
+        const fallback = getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
+        res.json({
+          ...fallback,
+          weekKey: weekInfo.weekKey,
+          weekLabel: weekInfo.weekLabel,
+          notice: 'Modo offline: exibindo ciclo verificado de proteção e EPIs da obra.',
+        });
+        return;
+      }
+
+      const workerRole =
+        typeof body.role === 'string' && body.role.trim()
+          ? body.role.trim()
+          : 'Operário da Construção Civil';
+
+      const prompt = [
+        `Gere os Lembretes Semanais de Segurança no Canteiro e Uso de EPIs para a ${weekInfo.weekLabel} (${weekInfo.weekKey}) para trabalhadores de canteiros de obra em Rondonópolis e Mato Grosso.`,
+        `Ocupação de referência do trabalhador: ${workerRole}.`,
+        body.focusEpi ? `Foco principal solicitado: ${body.focusEpi}.` : '',
+        'Aborde exatamente 4 EPIs indispensáveis conforme as normas brasileiras NR-06, NR-18, NR-35, NR-10 e NR-15.',
+        'Explique de forma prática: por que importa no calor e poeira do canteiro de Rondonópolis, checklist de inspeção física de 3 passos, 2 erros comuns e risco/penalidade do não uso.',
+        'Linguagem direta, firme e acolhedora de encarregado/mestre e técnico de segurança do trabalho.',
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-4-hydrogen',
+        contents: prompt,
+        config: {
+          systemInstruction:
+            'Você é um Engenheiro de Segurança do Trabalho e Técnico de Segurança (NR-18 e NR-35) atuando na construção civil em Rondonópolis-MT. Gere diretrizes precisas e acionáveis sobre inspeção diária e uso de EPIs no canteiro.',
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              themeTitle: {
+                type: Type.STRING,
+                description: 'Tema semanal curto da campanha de EPI (máximo 10 palavras).',
+              },
+              themeDescription: {
+                type: Type.STRING,
+                description: 'Resumo em 1 ou 2 frases sobre a meta de prevenção da semana.',
+              },
+              generalNotice: {
+                type: Type.STRING,
+                description: 'Lembrete sobre o Diálogo Diário de Segurança (DDS) ou inspeção matinal.',
+              },
+              weeklyHighlights: {
+                type: Type.ARRAY,
+                description: 'Lista de exatamente 4 EPIs cruciais para a semana.',
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    id: { type: Type.STRING },
+                    epiName: {
+                      type: Type.STRING,
+                      description: 'Nome do EPI (ex: Capacete com Jugular, Botina com Biqueira, Cinto NR-35).',
+                    },
+                    category: {
+                      type: Type.STRING,
+                      description: 'Uma de: cabeca, pes, olhos, ouvidos, altura, respiratoria, maos.',
+                    },
+                    categoryLabel: { type: Type.STRING },
+                    title: { type: Type.STRING, description: 'Título prático da recomendação.' },
+                    nrReference: { type: Type.STRING, description: 'Ex: NR-06 & NR-18.10 ou NR-35.' },
+                    whyItMatters: {
+                      type: Type.STRING,
+                      description: 'Por que protege a vida do operário no canteiro em 1 a 2 frases.',
+                    },
+                    inspectionChecklist: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                      description: '3 itens objetivos de checagem física do equipamento.',
+                    },
+                    commonMistakes: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                      description: '2 erros comuns cometidos pelos operários.',
+                    },
+                    penaltyOrRisk: {
+                      type: Type.STRING,
+                      description: 'Consequência física grave do não uso.',
+                    },
+                  },
+                  required: [
+                    'id',
+                    'epiName',
+                    'category',
+                    'categoryLabel',
+                    'title',
+                    'nrReference',
+                    'whyItMatters',
+                    'inspectionChecklist',
+                    'commonMistakes',
+                    'penaltyOrRisk',
+                  ],
+                },
+              },
+            },
+            required: ['themeTitle', 'themeDescription', 'generalNotice', 'weeklyHighlights'],
+          },
+        },
+      });
+
+      const parsed = parseSafetyWeeklyTipsPayload(
+        response.text ?? '',
+        weekInfo.weekKey
+      );
+      res.json(parsed);
+    } catch (err) {
+      console.warn(
+        'Falha em /api/safety-weekly-reminders, aplicando fallback verificado:',
+        err
+      );
+      const weekInfo = getIsoWeekString(new Date());
+      const fallback = getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
+      res.json({
+        ...fallback,
+        weekKey: weekInfo.weekKey,
+        weekLabel: weekInfo.weekLabel,
+      });
+    }
+  });
+
+  app.get('/api/construction-news', async (_req: Request, res: Response) => {
+    try {
+      if (newsCache && newsCache.expiresAt > Date.now()) {
+        res.json(newsCache.payload);
+        return;
+      }
+
+      const ai = getGeminiClient();
+      if (!ai) {
+        const fallback = getCuratedConstructionNews();
+        res.json(fallback);
+        return;
+      }
+
+      const prompt =
+        'Traga as principais manchetes, notícias recentes e anúncios de infraestrutura sobre construção civil em Mato Grosso e Rondonópolis (como Ferrovia Estadual FMT / Rumo, duplicação da BR-163 pela Nova Rota do Oeste, pavimentação urbana, saneamento, lançamentos logísticos e habitação). ' +
+        'Gere um JSON com os campos: headlineBanner (resumo geral da semana) e items (array de notícias, cada uma com id, title, summary, source, category entre "ferrovias", "rodovias", "obras_urbanas", "habitacao", "mercado", location, relativeDate, jobImpact destacando cargos como pedreiro, operador, carpinteiro, eletricista e armador).';
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-4-hydrogen',
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
+      });
+
+      const groundingChunks = (
+        response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []
+      ) as Array<{ web?: { uri?: string; title?: string } }>;
+
+      const parsed = parseConstructionNewsPayload(
+        response.text ?? '',
+        groundingChunks
+      );
+
+      newsCache = {
+        expiresAt: Date.now() + NEWS_CACHE_TTL_MS,
+        payload: parsed,
+      };
+
+      res.json(parsed);
+    } catch (err) {
+      console.warn(
+        'Falha ao consultar notícias via Search Grounding, retornando feed curado:',
+        err
+      );
+      const fallback = getCuratedConstructionNews();
+      res.json(fallback);
     }
   });
 

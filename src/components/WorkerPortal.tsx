@@ -109,6 +109,8 @@ import { RainAlertsPanel } from './RainAlertsPanel';
 import { RequiredDocumentsSection } from './RequiredDocumentsSection';
 import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
 import { SafetyTipsCard } from './SafetyTipsCard';
+import { SafetyWeeklyRemindersCard } from './SafetyWeeklyRemindersCard';
+import { ConstructionNewsTab } from './ConstructionNewsTab';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
 import { WorkerEarningsPanel } from './WorkerEarningsPanel';
@@ -122,7 +124,13 @@ import {
 } from '../utils/requiredDocuments';
 import workerCraftImg from '../assets/images/brickjobs_worker_craft_1794693694923.jpg';
 
-export type WorkerTab = 'vagas' | 'cadastro' | 'perfil' | 'utilidades';
+export type WorkerTab =
+  | 'vagas'
+  | 'seguranca'
+  | 'noticias'
+  | 'cadastro'
+  | 'perfil'
+  | 'utilidades';
 
 interface WorkerPortalProps {
   activeTab: WorkerTab;
@@ -2698,6 +2706,60 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   ? { lat: proximityFilter.userLat, lng: proximityFilter.userLng }
                   : null
               }
+            />
+          </motion.div>
+        )}
+
+        {/* TAB: Dicas de Segurança no Canteiro */}
+        {activeTab === 'seguranca' && (
+          <motion.div
+            key="worker-tab-seguranca"
+            variants={TAB_TRANSITION_VARIANTS}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={TAB_TRANSITION_CONFIG}
+            className="mt-6 space-y-6"
+          >
+            <SafetyWeeklyRemindersCard
+              workerRole={workerProfile.funcaoPrincipal || 'Operário da Construção Civil'}
+            />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              <div className="lg:col-span-2">
+                <SafetyTipsCard
+                  workerProfile={workerProfile}
+                  onQuizComplete={handleSafetyQuizComplete}
+                />
+              </div>
+              <div className="lg:col-span-1">
+                <SafetyLeaderboardCard
+                  workerProfile={workerProfile}
+                  selectedRegion={selectedRegion}
+                  safetyStats={safetyStats}
+                  lastPointsEarned={lastPointsEarned}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB: Notícias da Construção */}
+        {activeTab === 'noticias' && (
+          <motion.div
+            key="worker-tab-noticias"
+            variants={TAB_TRANSITION_VARIANTS}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={TAB_TRANSITION_CONFIG}
+            className="mt-6"
+          >
+            <ConstructionNewsTab
+              onOpenJobFilter={(keyword) => {
+                setSearchQuery(keyword);
+                onChangeTab('vagas');
+              }}
             />
           </motion.div>
         )}

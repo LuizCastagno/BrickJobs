@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import { BarChart3, Building2, Calculator, ClipboardList, FileCheck, HardHat, Search, Users } from 'lucide-react';
+import {
+  BarChart3,
+  Building2,
+  Calculator,
+  ClipboardList,
+  FileCheck,
+  HardHat,
+  Newspaper,
+  Search,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import { AppLoadingOverlay } from './components/AppLoadingOverlay';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { CoverScreen } from './components/CoverScreen';
@@ -897,6 +908,8 @@ export default function App() {
 
   const workerDesktopTabs: NavTabItem[] = [
     { id: 'vagas', label: 'Vagas Disponíveis' },
+    { id: 'seguranca', label: 'Dicas de Segurança' },
+    { id: 'noticias', label: 'Notícias da Construção' },
     { id: 'cadastro', label: 'Meu Cadastro' },
     { id: 'perfil', label: 'Perfil Gerado' },
     { id: 'utilidades', label: 'Rescisão e Clima' },
@@ -904,9 +917,11 @@ export default function App() {
 
   const workerMobileTabs: MobileTabItem[] = [
     { id: 'vagas', label: 'Vagas', icon: Search },
+    { id: 'seguranca', label: 'Segurança', icon: ShieldCheck },
+    { id: 'noticias', label: 'Notícias', icon: Newspaper },
     { id: 'cadastro', label: 'Cadastro', icon: HardHat },
     { id: 'perfil', label: 'Perfil', icon: FileCheck },
-    { id: 'utilidades', label: 'Clima e CLT', icon: Calculator },
+    { id: 'utilidades', label: 'Clima/CLT', icon: Calculator },
   ];
 
   const activePortalRole: UserRole =
