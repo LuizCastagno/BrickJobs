@@ -355,7 +355,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
               Área do Contratante · Rondonópolis-MT
             </p>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words h-[112px] w-[149.59375px]">
               {isCompanyRegistered ? companyProfile.nomeFantasia : 'Painel da Construtora'}
             </h1>
             <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1 break-words">
