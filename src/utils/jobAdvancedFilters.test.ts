@@ -170,9 +170,36 @@ test('filterJobsAdvanced combines region, salaryBand, serviceType, and contractT
 });
 
 test('getAvailableServiceTypeOptions and active filter summary helpers produce deterministic results', () => {
-  const serviceOptions = getAvailableServiceTypeOptions(SAMPLE_JOBS);
+  const serviceOptions = getAvailableServiceTypeOptions([
+    ...SAMPLE_JOBS,
+    {
+      ...SAMPLE_JOBS[0],
+      id: 'j5',
+      skillTags: ['pré-moldados', 'construções industriais'],
+    },
+    {
+      ...SAMPLE_JOBS[0],
+      id: 'j6',
+      skillTags: ['construções alternativas e sustentáveis'],
+    },
+  ]);
   assert.ok(serviceOptions.some((o) => o.value === 'alvenaria' && o.label === 'Alvenaria'));
   assert.ok(serviceOptions.some((o) => o.value === 'elétrica' && o.label === 'Elétrica'));
+  assert.ok(
+    serviceOptions.some(
+      (o) => o.value === 'construções industriais' && o.label === 'Construções industriais'
+    )
+  );
+  assert.ok(
+    serviceOptions.some((o) => o.value === 'pré-moldados' && o.label === 'Pré-moldados')
+  );
+  assert.ok(
+    serviceOptions.some(
+      (o) =>
+        o.value === 'construções alternativas e sustentáveis' &&
+        o.label === 'Construções alternativas e sustentáveis'
+    )
+  );
 
   const activeItems = getActiveAdvancedFilterItems({
     region: 'Vila Aurora',

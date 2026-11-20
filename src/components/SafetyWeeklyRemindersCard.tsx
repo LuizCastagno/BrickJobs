@@ -130,7 +130,7 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
               <ShieldAlert className="w-3.5 h-3.5 text-[#F06449] shrink-0" aria-hidden="true" />
               <span>{payload.weekLabel || weekInfo.weekLabel}</span>
               <span className="text-white/40">·</span>
-              <span className="text-[#F06449]">Normas NR-06 & NR-18</span>
+              <span className="text-[#F06449]">Normas NR-06, NR-11, NR-12, NR-18 & NR-35</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight font-display [text-wrap:balance]">
               {payload.themeTitle}
@@ -342,30 +342,63 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
                 </div>
               </div>
 
-              {/* Expanded details: Common mistakes & Penalty/Risk */}
+              {/* Expanded details: Common mistakes, Penalty/Risk & Competencies */}
               {isExpanded && (
-                <div className="mt-4 pt-4 border-t border-[#F1F5F9] dark:border-[#334155]/60 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-1.5">
-                    <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
-                      Erros frequentes no canteiro:
-                    </span>
-                    <ul className="list-disc list-inside space-y-1 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed">
-                      {reminder.commonMistakes.map((mistake, mIdx) => (
-                        <li key={mIdx}>{mistake}</li>
-                      ))}
-                    </ul>
+                <div className="mt-4 pt-4 border-t border-[#F1F5F9] dark:border-[#334155]/60 space-y-3 text-xs">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-1.5">
+                      <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
+                        Erros frequentes no canteiro:
+                      </span>
+                      <ul className="list-disc list-inside space-y-1 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed">
+                        {reminder.commonMistakes.map((mistake, mIdx) => (
+                          <li key={mIdx}>{mistake}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 space-y-1.5">
+                      <span className="font-bold text-red-900 dark:text-red-200 flex items-center gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5 text-red-600 shrink-0" aria-hidden="true" />
+                        Risco direto do não uso:
+                      </span>
+                      <p className="text-red-800 dark:text-red-300 text-[11px] leading-relaxed">
+                        {reminder.penaltyOrRisk}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 space-y-1.5">
-                    <span className="font-bold text-red-900 dark:text-red-200 flex items-center gap-1.5">
-                      <ShieldAlert className="w-3.5 h-3.5 text-red-600 shrink-0" aria-hidden="true" />
-                      Risco direto do não uso:
-                    </span>
-                    <p className="text-red-800 dark:text-red-300 text-[11px] leading-relaxed">
-                      {reminder.penaltyOrRisk}
-                    </p>
-                  </div>
+                  {((reminder.requiredCompetencies?.length ?? 0) > 0 ||
+                    (reminder.preferredCompetencies?.length ?? 0) > 0) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(reminder.requiredCompetencies?.length ?? 0) > 0 && (
+                        <div className="p-3 rounded-lg bg-[#F8FAFC] dark:bg-[#0F172A]/60 border border-[#E2E8F0] dark:border-[#334155] space-y-1.5">
+                          <span className="font-bold text-[#0F172A] dark:text-[#F8FAFC] block">
+                            Competências requeridas:
+                          </span>
+                          <ul className="space-y-1 text-[#334155] dark:text-[#CBD5E1] text-[11px] leading-relaxed">
+                            {reminder.requiredCompetencies?.map((comp, cIdx) => (
+                              <li key={cIdx}>· {comp}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {(reminder.preferredCompetencies?.length ?? 0) > 0 && (
+                        <div className="p-3 rounded-lg bg-[#F8FAFC] dark:bg-[#0F172A]/60 border border-[#E2E8F0] dark:border-[#334155] space-y-1.5">
+                          <span className="font-bold text-[#475569] dark:text-[#94A3B8] block">
+                            Competências preferenciais:
+                          </span>
+                          <ul className="space-y-1 text-[#475569] dark:text-[#94A3B8] text-[11px] leading-relaxed">
+                            {reminder.preferredCompetencies?.map((comp, cIdx) => (
+                              <li key={cIdx}>· {comp}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -60,6 +60,18 @@ export function loadBrickJobsState(): BrickJobsAppState {
         Array.isArray(parsed.jobs) && parsed.jobs.length > 0
           ? parsed.jobs.map((job) => {
               const normalizedPrioridade = normalizeJobPriority(job.prioridade);
+              const competenciasRequeridas = Array.isArray(job.competenciasRequeridas)
+                ? job.competenciasRequeridas.filter(
+                    (c): c is string => typeof c === 'string' && c.trim().length > 0
+                  )
+                : undefined;
+              const competenciasPreferenciais = Array.isArray(
+                job.competenciasPreferenciais
+              )
+                ? job.competenciasPreferenciais.filter(
+                    (c): c is string => typeof c === 'string' && c.trim().length > 0
+                  )
+                : undefined;
               if (job.status === 'encerrada' && !job.closedAt) {
                 const seedMatch = DEFAULT_APP_STATE.jobs.find(
                   (seedJob) => seedJob.id === job.id
@@ -68,6 +80,8 @@ export function loadBrickJobsState(): BrickJobsAppState {
                   return {
                     ...job,
                     prioridade: normalizedPrioridade,
+                    competenciasRequeridas,
+                    competenciasPreferenciais,
                     closedAt: seedMatch.closedAt,
                   };
                 }
@@ -75,6 +89,8 @@ export function loadBrickJobsState(): BrickJobsAppState {
               return {
                 ...job,
                 prioridade: normalizedPrioridade,
+                competenciasRequeridas,
+                competenciasPreferenciais,
               };
             })
           : DEFAULT_APP_STATE.jobs,

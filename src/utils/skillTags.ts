@@ -17,6 +17,12 @@ export const CORE_PRIORITY_SKILL_TAGS: string[] = [
   'pintura',
 ];
 
+export const SPECIALTY_SKILL_TAGS: string[] = [
+  'construções industriais',
+  'pré-moldados',
+  'construções alternativas e sustentáveis',
+];
+
 export const CONSTRUCTION_SKILL_TAGS: string[] = [
   'alvenaria',
   'elétrica',
@@ -30,6 +36,9 @@ export const CONSTRUCTION_SKILL_TAGS: string[] = [
   'soldagem',
   'máquinas',
   'projetos',
+  'construções industriais',
+  'pré-moldados',
+  'construções alternativas e sustentáveis',
 ];
 
 const SKILL_TAG_LABELS: Record<string, string> = {
@@ -45,6 +54,9 @@ const SKILL_TAG_LABELS: Record<string, string> = {
   soldagem: 'Soldagem',
   'máquinas': 'Máquinas',
   projetos: 'Projetos',
+  'construções industriais': 'Construções industriais',
+  'pré-moldados': 'Pré-moldados',
+  'construções alternativas e sustentáveis': 'Construções alternativas e sustentáveis',
 };
 
 const SKILL_KEYWORDS: Array<{ tag: string; patterns: RegExp[] }> = [
@@ -142,6 +154,8 @@ const SKILL_KEYWORDS: Array<{ tag: string; patterns: RegExp[] }> = [
     tag: 'segurança',
     patterns: [
       /\bseguranca\b/,
+      /\bnr[-\s]?11\b/,
+      /\bnr[-\s]?12\b/,
       /\bnr[-\s]?18\b/,
       /\bnr[-\s]?35\b/,
       /\bnr[-\s]?10\b/,
@@ -172,7 +186,9 @@ const SKILL_KEYWORDS: Array<{ tag: string; patterns: RegExp[] }> = [
       /\bescavadeira\b/,
       /\bretroescavadeira\b/,
       /\bmunck\b/,
+      /\bguindaste\b/,
       /\bbetoneira\b/,
+      /\bponte rolante\b/,
     ],
   },
   {
@@ -183,6 +199,53 @@ const SKILL_KEYWORDS: Array<{ tag: string; patterns: RegExp[] }> = [
       /\bleitura de projetos\b/,
       /\bcronograma\b/,
       /\bcoordenacao\b/,
+    ],
+  },
+  {
+    tag: 'construções industriais',
+    patterns: [
+      /\bconstruc(?:ao|oes)\s+industria(?:l|is)\b/,
+      /\bindustrial\b/,
+      /\bindustriais\b/,
+      /\bgalp(?:ao|oes)\b/,
+      /\blogistic\w*/,
+      /\bplanta fabril\b/,
+      /\barmazem\b/,
+      /\bponte rolante\b/,
+      /\bsilo[s]?\b/,
+      /\bdistrito industrial\b/,
+    ],
+  },
+  {
+    tag: 'pré-moldados',
+    patterns: [
+      /\bpre[-\s]?moldad\w*/,
+      /\bpre[-\s]?fabricad\w*/,
+      /\bprotendid\w*/,
+      /\bicamento\b/,
+      /\bplano de rigging\b/,
+      /\brigging\b/,
+      /\blaje alveolar\b/,
+      /\bcalice de fundacao\b/,
+    ],
+  },
+  {
+    tag: 'construções alternativas e sustentáveis',
+    patterns: [
+      /\bconstruc(?:ao|oes)\s+alternativas?\b/,
+      /\bsustentavel\b/,
+      /\bsustentaveis\b/,
+      /\bbioconstruc\w*/,
+      /\becologic\w*/,
+      /\bsteel frame\b/,
+      /\bwood frame\b/,
+      /\bdrywall\b/,
+      /\btijolo ecologico\b/,
+      /\bsolo[-\s]?cimento\b/,
+      /\breuso de agua\b/,
+      /\bcaptacao pluvial\b/,
+      /\benergia solar\b/,
+      /\bcontainer\b/,
     ],
   },
 ];
@@ -207,8 +270,37 @@ export function formatSkillTagLabel(tag: string): string {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+export function parseCompetencyList(raw: string | string[] | undefined): string[] {
+  if (!raw) return [];
+  const items = Array.isArray(raw)
+    ? raw
+    : raw.split(/[\n,;•]+/);
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const item of items) {
+    const clean = String(item).trim();
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(clean);
+  }
+
+  return result;
+}
+
+export function formatCompetencyList(items?: string[]): string {
+  if (!Array.isArray(items) || items.length === 0) return '';
+  return items.join(' · ');
+}
+
 export function inferJobSkillTags(
-  job: Pick<JobPosting, 'funcao' | 'descricao' | 'skillTags'>
+  job: Pick<JobPosting, 'funcao' | 'descricao' | 'skillTags'> & {
+    competenciasRequeridas?: string[];
+    competenciasPreferenciais?: string[];
+  }
 ): string[] {
   const tags: string[] = [];
   const seen = new Set<string>();
@@ -230,7 +322,14 @@ export function inferJobSkillTags(
     return tags;
   }
 
-  const searchable = stripDiacritics(`${job.funcao} ${job.descricao}`);
+  const searchable = stripDiacritics(
+    [
+      job.funcao,
+      job.descricao,
+      ...(job.competenciasRequeridas ?? []),
+      ...(job.competenciasPreferenciais ?? []),
+    ].join(' ')
+  );
   for (const rule of SKILL_KEYWORDS) {
     if (rule.patterns.some((pattern) => pattern.test(searchable))) {
       pushTag(rule.tag);
@@ -245,7 +344,10 @@ export function inferJobSkillTags(
 }
 
 export function getJobSkillTags(
-  job: Pick<JobPosting, 'funcao' | 'descricao' | 'skillTags'>
+  job: Pick<JobPosting, 'funcao' | 'descricao' | 'skillTags'> & {
+    competenciasRequeridas?: string[];
+    competenciasPreferenciais?: string[];
+  }
 ): string[] {
   return inferJobSkillTags(job);
 }
@@ -285,7 +387,10 @@ export function buildSkillTagSummaries(
   allOpenJobs: JobPosting[],
   scopedJobs: JobPosting[] = allOpenJobs
 ): SkillTagSummary[] {
-  const availableSet = new Set<string>(CORE_PRIORITY_SKILL_TAGS);
+  const availableSet = new Set<string>([
+    ...CORE_PRIORITY_SKILL_TAGS,
+    ...SPECIALTY_SKILL_TAGS,
+  ]);
   for (const job of allOpenJobs) {
     for (const tag of getJobSkillTags(job)) {
       availableSet.add(tag);

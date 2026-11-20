@@ -3,11 +3,6 @@
  * @description Catálogo de modelos de descrição e requisitos rápidos por ocupação para agilizar a publicação de vagas.
  */
 
-/**
- * @file src/utils/jobSuggestions.ts
- * @description Catálogo de modelos de descrição e requisitos rápidos por ocupação para agilizar a publicação de vagas.
- */
-
 import type { ContractType, ExperienceLevel } from '../types/brickjobs';
 
 export interface JobSuggestionTemplate {
@@ -15,6 +10,8 @@ export interface JobSuggestionTemplate {
   titulo: string;
   descricao: string;
   requisitos: string[];
+  requiredCompetencies: string[];
+  preferredCompetencies: string[];
 }
 
 export interface SuggestionContext {
@@ -31,6 +28,8 @@ interface RolePreset {
     baseRequisitos: string[];
   }>;
   quickRequirements: string[];
+  requiredCompetencies?: string[];
+  preferredCompetencies?: string[];
 }
 
 const ROLE_PRESETS: Record<string, RolePreset> = {
@@ -62,6 +61,14 @@ const ROLE_PRESETS: Record<string, RolePreset> = {
       'Alvenaria estrutural',
       'Ferramentas próprias básicas',
       'Disponibilidade imediata',
+    ],
+    requiredCompetencies: [
+      'Prática em alvenaria no prumo e nível',
+      'Uso obrigatório de EPIs (NR-06 e NR-18)',
+    ],
+    preferredCompetencies: [
+      'Leitura básica de planta arquitetônica',
+      'Ferramentas manuais próprias',
     ],
   },
   'Servente de Obras': {
@@ -182,6 +189,128 @@ const ROLE_PRESETS: Record<string, RolePreset> = {
       'NR-35 trabalho em altura',
       'Operação de serra circular',
       'Leitura de planta de fôrmas',
+    ],
+    requiredCompetencies: [
+      'Prática em montagem de fôrmas e escoramentos',
+      'Cumprimento de NR-12 e NR-35',
+    ],
+    preferredCompetencies: [
+      'Execução de telhados e estruturas em Wood Frame',
+      'Leitura de projeto de fôrmas',
+    ],
+  },
+  'Montador de Pré-Moldados': {
+    templates: [
+      {
+        id: 'premoldado-galpao',
+        titulo: 'Montagem Estrutural Industrial',
+        baseDescricao:
+          'Içamento, posicionamento, prumo e grauteamento de pilares, vigas protendidas, tesouras e painéis pré-moldados em galpões industriais e logísticos.',
+        baseRequisitos: [
+          'Certificação NR-35 (trabalho em altura) e NR-11 (movimentação de cargas) válidas',
+          'Leitura de projeto de montagem e cumprimento rigoroso de plano de rigging (NR-18)',
+        ],
+      },
+      {
+        id: 'premoldado-lajes',
+        titulo: 'Lajes Alveolares e Fechamentos',
+        baseDescricao:
+          'Instalação de lajes alveolares, placas de fechamento lateral, soldagem de chapas de ligação e vedação de juntas em obras pré-fabricadas.',
+        baseRequisitos: [
+          'Vivência com linha de vida, trava-quedas e plataforma elevatória (PTA/PEMT)',
+          'Comunicação padronizada por sinais e rádio com operador de guindaste',
+        ],
+      },
+    ],
+    quickRequirements: [
+      'Certificado NR-11 (Cargas)',
+      'Certificado NR-35 (Altura)',
+      'Leitura de plano de rigging',
+      'Vivência em galpões industriais',
+    ],
+    requiredCompetencies: [
+      'Certificação NR-11 e NR-35 atualizadas',
+      'Leitura de projeto de montagem pré-moldada (NR-18)',
+    ],
+    preferredCompetencies: [
+      'Experiência com lajes alveolares e vigas protendidas',
+      'Operação de plataforma elevatória (PTA/PEMT)',
+    ],
+  },
+  'Operador de Guindaste / Içamento': {
+    templates: [
+      {
+        id: 'icamento-munck-guindaste',
+        titulo: 'Içamento de Pré-Moldados e Cargas Pesadas',
+        baseDescricao:
+          'Operação de guindaste ou caminhão munck para descarga, içamento e posicionamento de peças pré-moldadas e estruturas metálicas em canteiros industriais.',
+        baseRequisitos: [
+          'CNH D ou E em dia e certificação NR-11 / NR-12 para equipamentos de guindar',
+          'Interpretação de tabela de carga, nivelamento de patolas e inspeção de cintas/manilhas',
+        ],
+      },
+      {
+        id: 'icamento-ponte-rolante',
+        titulo: 'Pátio Fabril e Ponte Rolante',
+        baseDescricao:
+          'Movimentação de formas metálicas, armaduras e elementos pré-fabricados em central industrial utilizando ponte rolante ou pórtico.',
+        baseRequisitos: [
+          'Atenção rigorosa ao isolamento de área de giro e checklist diário pré-operação',
+          'Coordenação direta com sinaleiro/rigger conforme NR-11 e NR-18',
+        ],
+      },
+    ],
+    quickRequirements: [
+      'Certificado NR-11 e NR-12',
+      'CNH D ou E válida',
+      'Interpretação de tabela de carga',
+      'Plano de rigging e sinaleiro',
+    ],
+    requiredCompetencies: [
+      'Habilitação e treinamento NR-11 / NR-12 em movimentação de cargas',
+      'Leitura de tabela de carga e checklist de cintas/eslingas',
+    ],
+    preferredCompetencies: [
+      'Experiência em içamento de pilares e vigas pré-moldadas',
+      'Certificação de rigger ou sinaleiro industrial',
+    ],
+  },
+  'Especialista em Construções Sustentáveis': {
+    templates: [
+      {
+        id: 'sustentavel-steel-tijolo',
+        titulo: 'Steel Frame e Tijolo Ecológico',
+        baseDescricao:
+          'Execução de edificações alternativas com tijolo ecológico (solo-cimento), Light Steel Frame, placas cimentícias e isolamento termoacústico com mínimo desperdício.',
+        baseRequisitos: [
+          'Domínio de montagem modulada, alinhamento a laser e fixação estrutural',
+          'Uso rigoroso de respirador PFF2, óculos vedados e luva anticorte (NR-06 e NR-18)',
+        ],
+      },
+      {
+        id: 'sustentavel-bioconstrucao-agua',
+        titulo: 'Bioconstrução, Reúso e Eficiência Energética',
+        baseDescricao:
+          'Implantação de sistemas construtivos de baixo impacto ambiental, cisternas de captação pluvial, telhados verdes e preparo de infraestrutura para energia solar.',
+        baseRequisitos: [
+          'Experiência prática em construção seca, drywall ou técnicas de bioconstrução',
+          'Organização limpa do canteiro com triagem e reaproveitamento de resíduos',
+        ],
+      },
+    ],
+    quickRequirements: [
+      'Prática em Steel Frame / Drywall',
+      'Alvenaria com tijolo ecológico',
+      'Uso de PFF2 e EPIs NR-06',
+      'Captação pluvial e eficiência térmica',
+    ],
+    requiredCompetencies: [
+      'Montagem de sistemas construtivos modulares ou solo-cimento',
+      'Cumprimento de NR-06 e NR-18 contra poeira mineral e cortes',
+    ],
+    preferredCompetencies: [
+      'Vivência com Light Steel Frame, drywall ou bioconstrução',
+      'Noções de reúso de água pluvial e infraestrutura solar',
     ],
   },
   'Eletricista Predial': {
@@ -500,12 +629,38 @@ function formatExperienceContextRequirement(
   }
 }
 
+export function getRoleCompetencySuggestions(roleName: string): {
+  requiredCompetencies: string[];
+  preferredCompetencies: string[];
+} {
+  const cleanRole = roleName.trim();
+  const preset = ROLE_PRESETS[cleanRole];
+  if (preset && preset.requiredCompetencies && preset.preferredCompetencies) {
+    return {
+      requiredCompetencies: [...preset.requiredCompetencies],
+      preferredCompetencies: [...preset.preferredCompetencies],
+    };
+  }
+
+  return {
+    requiredCompetencies: [
+      `Experiência prática comprovada em ${cleanRole || 'canteiro de obras'}`,
+      'Uso obrigatório de EPIs e respeito às NRs aplicáveis (NR-06 e NR-18)',
+    ],
+    preferredCompetencies: [
+      'Certificações complementares (NR-11, NR-12 ou NR-35 conforme atividade)',
+      'Disponibilidade imediata e ferramentas próprias básicas',
+    ],
+  };
+}
+
 export function getJobDescriptionSuggestions(
   roleName: string,
   context: SuggestionContext = {}
 ): JobSuggestionTemplate[] {
   const cleanRole = roleName.trim() || 'Profissional da Construção Civil';
   const preset = ROLE_PRESETS[cleanRole];
+  const compDefaults = getRoleCompetencySuggestions(cleanRole);
   const expReq = formatExperienceContextRequirement(context.experienceLevel);
   const contractNote = context.contractType
     ? `Regime de contratação: ${context.contractType}.`
@@ -528,6 +683,8 @@ export function getJobDescriptionSuggestions(
         titulo: tpl.titulo,
         descricao,
         requisitos,
+        requiredCompetencies: compDefaults.requiredCompetencies,
+        preferredCompetencies: compDefaults.preferredCompetencies,
       };
     });
   }
@@ -546,6 +703,8 @@ export function getJobDescriptionSuggestions(
         'Uso obrigatório de EPIs e respeito às normas de segurança NR-18',
         expReq,
       ],
+      requiredCompetencies: compDefaults.requiredCompetencies,
+      preferredCompetencies: compDefaults.preferredCompetencies,
     },
     {
       id: 'custom-acabamento',
@@ -556,6 +715,8 @@ export function getJobDescriptionSuggestions(
         expReq,
         ...(contractNote ? [contractNote] : []),
       ],
+      requiredCompetencies: compDefaults.requiredCompetencies,
+      preferredCompetencies: compDefaults.preferredCompetencies,
     },
   ];
 }

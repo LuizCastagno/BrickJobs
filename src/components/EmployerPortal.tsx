@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import {
+  COMPANY_SPECIALTY_OPTIONS,
   CONSTRUCTION_ROLES,
   CONTRACT_TYPE_OPTIONS,
   EXPERIENCE_LEVEL_OPTIONS,
@@ -54,7 +55,15 @@ import {
   formatRatingSummaryLabel,
   getRatingForApplication,
 } from '../utils/ratings';
-import { inferJobSkillTags } from '../utils/skillTags';
+import {
+  CONSTRUCTION_SKILL_TAGS,
+  formatCompetencyList,
+  formatSkillTagLabel,
+  getJobSkillTags,
+  inferJobSkillTags,
+  parseCompetencyList,
+  toggleSkillTagSelection,
+} from '../utils/skillTags';
 import {
   getJobPriorityMeta,
   JOB_PRIORITY_OPTIONS,
@@ -146,6 +155,9 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
     'Intermediário (1 a 3 anos)'
   );
   const [jobPrioridade, setJobPrioridade] = useState<JobPriority>('normal');
+  const [jobSkillTags, setJobSkillTags] = useState<string[]>([]);
+  const [jobReqCompetencies, setJobReqCompetencies] = useState<string>('');
+  const [jobPrefCompetencies, setJobPrefCompetencies] = useState<string>('');
   const [jobDescricao, setJobDescricao] = useState<string>('');
   const [jobError, setJobError] = useState<string>('');
   const [jobSavedMsg, setJobSavedMsg] = useState<string>('');
@@ -318,6 +330,18 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
       jobDescricao.trim() ||
       `Vaga para ${finalFuncao} em obra no bairro ${jobBairro}, Rondonópolis-MT.`;
 
+    const competenciasRequeridas = parseCompetencyList(jobReqCompetencies);
+    const competenciasPreferenciais = parseCompetencyList(jobPrefCompetencies);
+    const inferredTags = inferJobSkillTags({
+      funcao: finalFuncao,
+      descricao: finalDescricao,
+      competenciasRequeridas,
+      competenciasPreferenciais,
+    });
+    const combinedSkillTags = Array.from(
+      new Set([...jobSkillTags, ...inferredTags])
+    );
+
     onCreateJob({
       companyId: companyProfile.id,
       companyName: companyProfile.nomeFantasia,
@@ -333,7 +357,11 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
       prioridade: normalizeJobPriority(jobPrioridade),
       turno: jobTurno,
       descricao: finalDescricao,
-      skillTags: inferJobSkillTags({ funcao: finalFuncao, descricao: finalDescricao }),
+      skillTags: combinedSkillTags,
+      competenciasRequeridas:
+        competenciasRequeridas.length > 0 ? competenciasRequeridas : undefined,
+      competenciasPreferenciais:
+        competenciasPreferenciais.length > 0 ? competenciasPreferenciais : undefined,
       telefoneContato: companyProfile.telefone,
     });
 
@@ -345,6 +373,9 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
     setJobContrato('CLT');
     setJobExperiencia('Intermediário (1 a 3 anos)');
     setJobPrioridade('normal');
+    setJobSkillTags([]);
+    setJobReqCompetencies('');
+    setJobPrefCompetencies('');
     setJobDescricao('');
     setJobSavedMsg(
       submittedPriority === 'urgente'
@@ -752,6 +783,14 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                   neighborhood={jobBairro}
                   currentDescription={jobDescricao}
                   onApplyDescription={setJobDescricao}
+                  onApplyCompetencies={({ required, preferred }) => {
+                    if (required.length > 0) {
+                      setJobReqCompetencies(required.join(', '));
+                    }
+                    if (preferred.length > 0) {
+                      setJobPrefCompetencies(preferred.join(', '));
+                    }
+                  }}
                 />
 
                 <div>
@@ -769,6 +808,79 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                     placeholder="Ex: Experiência com alvenaria estrutural, disponibilidade imediata."
                     className="w-full px-3.5 py-2.5 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] placeholder:text-[#6B7280] dark:placeholder:text-[#94A3B8] focus:outline-none focus:border-[#C93B1E]"
                   />
+                </div>
+
+                <div>
+                  <p className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5">
+                    Tags de habilidades e especialidades da vaga
+                  </p>
+                  <div
+                    role="group"
+                    aria-label="Selecionar tags de especialidade da vaga"
+                    data-testid="employer-job-skill-tags"
+                    className="flex flex-wrap gap-1.5"
+                  >
+                    {CONSTRUCTION_SKILL_TAGS.map((tag) => {
+                      const isSelected = jobSkillTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          aria-pressed={isSelected}
+                          data-testid={`employer-job-tag-${tag}`}
+                          onClick={() =>
+                            setJobSkillTags((prev) => toggleSkillTagSelection(prev, tag))
+                          }
+                          className={`min-h-[36px] px-2.5 py-1 rounded-lg border text-xs font-semibold inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'border-[#C93B1E] bg-[#C93B1E] text-white dark:border-[#F06449]'
+                              : 'border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] text-[#374151] dark:text-[#CBD5E1] hover:border-[#C93B1E] dark:hover:border-[#F06449]'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 shrink-0" aria-hidden="true" />}
+                          <span>{formatSkillTagLabel(tag)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label
+                      htmlFor="job-required-competencies"
+                      className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                    >
+                      Competências requeridas / obrigatórias (separadas por vírgula)
+                    </label>
+                    <input
+                      id="job-required-competencies"
+                      data-testid="job-required-competencies-input"
+                      type="text"
+                      value={jobReqCompetencies}
+                      onChange={(e) => setJobReqCompetencies(e.target.value)}
+                      placeholder="Ex: NR-11 (Cargas), NR-35 válida, leitura de projeto de montagem"
+                      className={inputClass}
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="job-preferred-competencies"
+                      className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                    >
+                      Competências preferenciais / diferenciais (opcional)
+                    </label>
+                    <input
+                      id="job-preferred-competencies"
+                      data-testid="job-preferred-competencies-input"
+                      type="text"
+                      value={jobPrefCompetencies}
+                      onChange={(e) => setJobPrefCompetencies(e.target.value)}
+                      placeholder="Ex: Experiência com pré-moldados protendidos, PTA/PEMT, Light Steel Frame"
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -912,6 +1024,31 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                       <p className="mt-2 text-xs text-[#4B5563] dark:text-[#94A3B8]">
                         <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">Benefícios:</span>{' '}
                         {job.beneficios}
+                      </p>
+                    )}
+
+                    <p className="mt-2 text-xs text-[#4B5563] dark:text-[#94A3B8]">
+                      <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                        Especialidades:
+                      </span>{' '}
+                      {getJobSkillTags(job).map(formatSkillTagLabel).join(' · ')}
+                    </p>
+
+                    {job.competenciasRequeridas && job.competenciasRequeridas.length > 0 && (
+                      <p className="mt-1.5 text-xs text-[#4B5563] dark:text-[#94A3B8]">
+                        <span className="font-semibold text-[#C93B1E] dark:text-[#F06449]">
+                          Competências requeridas:
+                        </span>{' '}
+                        {formatCompetencyList(job.competenciasRequeridas)}
+                      </p>
+                    )}
+
+                    {job.competenciasPreferenciais && job.competenciasPreferenciais.length > 0 && (
+                      <p className="mt-1 text-xs text-[#4B5563] dark:text-[#94A3B8]">
+                        <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                          Competências preferenciais:
+                        </span>{' '}
+                        {formatCompetencyList(job.competenciasPreferenciais)}
                       </p>
                     )}
 
@@ -1299,9 +1436,36 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                   onChange={(e) =>
                     setCompanyForm({ ...companyForm, especialidade: e.target.value })
                   }
-                  placeholder="Ex: Obras residenciais, galpões, pavimentação"
+                  placeholder="Ex: Construções industriais, pré-moldados, construções sustentáveis"
                   className={inputClass}
                 />
+                <div
+                  className="mt-2 flex flex-wrap gap-1.5"
+                  role="group"
+                  aria-label="Sugestões de especialidade da construtora"
+                >
+                  {COMPANY_SPECIALTY_OPTIONS.map((spec) => {
+                    const isActive =
+                      companyForm.especialidade.toLowerCase() === spec.toLowerCase();
+                    return (
+                      <button
+                        key={spec}
+                        type="button"
+                        data-testid={`company-specialty-option-${spec}`}
+                        onClick={() =>
+                          setCompanyForm({ ...companyForm, especialidade: spec })
+                        }
+                        className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                          isActive
+                            ? 'border-[#C93B1E] bg-[#C93B1E] text-white dark:border-[#F06449]'
+                            : 'border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] text-[#374151] dark:text-[#CBD5E1] hover:border-[#C93B1E]'
+                        }`}
+                      >
+                        {spec}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

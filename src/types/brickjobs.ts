@@ -67,6 +67,8 @@ export interface JobPosting {
   turno: string;
   descricao: string;
   skillTags?: string[];
+  competenciasRequeridas?: string[];
+  competenciasPreferenciais?: string[];
   telefoneContato: string;
   status: 'aberta' | 'encerrada';
   createdAt: string;

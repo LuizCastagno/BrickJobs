@@ -20,6 +20,10 @@ interface JobDescriptionSuggestionsProps {
   neighborhood: string;
   currentDescription: string;
   onApplyDescription: (nextDescription: string) => void;
+  onApplyCompetencies?: (competencies: {
+    required: string[];
+    preferred: string[];
+  }) => void;
 }
 
 export const JobDescriptionSuggestions: React.FC<JobDescriptionSuggestionsProps> = ({
@@ -29,6 +33,7 @@ export const JobDescriptionSuggestions: React.FC<JobDescriptionSuggestionsProps>
   neighborhood,
   currentDescription,
   onApplyDescription,
+  onApplyCompetencies,
 }) => {
   const displayRole = roleName.trim() || 'Nova função';
 
@@ -69,6 +74,10 @@ export const JobDescriptionSuggestions: React.FC<JobDescriptionSuggestionsProps>
     if (!activeSuggestion) return;
     const formatted = formatSuggestionForTextarea(activeSuggestion);
     onApplyDescription(formatted);
+    onApplyCompetencies?.({
+      required: activeSuggestion.requiredCompetencies,
+      preferred: activeSuggestion.preferredCompetencies,
+    });
     setAppliedBanner(`Modelo "${activeSuggestion.titulo}" aplicado abaixo.`);
   };
 

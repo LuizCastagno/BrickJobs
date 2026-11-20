@@ -5,6 +5,7 @@ import {
   formatSuggestionForTextarea,
   getJobDescriptionSuggestions,
   getQuickRequirementsForRole,
+  getRoleCompetencySuggestions,
 } from './jobSuggestions';
 
 test('getJobDescriptionSuggestions returns two tailored templates for known roles', () => {
@@ -19,6 +20,25 @@ test('getJobDescriptionSuggestions returns two tailored templates for known role
   assert.ok(
     pedreiro[0].requisitos.some((r) => r.includes('3+ anos'))
   );
+  assert.ok(pedreiro[0].requiredCompetencies.length >= 2);
+  assert.ok(pedreiro[0].preferredCompetencies.length >= 2);
+
+  const premoldados = getJobDescriptionSuggestions('Montador de Pré-Moldados', {
+    experienceLevel: 'Experiente (3+ anos)',
+    neighborhood: 'Distrito Industrial',
+  });
+  assert.equal(premoldados.length, 2);
+  assert.match(premoldados[0].requisitos.join(' '), /NR-11/i);
+  assert.match(premoldados[0].requisitos.join(' '), /NR-35/i);
+  assert.ok(premoldados[0].requiredCompetencies.some((c) => /NR-11/i.test(c)));
+
+  const sustentavel = getJobDescriptionSuggestions('Especialista em Construções Sustentáveis');
+  assert.equal(sustentavel.length, 2);
+  assert.match(sustentavel[0].descricao, /Steel Frame|tijolo ecológico/i);
+
+  const guindaste = getRoleCompetencySuggestions('Operador de Guindaste / Içamento');
+  assert.ok(guindaste.requiredCompetencies.some((c) => /NR-11/i.test(c)));
+  assert.ok(guindaste.preferredCompetencies.length >= 2);
 
   const eletricista = getJobDescriptionSuggestions('Eletricista Predial', {
     experienceLevel: 'Intermediário (1 a 3 anos)',

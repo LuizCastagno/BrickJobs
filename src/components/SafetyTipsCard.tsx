@@ -182,7 +182,7 @@ export const SafetyTipsCard: React.FC<SafetyTipsCardProps> = ({
           </h2>
           <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
             {viewMode === 'reading'
-              ? 'Orientações diárias baseadas nas Normas Regulamentadoras (NR-06, NR-10, NR-18 e NR-35) para proteger você no canteiro.'
+              ? 'Orientações diárias baseadas nas Normas Regulamentadoras (NR-06, NR-10, NR-11, NR-12, NR-18 e NR-35), incluindo pré-moldados, obras industriais e sustentáveis.'
               : 'Teste seus conhecimentos práticos sobre equipamentos de proteção e prevenção no canteiro de obras.'}
           </p>
         </div>
@@ -362,6 +362,49 @@ export const SafetyTipsCard: React.FC<SafetyTipsCardProps> = ({
                 </div>
               </div>
             </div>
+
+            {(tip.requiredCompetencies.length > 0 || tip.preferredCompetencies.length > 0) && (
+              <div
+                data-testid="safety-tip-competencies"
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
+                {tip.requiredCompetencies.length > 0 && (
+                  <div className="rounded-xl border border-[#E5E7EB] dark:border-[#1E293B] bg-[#F9FAFB] dark:bg-[#0F172A] p-4 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#C93B1E] dark:text-[#F06449]">
+                      Competências requeridas (obrigatórias)
+                    </p>
+                    <ul className="space-y-1.5 text-xs sm:text-sm text-[#111827] dark:text-[#F8FAFC]">
+                      {tip.requiredCompetencies.map((comp) => (
+                        <li key={comp} className="flex items-start gap-2">
+                          <span aria-hidden="true" className="text-[#C93B1E] dark:text-[#F06449] font-bold">
+                            ·
+                          </span>
+                          <span>{comp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {tip.preferredCompetencies.length > 0 && (
+                  <div className="rounded-xl border border-[#E5E7EB] dark:border-[#1E293B] bg-[#F9FAFB] dark:bg-[#0F172A] p-4 space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#4B5563] dark:text-[#94A3B8]">
+                      Competências preferenciais (diferenciais)
+                    </p>
+                    <ul className="space-y-1.5 text-xs sm:text-sm text-[#374151] dark:text-[#CBD5E1]">
+                      {tip.preferredCompetencies.map((comp) => (
+                        <li key={comp} className="flex items-start gap-2">
+                          <span aria-hidden="true" className="text-[#6B7280] dark:text-[#94A3B8] font-bold">
+                            ·
+                          </span>
+                          <span>{comp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Mini-Quiz Unlock & Launch Bar */}
             <div className="rounded-xl border border-[#E5E7EB] dark:border-[#1E293B] bg-[#F9FAFB] dark:bg-[#0F172A] px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

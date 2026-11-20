@@ -23,6 +23,8 @@ export interface SafetyWeeklyReminder {
   inspectionChecklist: string[];
   commonMistakes: string[];
   penaltyOrRisk: string;
+  requiredCompetencies?: string[];
+  preferredCompetencies?: string[];
 }
 
 export interface SafetyWeeklyPayload {
@@ -255,6 +257,143 @@ export const CURATED_SAFETY_WEEKLY_THEMES: SafetyWeeklyPayload[] = [
         ],
         penaltyOrRisk:
           'Falha mecânica com queda livre e impacto direto contra o solo.',
+        requiredCompetencies: [
+          'Certificado NR-35 válido e teste de trava antes da subida',
+          'Diferenciação entre linha de vida de cabo de aço e corda sintética',
+        ],
+        preferredCompetencies: [
+          'Experiência em montagem industrial e balancins fachadeiros',
+          'Noções de inspeção periódica de cabos e conectores',
+        ],
+      },
+    ],
+  },
+  {
+    weekKey: 'default-w3',
+    weekLabel: 'Ciclo 3 · Pré-Moldados e Obras Industriais',
+    themeTitle: 'Içamento Seguro e Montagem Industrial (NR-11, NR-12, NR-18 e NR-35)',
+    themeDescription:
+      'Diretrizes semanais de EPIs e competências para montagem de estruturas pré-moldadas, galpões logísticos, centrais de concreto e obras sustentáveis.',
+    source: 'curated',
+    generatedAt: new Date().toISOString(),
+    generalNotice:
+      'Içamentos de pré-moldados e trabalhos em cobertura industrial exigem Permissão de Trabalho (PT), isolamento do raio de carga e verificação do plano de rigging.',
+    weeklyHighlights: [
+      {
+        id: 'epi-capacete-impacto-lateral-w3',
+        epiName: 'Capacete com Jugular de 3 Pontos e Proteção Lateral',
+        category: 'cabeca',
+        categoryLabel: 'Cabeça (NR-06 & NR-18)',
+        title: 'Estabilidade total em içamento de vigas, pilares e galpões',
+        nrReference: 'NR-06 & NR-18 / NR-11',
+        whyItMatters:
+          'Durante o posicionamento de peças pré-moldadas e manobras de corda-guia, ventos fortes e movimentação constante exigem casco com jugular firme de 3 pontos e absorção lateral.',
+        inspectionChecklist: [
+          'Verifique a data de validade gravada no casco e ausência de ressecamento por sol.',
+          'Teste o ajuste da catraca traseira e os 3 pontos de fixação da jugular.',
+          'Confirme se a suspensão mantém folga mínima segura acima da cabeça.',
+        ],
+        commonMistakes: [
+          'Usar capacete sem jugular ao sinalizar caminhão munck ou guindaste.',
+          'Apoiar o capacete frouxo sobre boné ou capuz térmico.',
+        ],
+        penaltyOrRisk:
+          'Impacto craniano por oscilação de ferragens, cintas ou acessórios em altura.',
+        requiredCompetencies: [
+          'Treinamento NR-11 (movimentação de cargas) e DDS diário de içamento',
+          'Uso contínuo de EPI certificado (CA válido — NR-06)',
+        ],
+        preferredCompetencies: [
+          'Vivência com montagem de pilares e vigas pré-moldadas',
+          'Comunicação padronizada com operador de guindaste/rigger',
+        ],
+      },
+      {
+        id: 'epi-botina-antiperfurante-w3',
+        epiName: 'Botina Composite Antiperfurante com Proteção Metatarsal',
+        category: 'pes',
+        categoryLabel: 'Pés e Membros (NR-06 & NR-11)',
+        title: 'Blindagem contra esmagamento em pátios industriais e ferragens',
+        nrReference: 'NR-06, NR-11 & NR-18',
+        whyItMatters:
+          'Peças pré-fabricadas, chapas de aço e blocos de solo-cimento concentram grande peso próximo ao solo; a biqueira composite não conduz eletricidade e resiste a impactos severos.',
+        inspectionChecklist: [
+          'Confirme CA gravado com indicação de palmilha antiperfurante e biqueira resistente.',
+          'Inspecione o solado quanto a óleo, graxa ou desgaste dos sulcos antiderrapantes.',
+          'Verifique costuras laterais para impedir entrada de nata de cimento ou água.',
+        ],
+        commonMistakes: [
+          'Circular no pátio de pré-moldados com calçado comum ou solado liso.',
+          'Usar botina com biqueira de aço exposta perto de painéis elétricos (NR-10).',
+        ],
+        penaltyOrRisk:
+          'Esmagamento de dedos/metatarso, choque elétrico ou perfuração plantar.',
+        requiredCompetencies: [
+          'Cumprimento das rotas seguras e isolamento de piso na obra (NR-18)',
+          'Escolha de calçado compatível com risco elétrico ou mecânico (NR-06)',
+        ],
+        preferredCompetencies: [
+          'Experiência em centrais fabris e galpões logísticos',
+          'Prática em calçamento e nivelamento seguro de peças pré-moldadas',
+        ],
+      },
+      {
+        id: 'epi-trava-quedas-retratil-w3',
+        epiName: 'Cinto Paraquedista + Trava-Quedas Retrátil para Galpões',
+        category: 'altura',
+        categoryLabel: 'Montagem em Altura (NR-35)',
+        title: 'Conexão contínua em linhas de vida e plataformas elevatórias (PTA)',
+        nrReference: 'NR-35 & NR-18.12',
+        whyItMatters:
+          'Em coberturas industriais e encaixe de vigas protendidas, o trava-quedas retrátil reduz drasticamente a distância de queda livre e trava em fração de segundo.',
+        inspectionChecklist: [
+          'Puxe o cabo/fita bruscamente para validar o travamento automático da catraca interna.',
+          'Inspecione o indicador de queda no mosquetão giratório antes de conectar.',
+          'Confirme o cálculo de zona livre de queda (ZLQ) e ponto de ancoragem na PT.',
+        ],
+        commonMistakes: [
+          'Operar plataforma elevatória (PEMT/PTA) sem ancorar o cinto no ponto interno do cesto.',
+          'Trabalhar em viga pré-moldada sob chuva ou vento forte sem suspensão da PT.',
+        ],
+        penaltyOrRisk:
+          'Queda fatal de grande altura ou efeito pêndulo contra pilares de concreto.',
+        requiredCompetencies: [
+          'Certificado NR-35 atualizado e cumprimento da Permissão de Trabalho (PT)',
+          'Ancoragem em linha de vida certificada e cálculo básico de ZLQ',
+        ],
+        preferredCompetencies: [
+          'Habilitação em plataforma elevatória móvel de trabalho (PTA/PEMT)',
+          'Experiência em montagem de terças, telhas metálicas e lajes alveolares',
+        ],
+      },
+      {
+        id: 'epi-concha-pff2-antivibracao-w3',
+        epiName: 'Abafador Concha + Respirador PFF2 + Luva Antivibração',
+        category: 'respiratoria',
+        categoryLabel: 'Central Industrial & Sustentável',
+        title: 'Proteção combinada contra sílica, ruído e cortes em pré-fabricados',
+        nrReference: 'NR-12, NR-15 & NR-06',
+        whyItMatters:
+          'Mesas vibratórias, serras de corte de Steel Frame, placas cimentícias e centrais de concreto geram ruído acima de 85 dB, vibração e poeira fina mineral.',
+        inspectionChecklist: [
+          'Confirme vedação hermética do respirador PFF2 sobre nariz e queixo.',
+          'Cheque se as almofadas do abafador concha estão íntegras e sem folga na haste.',
+          'Verifique integridade da palma acolchoada ou malha anticorte da luva.',
+        ],
+        commonMistakes: [
+          'Cortar placas cimentícias ou tijolo ecológico a seco sem respirador PFF2.',
+          'Operar policorte ou vibrador industrial sem proteção auricular e ocular vedada.',
+        ],
+        penaltyOrRisk:
+          'Silicose pulmonar, perda auditiva permanente (PAIR) e lesões por vibração ou corte.',
+        requiredCompetencies: [
+          'Capacitação NR-12 para máquinas e respeito às proteções físicas',
+          'Uso e conservação de EPI respiratório, auditivo e para mãos (NR-06 / NR-15)',
+        ],
+        preferredCompetencies: [
+          'Vivência com Light Steel Frame, solo-cimento ou centrais de pré-moldados',
+          'Organização limpa e triagem sustentável de resíduos minerais e metálicos',
+        ],
       },
     ],
   },
@@ -394,6 +533,14 @@ export function parseSafetyWeeklyTipsPayload(
         ? r.penaltyOrRisk.trim()
         : 'Risco de acidentes severos, autuação da fiscalização e afastamento.';
 
+    const requiredCompetencies = Array.isArray(r.requiredCompetencies)
+      ? r.requiredCompetencies.map((c) => String(c).trim()).filter((c) => c.length > 0)
+      : undefined;
+
+    const preferredCompetencies = Array.isArray(r.preferredCompetencies)
+      ? r.preferredCompetencies.map((c) => String(c).trim()).filter((c) => c.length > 0)
+      : undefined;
+
     weeklyHighlights.push({
       id: typeof r.id === 'string' && r.id.trim() ? r.id.trim() : `epi-ai-${i + 1}`,
       epiName,
@@ -405,6 +552,8 @@ export function parseSafetyWeeklyTipsPayload(
       inspectionChecklist,
       commonMistakes,
       penaltyOrRisk,
+      requiredCompetencies,
+      preferredCompetencies,
     });
   }
 

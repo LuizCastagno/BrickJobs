@@ -339,11 +339,11 @@ async function startServer() {
           : 'Operário da Construção Civil';
 
       const prompt = [
-        `Gere os Lembretes Semanais de Segurança no Canteiro e Uso de EPIs para a ${weekInfo.weekLabel} (${weekInfo.weekKey}) para trabalhadores de canteiros de obra em Rondonópolis e Mato Grosso.`,
+        `Gere os Lembretes Semanais de Segurança no Canteiro e Uso de EPIs para a ${weekInfo.weekLabel} (${weekInfo.weekKey}) para trabalhadores de canteiros de obra em Rondonópolis e Mato Grosso, incluindo obras residenciais, construções industriais, montagem de pré-moldados e sistemas sustentáveis.`,
         `Ocupação de referência do trabalhador: ${workerRole}.`,
         body.focusEpi ? `Foco principal solicitado: ${body.focusEpi}.` : '',
-        'Aborde exatamente 4 EPIs indispensáveis conforme as normas brasileiras NR-06, NR-18, NR-35, NR-10 e NR-15.',
-        'Explique de forma prática: por que importa no calor e poeira do canteiro de Rondonópolis, checklist de inspeção física de 3 passos, 2 erros comuns e risco/penalidade do não uso.',
+        'Aborde exatamente 4 EPIs indispensáveis conforme as normas brasileiras NR-06, NR-10, NR-11 (içamento e movimentação de pré-moldados), NR-12 (máquinas e centrais industriais), NR-15, NR-18 e NR-35.',
+        'Explique de forma prática: por que importa no calor e poeira do canteiro de Rondonópolis, checklist de inspeção física de 3 passos, 2 erros comuns, risco/penalidade do não uso, 2 competências requeridas (obrigatórias) e 2 competências preferenciais (diferenciais).',
         'Linguagem direta, firme e acolhedora de encarregado/mestre e técnico de segurança do trabalho.',
       ]
         .filter(Boolean)
@@ -354,7 +354,7 @@ async function startServer() {
         contents: prompt,
         config: {
           systemInstruction:
-            'Você é um Engenheiro de Segurança do Trabalho e Técnico de Segurança (NR-18 e NR-35) atuando na construção civil em Rondonópolis-MT. Gere diretrizes precisas e acionáveis sobre inspeção diária e uso de EPIs no canteiro.',
+            'Você é um Engenheiro de Segurança do Trabalho e Técnico de Segurança (NR-11, NR-12, NR-18 e NR-35) atuando na construção civil, galpões industriais e montagem de pré-moldados em Rondonópolis-MT. Gere diretrizes precisas e acionáveis sobre inspeção diária e uso de EPIs no canteiro.',
           responseMimeType: 'application/json',
           responseSchema: {
             type: Type.OBJECT,
@@ -388,7 +388,7 @@ async function startServer() {
                     },
                     categoryLabel: { type: Type.STRING },
                     title: { type: Type.STRING, description: 'Título prático da recomendação.' },
-                    nrReference: { type: Type.STRING, description: 'Ex: NR-06 & NR-18.10 ou NR-35.' },
+                    nrReference: { type: Type.STRING, description: 'Ex: NR-06, NR-11, NR-12 & NR-18 ou NR-35.' },
                     whyItMatters: {
                       type: Type.STRING,
                       description: 'Por que protege a vida do operário no canteiro em 1 a 2 frases.',
@@ -407,6 +407,16 @@ async function startServer() {
                       type: Type.STRING,
                       description: 'Consequência física grave do não uso.',
                     },
+                    requiredCompetencies: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                      description: '2 competências técnicas/NRs obrigatórias.',
+                    },
+                    preferredCompetencies: {
+                      type: Type.ARRAY,
+                      items: { type: Type.STRING },
+                      description: '2 competências diferenciais ou preferenciais.',
+                    },
                   },
                   required: [
                     'id',
@@ -419,6 +429,8 @@ async function startServer() {
                     'inspectionChecklist',
                     'commonMistakes',
                     'penaltyOrRisk',
+                    'requiredCompetencies',
+                    'preferredCompetencies',
                   ],
                 },
               },

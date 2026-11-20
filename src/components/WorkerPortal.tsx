@@ -109,6 +109,7 @@ import {
 import {
   buildSkillTagSummaries,
   filterJobsBySkillTags,
+  formatCompetencyList,
   formatSkillTagLabel,
   getJobSkillTags,
   toggleSkillTagSelection,
@@ -807,15 +808,6 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             <span className="font-mono text-xs tabular-nums">({unreadCount})</span>
           </button>
 
-          {!isWorkerRegistered && activeTab !== 'cadastro' && (
-            <button
-              type="button"
-              onClick={() => onChangeTab('cadastro')}
-              className="min-h-[44px] px-4 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-sm font-semibold transition-colors cursor-pointer"
-            >
-              Criar meu perfil
-            </button>
-          )}
           {isWorkerRegistered && activeTab !== 'perfil' && (
             <button
               type="button"
@@ -1608,6 +1600,30 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         </span>{' '}
                         {getJobSkillTags(job).map(formatSkillTagLabel).join(' · ')}
                       </p>
+
+                      {job.competenciasRequeridas && job.competenciasRequeridas.length > 0 && (
+                        <p
+                          className="mt-1.5 text-xs text-[#4B5563] dark:text-[#94A3B8]"
+                          data-testid={`job-required-competencies-${job.id}`}
+                        >
+                          <span className="font-semibold text-[#C93B1E] dark:text-[#F06449]">
+                            Competências requeridas:
+                          </span>{' '}
+                          {formatCompetencyList(job.competenciasRequeridas)}
+                        </p>
+                      )}
+
+                      {job.competenciasPreferenciais && job.competenciasPreferenciais.length > 0 && (
+                        <p
+                          className="mt-1 text-xs text-[#4B5563] dark:text-[#94A3B8]"
+                          data-testid={`job-preferred-competencies-${job.id}`}
+                        >
+                          <span className="font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                            Competências preferenciais:
+                          </span>{' '}
+                          {formatCompetencyList(job.competenciasPreferenciais)}
+                        </p>
+                      )}
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-[#F3F4F6] dark:border-[#1E293B] flex flex-wrap items-center justify-between gap-3">
@@ -2599,15 +2615,8 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 Seu perfil ainda não foi gerado
               </h2>
               <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1.5">
-                Preencha seus dados gerais e anexe um currículo em PDF ou informe suas experiências profissionais para gerar o perfil.
+                Utilize a aba Meu Cadastro acima para preencher seus dados gerais e anexar um currículo em PDF ou informar suas experiências profissionais.
               </p>
-              <button
-                type="button"
-                onClick={() => onChangeTab('cadastro')}
-                className="mt-5 min-h-[48px] px-6 py-2.5 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-sm font-semibold cursor-pointer"
-              >
-                Preencher Meu Cadastro
-              </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" data-testid="generated-worker-profile">

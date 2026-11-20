@@ -17,8 +17,8 @@ import {
   toggleAcknowledgedSafetyTip,
 } from './safetyTips.ts';
 
-test('DAILY_SAFETY_TIPS entries have complete NR references, practices, and PPE items', () => {
-  assert.ok(DAILY_SAFETY_TIPS.length >= 10);
+test('DAILY_SAFETY_TIPS entries have complete NR references, practices, PPE items, and competencies', () => {
+  assert.ok(DAILY_SAFETY_TIPS.length >= 16);
   for (const tip of DAILY_SAFETY_TIPS) {
     assert.ok(tip.id.length > 0);
     assert.ok(tip.nrReference.includes('NR-'));
@@ -26,7 +26,26 @@ test('DAILY_SAFETY_TIPS entries have complete NR references, practices, and PPE 
     assert.ok(tip.recommendedPractice.trim().length > 20);
     assert.ok(tip.whyItMatters.trim().length > 15);
     assert.ok(tip.requiredPpe.length >= 2);
+    assert.ok(tip.requiredCompetencies.length >= 2, `Missing requiredCompetencies on ${tip.id}`);
+    assert.ok(tip.preferredCompetencies.length >= 2, `Missing preferredCompetencies on ${tip.id}`);
   }
+
+  const riggingTip = DAILY_SAFETY_TIPS.find((t) => t.id === 'industrial-icamento-premoldados');
+  assert.ok(riggingTip);
+  assert.ok(riggingTip.nrReference.includes('NR-11'));
+  assert.ok(isTipRelevantToRole(riggingTip, 'Montador de Pré-Moldados'));
+
+  const centralTip = DAILY_SAFETY_TIPS.find((t) => t.id === 'industrial-central-premoldados-nr12');
+  assert.ok(centralTip);
+  assert.ok(centralTip.nrReference.includes('NR-12'));
+
+  const galpaoTip = DAILY_SAFETY_TIPS.find((t) => t.id === 'industrial-montagem-altura-galpoes');
+  assert.ok(galpaoTip);
+  assert.ok(galpaoTip.nrReference.includes('NR-35'));
+
+  const sustainableTip = DAILY_SAFETY_TIPS.find((t) => t.id === 'sustentavel-epis-alternativas');
+  assert.ok(sustainableTip);
+  assert.ok(isTipRelevantToRole(sustainableTip, 'Especialista em Construções Sustentáveis'));
 });
 
 test('getLocalDateKey formats YYYY-MM-DD in local calendar values', () => {

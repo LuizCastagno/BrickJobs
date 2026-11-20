@@ -32,6 +32,19 @@ test('getCuratedSafetyWeeklyReminders provides comprehensive default PPE highlig
   const payload1 = getCuratedSafetyWeeklyReminders(1);
   const oculos = payload1.weeklyHighlights.find((h) => h.category === 'olhos');
   assert.ok(oculos);
+
+  const payload2 = getCuratedSafetyWeeklyReminders(2);
+  assert.ok(payload2.themeTitle.includes('NR-11'));
+  assert.ok(payload2.themeTitle.includes('NR-12'));
+  assert.ok(
+    payload2.weeklyHighlights.every(
+      (h) =>
+        Array.isArray(h.requiredCompetencies) &&
+        h.requiredCompetencies.length >= 2 &&
+        Array.isArray(h.preferredCompetencies) &&
+        h.preferredCompetencies.length >= 2
+    )
+  );
 });
 
 test('parseSafetyWeeklyTipsPayload handles valid structured JSON from Gemini', () => {
@@ -52,6 +65,8 @@ test('parseSafetyWeeklyTipsPayload handles valid structured JSON from Gemini', (
         inspectionChecklist: ['Verificar elástico', 'Ajustar clipe nasal'],
         commonMistakes: ['Usar frouxo'],
         penaltyOrRisk: 'Comprometimento respiratório',
+        requiredCompetencies: ['Teste prático de vedação PFF2 (NR-06)'],
+        preferredCompetencies: ['Experiência em obras de construção seca'],
       },
       {
         id: 'epi-cinto-teste',
@@ -73,6 +88,12 @@ test('parseSafetyWeeklyTipsPayload handles valid structured JSON from Gemini', (
   assert.equal(parsed.weeklyHighlights.length, 2);
   assert.equal(parsed.weeklyHighlights[0].category, 'respiratoria');
   assert.equal(parsed.weeklyHighlights[0].categoryLabel, 'Vias Respiratórias');
+  assert.deepEqual(parsed.weeklyHighlights[0].requiredCompetencies, [
+    'Teste prático de vedação PFF2 (NR-06)',
+  ]);
+  assert.deepEqual(parsed.weeklyHighlights[0].preferredCompetencies, [
+    'Experiência em obras de construção seca',
+  ]);
 });
 
 test('parseSafetyWeeklyTipsPayload gracefully falls back on malformed or empty responses', () => {

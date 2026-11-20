@@ -174,6 +174,8 @@ export function filterJobsByLocationAndQuery(
         job.tipoContrato ?? '',
         job.nivelExperiencia ?? '',
         job.turno,
+        ...(job.competenciasRequeridas ?? []),
+        ...(job.competenciasPreferenciais ?? []),
         ...getJobSkillTags(job),
       ]
         .join(' ')

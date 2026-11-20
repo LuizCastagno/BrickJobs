@@ -20,6 +20,8 @@ export interface SafetyTip {
   whyItMatters: string;
   requiredPpe: string[];
   targetRoles: string[];
+  requiredCompetencies: string[];
+  preferredCompetencies: string[];
 }
 
 export interface DailySafetyTipResult {
@@ -133,6 +135,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Botina com biqueira',
     ],
     targetRoles: ['Geral', 'Pedreiro', 'Servente', 'Mestre de Obras'],
+    requiredCompetencies: [
+      'Inspeção visual pré-uso do casco e suspensão (NR-06)',
+      'Cumprimento das regras de circulação e DDS no canteiro (NR-18)',
+    ],
+    preferredCompetencies: [
+      'Conhecimento de classes de isolamento do capacete (Classe A/B)',
+      'Participação ativa em treinamentos periódicos de segurança',
+    ],
   },
   {
     id: 'altura-cinto-ancoragem',
@@ -150,6 +160,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Capacete com jugular',
     ],
     targetRoles: ['Pedreiro', 'Carpinteiro', 'Pintor', 'Armador', 'Azulejista'],
+    requiredCompetencies: [
+      'Certificado NR-35 válido e ASO com aptidão para altura',
+      'Identificação de pontos de ancoragem independentes (1.500 kgf)',
+    ],
+    preferredCompetencies: [
+      'Experiência em montagem e conferência de andaimes fachadeiros',
+      'Noções de resgate e cálculo de zona livre de queda (ZLQ)',
+    ],
   },
   {
     id: 'prevencao-serra-disco',
@@ -167,6 +185,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Luva de vaqueta ou anticorte',
     ],
     targetRoles: ['Carpinteiro', 'Armador', 'Pedreiro', 'Azulejista'],
+    requiredCompetencies: [
+      'Capacitação NR-12 para operação segura de serras e ferramentas rotativas',
+      'Conferência de RPM máxima e validade do disco de corte',
+    ],
+    preferredCompetencies: [
+      'Prática em bloqueio e desconexão elétrica na troca de acessórios',
+      'Checklist diário de cabos, plugues e coifa retrátil',
+    ],
   },
   {
     id: 'eletrica-bloqueio-quadro',
@@ -184,6 +210,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Óculos de segurança anti-arco',
     ],
     targetRoles: ['Eletricista', 'Instalações Elétricas', 'Manutenção'],
+    requiredCompetencies: [
+      'Certificado NR-10 atualizado e leitura de diagramas unifilares',
+      'Procedimento de bloqueio, etiquetagem (LOTO) e teste de ausência de tensão',
+    ],
+    preferredCompetencies: [
+      'Qualificação NR-10 SEP para redes de média tensão e subestações',
+      'Experiência em painéis industriais (QGBT) e testes com megômetro',
+    ],
   },
   {
     id: 'epi-respiratorio-cimento',
@@ -201,6 +235,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Óculos de vedação',
     ],
     targetRoles: ['Servente', 'Pedreiro', 'Pintor', 'Azulejista'],
+    requiredCompetencies: [
+      'Teste prático de vedação facial do respirador PFF2 (NR-06)',
+      'Higienização e escolha correta de luvas contra agentes alcalinos',
+    ],
+    preferredCompetencies: [
+      'Corte úmido para redução de poeira de sílica no canteiro',
+      'Identificação precoce de desgaste e saturação de filtros',
+    ],
   },
   {
     id: 'canteiro-hidratacao-sol',
@@ -218,6 +260,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Óculos com filtro UV',
     ],
     targetRoles: ['Geral', 'Armador', 'Servente', 'Pedreiro'],
+    requiredCompetencies: [
+      'Reconhecimento de sinais de estresse térmico e desidratação (NR-21)',
+      'Uso contínuo de vestimenta UV e proteção ocular externa',
+    ],
+    preferredCompetencies: [
+      'Organização de rodízio de pausas em lajes e pátios industriais abertos',
+      'Noções de primeiros socorros em caso de insolação',
+    ],
   },
   {
     id: 'prevencao-vergalhoes-pontas',
@@ -235,6 +285,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Capacete',
     ],
     targetRoles: ['Armador', 'Pedreiro', 'Servente', 'Mestre de Obras'],
+    requiredCompetencies: [
+      'Bloqueio e proteção de esperas verticais conforme NR-18',
+      'Uso de botina com palmilha antiperfurante e biqueira resistente',
+    ],
+    preferredCompetencies: [
+      'Leitura de projeto de arranques e cálices de fundação',
+      'Organização de estoque de aço CA-50/CA-60 em bancadas',
+    ],
   },
   {
     id: 'prevencao-escavacao-talude',
@@ -252,6 +310,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Colete refletivo',
     ],
     targetRoles: ['Servente', 'Pedreiro', 'Mestre de Obras'],
+    requiredCompetencies: [
+      'Avaliação visual de taludes e escoramento de valas (NR-18)',
+      'Sinalização periférica e afastamento de sobrecarga nas bordas',
+    ],
+    preferredCompetencies: [
+      'Atuação coordenada com operador de retroescavadeira (NR-11)',
+      'Conhecimento de drenagem provisória em fundações industriais',
+    ],
   },
   {
     id: 'epi-auditivo-martelete',
@@ -269,6 +335,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Luva antivibração',
     ],
     targetRoles: ['Pedreiro', 'Servente', 'Carpinteiro', 'Azulejista'],
+    requiredCompetencies: [
+      'Colocação e vedação corretas do protetor auditivo (NR-06 / NR-15)',
+      'Uso de luva antivibração e controle de tempo de exposição',
+    ],
+    preferredCompetencies: [
+      'Noções de dupla proteção auditiva em áreas com ruído acima de 95 dB',
+      'Inspeção periódica de espumas e selos do abafador concha',
+    ],
   },
   {
     id: 'canteiro-organizacao-fios',
@@ -286,6 +360,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Capacete',
     ],
     targetRoles: ['Carpinteiro', 'Servente', 'Eletricista', 'Geral'],
+    requiredCompetencies: [
+      'Aplicação de organização 5S e rotas desobstruídas no canteiro (NR-18)',
+      'Suspensão segura de cabos longe de umidade e trânsito de máquinas',
+    ],
+    preferredCompetencies: [
+      'Triagem de madeiras e sucata metálica para descarte sustentável',
+      'Verificação de quadro elétrico provisório com dispositivo DR',
+    ],
   },
   {
     id: 'altura-escada-inclinacao',
@@ -303,6 +385,14 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Capacete com jugular',
     ],
     targetRoles: ['Pintor', 'Eletricista', 'Pedreiro', 'Carpinteiro'],
+    requiredCompetencies: [
+      'Regra de inclinação 1:4, amarração no topo e regra dos 3 pontos de apoio',
+      'Uso de escada de fibra isolante em proximidade elétrica (NR-10 / NR-35)',
+    ],
+    preferredCompetencies: [
+      'Preferência por plataforma elevatória (PTA) ou andaime com guarda-corpo',
+      'Uso de bolsa ou cinto porta-ferramentas certificado',
+    ],
   },
   {
     id: 'canteiro-postura-carga',
@@ -320,6 +410,141 @@ export const DAILY_SAFETY_TIPS: SafetyTip[] = [
       'Capacete',
     ],
     targetRoles: ['Servente', 'Pedreiro', 'Armador', 'Geral'],
+    requiredCompetencies: [
+      'Técnica ergonômica de levantamento manual de cargas (NR-17)',
+      'Uso de carrinhos, paleteiras ou apoio em dupla para cargas acima de 25 kg',
+    ],
+    preferredCompetencies: [
+      'Noções de amarração e distribuição de carga em paletes',
+      'Alongamento breve antes do turno de trabalho',
+    ],
+  },
+  {
+    id: 'industrial-icamento-premoldados',
+    category: 'prevencao',
+    categoryLabel: 'Pré-Moldados e Industriais',
+    nrReference: 'NR-11 / NR-18 · Içamento de Pré-Moldados',
+    title: 'Isole o raio de giro e use cordas-guia ao içar pilares e vigas pré-moldadas',
+    recommendedPractice:
+      'Antes de erguer elementos pré-moldados com guindaste ou munck, inspecione cintas, cabos de aço e manilhas, confira o patolamento em solo firme e conduza a peça apenas com cordas-guia fora da área isolada.',
+    whyItMatters:
+      'Cargas suspensas de toneladas são fatais em caso de ruptura de cinta ou balanço por vento; nunca passe ou posicione mãos sob peças pré-moldadas em movimentação.',
+    requiredPpe: [
+      'Capacete com jugular e proteção contra impacto lateral',
+      'Botina com biqueira composite/aço e palmilha antiperfurante',
+      'Luva de vaqueta ou anticorte reforçada',
+      'Colete de alta visibilidade (classe 2)',
+    ],
+    targetRoles: [
+      'Montador de Pré-Moldados',
+      'Operador de Guindaste / Içamento',
+      'Armador',
+      'Operador de Máquinas',
+      'Mestre de Obras',
+    ],
+    requiredCompetencies: [
+      'Capacitação NR-11 em movimentação, içamento e armazenagem de cargas',
+      'Atendimento ao plano de rigging, isolamento de área e sinais padronizados (NR-18)',
+    ],
+    preferredCompetencies: [
+      'Vivência na montagem de pilares, vigas protendidas e lajes alveolares',
+      'Inspeção visual de cintas têxteis, olhais de içamento e manilhas',
+    ],
+  },
+  {
+    id: 'industrial-central-premoldados-nr12',
+    category: 'epis',
+    categoryLabel: 'Pré-Moldados e Industriais',
+    nrReference: 'NR-12 / NR-06 · Máquinas e Centrais Industriais',
+    title: 'Proteja audição, olhos e pulmões em centrais de pré-moldados e mesas vibratórias',
+    recommendedPractice:
+      'Nunca burle grades de segurança, sensores ou botões de parada de emergência em pontes rolantes, betoneiras industriais e policortes. Use dupla proteção onde o ruído superar 95 dB e respirador PFF2 contra sílica.',
+    whyItMatters:
+      'Máquinas de pré-fabricação possuem pontos de esmagamento, cisalhamento e alta emissão de ruído e poeira mineral de concreto.',
+    requiredPpe: [
+      'Protetor auditivo tipo concha de alta atenuação',
+      'Óculos de ampla visão contra estilhaços e nata de cimento',
+      'Respirador PFF2 contra sílica cristalina',
+      'Luva antivibração ou anticorte',
+    ],
+    targetRoles: [
+      'Montador de Pré-Moldados',
+      'Operador de Máquinas',
+      'Soldador',
+      'Pedreiro',
+      'Servente',
+    ],
+    requiredCompetencies: [
+      'Treinamento NR-12 para operação segura e bloqueio de energia perigosa',
+      'Uso correto de EPIs para ruído (NR-15) e poeira mineral (NR-06)',
+    ],
+    preferredCompetencies: [
+      'Experiência em pátio ou fábrica de elementos pré-moldados',
+      'Checklist diário de ponte rolante, vibradores de concreto e esmerilhadeiras',
+    ],
+  },
+  {
+    id: 'industrial-montagem-altura-galpoes',
+    category: 'altura_eletrica',
+    categoryLabel: 'Pré-Moldados e Industriais',
+    nrReference: 'NR-35 / NR-18 · Montagem Industrial em Altura',
+    title: 'Na montagem de galpões e coberturas pré-moldadas, ancore-se em linha de vida certificada',
+    recommendedPractice:
+      'Instale a linha de vida horizontal antes do içamento das vigas e terças, utilize plataforma elevatória (PTA/PEMT) com guarda-corpo travado e paralise o içamento se o vento ultrapassar o limite técnico da APR.',
+    whyItMatters:
+      'Montagens industriais acontecem acima de 6 a 12 metros com peças pesadas e risco combinado de queda, vento lateral e proximidade de redes elétricas.',
+    requiredPpe: [
+      'Cinto paraquedista com 2 pontos de ancoragem e absorvedor',
+      'Trava-quedas retrátil ou talabarte em Y certificado',
+      'Capacete com jugular de 3 pontos',
+      'Botina antiderrapante com suporte de tornozelo',
+    ],
+    targetRoles: [
+      'Montador de Pré-Moldados',
+      'Soldador',
+      'Eletricista',
+      'Carpinteiro',
+      'Mestre de Obras',
+    ],
+    requiredCompetencies: [
+      'Certificado NR-35 válido e emissão diária de Permissão de Trabalho (PT)',
+      'Operação segura com linha de vida, trava-quedas e Análise Preliminar de Risco (APR)',
+    ],
+    preferredCompetencies: [
+      'Qualificação para operação de plataforma elevatória móvel (PEMT/PTA — NR-18)',
+      'Experiência com solda ou aparafusamento estrutural em galpões industriais',
+    ],
+  },
+  {
+    id: 'sustentavel-epis-alternativas',
+    category: 'epis',
+    categoryLabel: 'Construções Sustentáveis',
+    nrReference: 'NR-06 / NR-18 · Construções Alternativas e Sustentáveis',
+    title: 'Corte de placas cimentícias, steel frame e solo-cimento exige PFF2 e luva anticorte',
+    recommendedPractice:
+      'Ao cortar perfis metálicos de Light Steel Frame, chapas de drywall/cimentícias ou prensar tijolo ecológico de solo-cimento, utilize respirador PFF2 vedado, óculos herméticos e luvas táteis anticorte.',
+    whyItMatters:
+      'Construções secas e ecológicas reduzem entulho, mas liberam partículas finas respiráveis e bordas metálicas cortantes nos perfis galvanizados.',
+    requiredPpe: [
+      'Respirador PFF2/PFF3 com vedação nasal ajustada',
+      'Óculos de segurança com vedação periférica',
+      'Luva anticorte tátil (nível A3/A4) para perfis metálicos',
+      'Protetor auricular',
+    ],
+    targetRoles: [
+      'Especialista em Construções Sustentáveis',
+      'Carpinteiro',
+      'Pedreiro',
+      'Soldador',
+    ],
+    requiredCompetencies: [
+      'Verificação de CA válido e conservação de EPIs conforme NR-06',
+      'Leitura de projeto modulado para montagem seca ou solo-cimento (NR-18)',
+    ],
+    preferredCompetencies: [
+      'Prática em Light Steel Frame, Wood Frame ou tijolo ecológico',
+      'Triagem limpa e reaproveitamento de sobras metálicas e minerais',
+    ],
   },
 ];
 
@@ -634,6 +859,66 @@ export const SAFETY_QUIZ_QUESTIONS: SafetyQuizQuestion[] = [
     correctIndex: 1,
     explanation:
       'Transferir o esforço para as pernas, usar carrinho ou ajuda em cargas acima de 25 kg e vestir luvas e botina previne lombalgias e esmagamentos.',
+  },
+  {
+    id: 'quiz-industrial-icamento',
+    tipId: 'industrial-icamento-premoldados',
+    nrReference: 'NR-11 / NR-18 · Içamento de Pré-Moldados',
+    question:
+      'Ao içar pilares ou vigas pré-moldadas com guindaste (NR-11 e NR-18), qual procedimento garante a segurança da equipe de montagem?',
+    options: [
+      'Guiar a peça segurando diretamente por baixo com as mãos para acelerar o encaixe',
+      'Isolar o raio de giro, conferir cintas e manilhas, conduzir com cordas-guia e usar capacete, botina antiperfurante, luva e colete refletivo',
+      'Dispensar o isolamento da área se o operador do munck já tiver experiência',
+    ],
+    correctIndex: 1,
+    explanation:
+      'A NR-11 e a NR-18 proíbem permanecer sob carga suspensa: isolamento do raio de giro, inspeção de eslingas, cordas-guia e EPIs completos evitam esmagamentos fatais.',
+  },
+  {
+    id: 'quiz-industrial-central-nr12',
+    tipId: 'industrial-central-premoldados-nr12',
+    nrReference: 'NR-12 / NR-06 · Máquinas e Centrais Industriais',
+    question:
+      'Em centrais de pré-moldados com pontes rolantes, mesas vibratórias e corte de aço (NR-12 e NR-15), o que é obrigatório?',
+    options: [
+      'Manter todas as proteções e paradas de emergência ativas e vestir protetor auricular concha, óculos ampla visão, PFF2 e luva antivibração',
+      'Desativar o sensor da grade de proteção para facilitar a limpeza da mesa vibratória ligada',
+      'Usar apenas protetor auditivo quando o engenheiro estiver visitando o pátio',
+    ],
+    correctIndex: 0,
+    explanation:
+      'A NR-12 exige proteções físicas íntegras nas máquinas industriais, enquanto os EPIs da NR-06 e NR-15 previnem perda auditiva, silicose e lesões por projeção ou vibração.',
+  },
+  {
+    id: 'quiz-industrial-montagem-altura',
+    tipId: 'industrial-montagem-altura-galpoes',
+    nrReference: 'NR-35 / NR-18 · Montagem Industrial em Altura',
+    question:
+      'Na montagem em altura de coberturas e vigas pré-moldadas em galpões industriais (NR-35 e NR-18), o que deve ser feito?',
+    options: [
+      'Subir sem linha de vida para ganhar agilidade antes do fim do turno',
+      'Emitir PT/APR, ancorar cinto paraquedista com trava-quedas em linha de vida certificada e respeitar os limites de vento',
+      'Apoiar o corpo apenas na borda da viga recém-posicionada sem talabarte',
+    ],
+    correctIndex: 1,
+    explanation:
+      'A montagem industrial em altura exige Permissão de Trabalho (PT), linha de vida independente, cinto paraquedista com trava-quedas e suspensão imediata sob ventos fortes.',
+  },
+  {
+    id: 'quiz-sustentavel-epis',
+    tipId: 'sustentavel-epis-alternativas',
+    nrReference: 'NR-06 / NR-18 · Construções Alternativas e Sustentáveis',
+    question:
+      'Ao cortar perfis metálicos de Steel Frame, placas cimentícias ou tijolo ecológico (solo-cimento), quais EPIs protegem o trabalhador?',
+    options: [
+      'Respirador PFF2/PFF3 vedado, óculos com vedação periférica, luva anticorte tátil e protetor auricular',
+      'Apenas luva de algodão fina e máscara cirúrgica comum',
+      'Nenhum EPI respiratório é necessário porque placas cimentícias não geram poeira',
+    ],
+    correctIndex: 0,
+    explanation:
+      'Cortes em placas cimentícias e solo-cimento liberam partículas respiráveis e os perfis galvanizados possuem bordas cortantes; PFF2, óculos vedados e luva anticorte são essenciais conforme NR-06.',
   },
 ];
 
