@@ -3,15 +3,11 @@
  * @description Tela inicial (landing) do BrickJobs em Rondonópolis-MT com seleção de perfil
  *   (Contratante/Contratado), busca rápida por proximidade GPS e vitrine de vagas abertas.
  */
-/**
- * @file CoverScreen.tsx
- * @description Tela inicial (landing) do BrickJobs em Rondonópolis-MT com seleção de perfil
- *   (Contratante/Contratado), busca rápida por proximidade GPS e vitrine de vagas abertas.
- */
 import React, { useMemo, useState } from 'react';
 import {
   ArrowRight,
   Building2,
+  Flame,
   HardHat,
   LocateFixed,
   MapPin,
@@ -36,6 +32,7 @@ import {
   type ProximityFilterState,
 } from '../utils/geolocation';
 import type { LgpdModalTab } from '../utils/lgpdConsent';
+import { getJobPriorityMeta, sortJobsByPriority } from '../utils/jobPriority';
 import coverHeroImg from '../assets/images/brickjobs_cover_hero_1794693694488.jpg';
 import { BrickLogo } from './BrickLogo';
 import { SelectWrapper } from './SelectWrapper';
@@ -75,7 +72,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
     const queryFiltered = filterJobsByTitleOrDescription(jobs, searchQuery);
     if (!proximityFilter?.active) {
       return {
-        filteredJobs: queryFiltered,
+        filteredJobs: sortJobsByPriority(queryFiltered),
         distanceByJobId: new Map<string, number>(),
       };
     }
@@ -566,13 +563,38 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {filteredJobs.map((job) => {
                     const distKm = distanceByJobId.get(job.id);
+                    const priorityMeta = getJobPriorityMeta(job.prioridade);
+                    const isUrgent = priorityMeta.value === 'urgente';
+                    const isHigh = priorityMeta.value === 'alta';
+                    const cardClass = isUrgent
+                      ? 'border-[#FDBA74] dark:border-[#9A3412] bg-[#FFF7ED] dark:bg-[#1F1510]'
+                      : isHigh
+                        ? 'border-[#FCD34D] dark:border-[#854D0E] bg-[#FFFBEB] dark:bg-[#1C1912]'
+                        : 'border-[#E5E7EB] dark:border-[#1E293B] bg-[#F9FAFB] dark:bg-[#0F172A]';
                     return (
                       <article
                         key={job.id}
-                        className="rounded-xl border border-[#E5E7EB] dark:border-[#1E293B] bg-[#F9FAFB] dark:bg-[#0F172A] p-4 flex flex-col justify-between gap-2"
+                        className={`rounded-xl border ${cardClass} p-4 flex flex-col justify-between gap-2`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
+                            {priorityMeta.isHighlighted && (
+                              <p
+                                className={`mb-1 inline-flex items-center gap-1 text-xs font-bold ${
+                                  isUrgent
+                                    ? 'text-[#C93B1E] dark:text-[#FB923C]'
+                                    : 'text-[#B45309] dark:text-[#FBBF24]'
+                                }`}
+                              >
+                                <Flame
+                                  className={`w-3.5 h-3.5 shrink-0 ${
+                                    isUrgent ? 'fill-current' : ''
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                                <span>{priorityMeta.shortLabel}</span>
+                              </p>
+                            )}
                             <h3 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
                               {job.funcao}
                             </h3>

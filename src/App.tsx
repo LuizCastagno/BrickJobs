@@ -39,6 +39,7 @@ import type {
   UserRole,
   WorkerProfile,
 } from './types/brickjobs';
+import { normalizeJobPriority } from './utils/jobPriority';
 import {
   createAcceptedApplicationNotification,
   createNewJobNotification,
@@ -428,6 +429,7 @@ export default function App() {
   ) => {
     const newJob: JobPosting = {
       ...jobInput,
+      prioridade: normalizeJobPriority(jobInput.prioridade),
       id: `job-${Date.now()}`,
       status: 'aberta',
       createdAt: new Date().toISOString().slice(0, 10),

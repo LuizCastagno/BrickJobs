@@ -8,6 +8,7 @@ import {
   normalizeRegistrantSex,
   sanitizeRequiredDocumentsMap,
 } from './requiredDocuments';
+import { normalizeJobPriority } from './jobPriority';
 
 const STORAGE_KEY = 'brickjobs_rondonopolis_state_v1';
 
@@ -58,15 +59,23 @@ export function loadBrickJobsState(): BrickJobsAppState {
       jobs:
         Array.isArray(parsed.jobs) && parsed.jobs.length > 0
           ? parsed.jobs.map((job) => {
+              const normalizedPrioridade = normalizeJobPriority(job.prioridade);
               if (job.status === 'encerrada' && !job.closedAt) {
                 const seedMatch = DEFAULT_APP_STATE.jobs.find(
                   (seedJob) => seedJob.id === job.id
                 );
                 if (seedMatch?.closedAt) {
-                  return { ...job, closedAt: seedMatch.closedAt };
+                  return {
+                    ...job,
+                    prioridade: normalizedPrioridade,
+                    closedAt: seedMatch.closedAt,
+                  };
                 }
               }
-              return job;
+              return {
+                ...job,
+                prioridade: normalizedPrioridade,
+              };
             })
           : DEFAULT_APP_STATE.jobs,
       seedWorkers:

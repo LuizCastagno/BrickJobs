@@ -77,10 +77,12 @@ export function createNewJobNotification(
   createdAt: string = new Date().toISOString()
 ): WorkerNotification {
   const vagasLabel = job.quantidadeVagas === 1 ? '1 vaga' : `${job.quantidadeVagas} vagas`;
+  const urgentPrefix =
+    job.prioridade === 'urgente' ? 'Vaga urgente na sua região' : 'Nova vaga na sua região';
   return {
     id: `notif-job-${job.id}-${Date.now()}`,
     type: 'nova_vaga_regiao',
-    title: `Nova vaga na sua região: ${job.funcao}`,
+    title: `${urgentPrefix}: ${job.funcao}`,
     message: `${job.companyName} abriu ${vagasLabel} em ${job.bairro} (${job.salarioOuDiaria}).`,
     jobId: job.id,
     region: job.bairro,

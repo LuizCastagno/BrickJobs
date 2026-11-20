@@ -11,6 +11,7 @@ import {
   Check,
   CheckCircle2,
   FileText,
+  Flame,
   MapPin,
   MessageSquare,
   Minus,
@@ -35,6 +36,7 @@ import type {
   ExperienceLevel,
   JobApplication,
   JobPosting,
+  JobPriority,
   RequiredDocumentKey,
   WorkerProfile,
 } from '../types/brickjobs';
@@ -53,6 +55,11 @@ import {
   getRatingForApplication,
 } from '../utils/ratings';
 import { inferJobSkillTags } from '../utils/skillTags';
+import {
+  getJobPriorityMeta,
+  JOB_PRIORITY_OPTIONS,
+  normalizeJobPriority,
+} from '../utils/jobPriority';
 import {
   TAB_TRANSITION_CONFIG,
   TAB_TRANSITION_VARIANTS,
@@ -138,6 +145,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
   const [jobExperiencia, setJobExperiencia] = useState<ExperienceLevel>(
     'Intermediário (1 a 3 anos)'
   );
+  const [jobPrioridade, setJobPrioridade] = useState<JobPriority>('normal');
   const [jobDescricao, setJobDescricao] = useState<string>('');
   const [jobError, setJobError] = useState<string>('');
   const [jobSavedMsg, setJobSavedMsg] = useState<string>('');
@@ -322,20 +330,27 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
       beneficios: jobBeneficios.trim() || undefined,
       tipoContrato: jobContrato,
       nivelExperiencia: jobExperiencia,
+      prioridade: normalizeJobPriority(jobPrioridade),
       turno: jobTurno,
       descricao: finalDescricao,
       skillTags: inferJobSkillTags({ funcao: finalFuncao, descricao: finalDescricao }),
       telefoneContato: companyProfile.telefone,
     });
 
+    const submittedPriority = normalizeJobPriority(jobPrioridade);
     setCustomRole('');
     setQuantidadeVagas(2);
     setJobSalario('');
     setJobBeneficios('');
     setJobContrato('CLT');
     setJobExperiencia('Intermediário (1 a 3 anos)');
+    setJobPrioridade('normal');
     setJobDescricao('');
-    setJobSavedMsg(`Busca registrada: ${finalFuncao} (${Math.floor(quantidadeVagas)} vagas).`);
+    setJobSavedMsg(
+      submittedPriority === 'urgente'
+        ? `Busca urgente registrada: ${finalFuncao} (${Math.floor(quantidadeVagas)} vagas).`
+        : `Busca registrada: ${finalFuncao} (${Math.floor(quantidadeVagas)} vagas).`
+    );
   };
 
   const inputClass =
@@ -662,6 +677,56 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
 
               <div>
                 <label
+                  htmlFor="job-priority"
+                  className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                >
+                  Prioridade / Urgência da contratação
+                </label>
+                <SelectWrapper>
+                  <select
+                    id="job-priority"
+                    data-testid="job-priority-select"
+                    value={jobPrioridade}
+                    onChange={(e) =>
+                      setJobPrioridade(normalizeJobPriority(e.target.value))
+                    }
+                    className={selectClass}
+                  >
+                    {JOB_PRIORITY_OPTIONS.map((opt) => {
+                      const meta = getJobPriorityMeta(opt);
+                      return (
+                        <option key={opt} value={opt}>
+                          {meta.selectLabel}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </SelectWrapper>
+                {jobPrioridade !== 'normal' && (
+                  <p
+                    className={`mt-1.5 text-xs font-medium inline-flex items-center gap-1.5 ${
+                      jobPrioridade === 'urgente'
+                        ? 'text-[#C93B1E] dark:text-[#FB923C]'
+                        : 'text-[#B45309] dark:text-[#FBBF24]'
+                    }`}
+                  >
+                    <Flame
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        jobPrioridade === 'urgente' ? 'fill-current' : ''
+                      }`}
+                      aria-hidden="true"
+                    />
+                    <span>
+                      {jobPrioridade === 'urgente'
+                        ? 'Destaque com ícone de fogo e prioridade no topo da listagem para trabalhadores.'
+                        : 'Vaga destacada acima das oportunidades de prazo padrão.'}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label
                   htmlFor="job-benefits"
                   className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
                 >
@@ -774,16 +839,45 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
               </div>
             ) : (
               <div className="space-y-3" data-testid="company-jobs-list">
-                {companyJobs.map((job) => (
+                {companyJobs.map((job) => {
+                  const priorityMeta = getJobPriorityMeta(job.prioridade);
+                  const isUrgent = priorityMeta.value === 'urgente';
+                  const isHigh = priorityMeta.value === 'alta';
+                  const cardSurfaceClass = isUrgent
+                    ? 'bg-[#FFF7ED] dark:bg-[#1F1510] border-[#FDBA74] dark:border-[#9A3412]'
+                    : isHigh
+                      ? 'bg-[#FFFBEB] dark:bg-[#1C1912] border-[#FCD34D] dark:border-[#854D0E]'
+                      : 'bg-white dark:bg-[#111827] border-[#E5E7EB] dark:border-[#1E293B]';
+                  return (
                   <article
                     key={job.id}
-                    className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5"
+                    className={`${cardSurfaceClass} border rounded-2xl p-5`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]">
-                          {job.funcao}
-                        </h3>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]">
+                            {job.funcao}
+                          </h3>
+                          {priorityMeta.isHighlighted && (
+                            <span
+                              data-testid={`company-job-priority-${job.id}`}
+                              className={`inline-flex items-center gap-1 text-xs font-bold ${
+                                isUrgent
+                                  ? 'text-[#C93B1E] dark:text-[#FB923C]'
+                                  : 'text-[#B45309] dark:text-[#FBBF24]'
+                              }`}
+                            >
+                              <Flame
+                                className={`w-3.5 h-3.5 shrink-0 ${
+                                  isUrgent ? 'fill-current' : ''
+                                }`}
+                                aria-hidden="true"
+                              />
+                              <span>{priorityMeta.shortLabel}</span>
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mt-1">
                           {job.bairro} · {job.tipoContrato ?? 'CLT'} ·{' '}
                           {job.nivelExperiencia ?? 'Intermediário (1 a 3 anos)'} · {job.turno} ·{' '}
@@ -850,7 +944,8 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                       </button>
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             )}
 

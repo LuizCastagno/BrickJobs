@@ -43,6 +43,8 @@ export interface CompanyProfile {
 
 export type ContractType = 'CLT' | 'Autônomo' | 'Temporário';
 
+export type JobPriority = 'normal' | 'alta' | 'urgente';
+
 export type ExperienceLevel =
   | 'Sem experiência / Auxiliar'
   | 'Intermediário (1 a 3 anos)'
@@ -61,6 +63,7 @@ export interface JobPosting {
   beneficios?: string;
   tipoContrato?: ContractType;
   nivelExperiencia?: ExperienceLevel;
+  prioridade?: JobPriority;
   turno: string;
   descricao: string;
   skillTags?: string[];

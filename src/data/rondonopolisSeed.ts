@@ -3,11 +3,6 @@
  * @description Dados iniciais (seed) voltados para a construção civil em Rondonópolis-MT, incluindo regiões, categorias, vagas de exemplo e perfis vazios.
  */
 
-/**
- * @file src/data/rondonopolisSeed.ts
- * @description Dados iniciais (seed) voltados para a construção civil em Rondonópolis-MT, incluindo regiões, categorias, vagas de exemplo e perfis vazios.
- */
-
 import type {
   ChatMessage,
   CompanyProfile,
@@ -97,6 +92,7 @@ export const SEED_JOBS: JobPosting[] = [
     beneficios: 'Almoço na obra e vale-transporte',
     tipoContrato: 'Autônomo',
     nivelExperiencia: 'Intermediário (1 a 3 anos)',
+    prioridade: 'urgente',
     turno: 'Comercial (07h–17h)',
     descricao: 'Execução de alvenaria estrutural, reboco interno e assentamento de blocos em obra residencial multifamiliar.',
     skillTags: ['alvenaria', 'acabamento'],
@@ -190,6 +186,7 @@ export const SEED_JOBS: JobPosting[] = [
     beneficios: 'Vale-transporte, almoço na obra e seguro de vida',
     tipoContrato: 'CLT',
     nivelExperiencia: 'Intermediário (1 a 3 anos)',
+    prioridade: 'alta',
     turno: 'Comercial (07h–17h)',
     descricao: 'Execução de instalações elétricas comerciais e residenciais, montagem de quadros de distribuição (QDC), aterramento e testes conforme NBR 5410.',
     skillTags: ['elétrica'],
@@ -209,6 +206,7 @@ export const SEED_JOBS: JobPosting[] = [
     beneficios: 'Adicional de periculosidade, cesta básica e EPI completo',
     tipoContrato: 'CLT',
     nivelExperiencia: 'Experiente (3+ anos)',
+    prioridade: 'urgente',
     turno: 'Comercial (07h–17h)',
     descricao: 'Manutenção preventiva e corretiva em redes elétricas de baixa e média tensão, quadros gerais e alimentadores em galpões logísticos.',
     skillTags: ['elétrica', 'segurança'],

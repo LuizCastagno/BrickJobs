@@ -16,6 +16,7 @@ import {
   Clock,
   Download,
   FileText,
+  Flame,
   HardHat,
   LocateFixed,
   MapPin,
@@ -104,6 +105,12 @@ import {
   getJobSkillTags,
   toggleSkillTagSelection,
 } from '../utils/skillTags';
+import {
+  countUrgentJobs,
+  filterJobsByUrgency,
+  getJobPriorityMeta,
+  sortJobsByPriority,
+} from '../utils/jobPriority';
 import {
   loadWorkerSafetyStats,
   recordWorkerQuizAttempt,
@@ -226,6 +233,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   const [filterContract, setFilterContract] = useState<string>('Todos');
   const [filterExperience, setFilterExperience] = useState<string>('Todos');
   const [selectedSkillTags, setSelectedSkillTags] = useState<string[]>([]);
+  const [onlyUrgentJobs, setOnlyUrgentJobs] = useState<boolean>(false);
   const [applyFeedback, setApplyFeedback] = useState<string>('');
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [pdfExportFeedback, setPdfExportFeedback] = useState<string>('');
@@ -443,15 +451,23 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     proximityFilter,
   ]);
 
+  const urgentOpenJobsCount = useMemo(
+    () => countUrgentJobs(openJobs, true),
+    [openJobs]
+  );
+
   const skillTagSummaries = useMemo(
     () => buildSkillTagSummaries(openJobs, scopedJobsBeforeTags),
     [openJobs, scopedJobsBeforeTags]
   );
 
-  const filteredJobs = useMemo(
-    () => filterJobsBySkillTags(scopedJobsBeforeTags, selectedSkillTags),
-    [scopedJobsBeforeTags, selectedSkillTags]
-  );
+  const filteredJobs = useMemo(() => {
+    const tagFiltered = filterJobsBySkillTags(scopedJobsBeforeTags, selectedSkillTags);
+    const urgencyFiltered = filterJobsByUrgency(tagFiltered, onlyUrgentJobs);
+    return proximityFilter?.active
+      ? urgencyFiltered
+      : sortJobsByPriority(urgencyFiltered);
+  }, [scopedJobsBeforeTags, selectedSkillTags, onlyUrgentJobs, proximityFilter]);
 
   const clearAdvancedFilters = () => {
     setFilterOccupation('Todas');
@@ -1056,33 +1072,62 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
           {/* Advanced Filters Menu */}
           <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => setShowAdvancedFilters((prev) => !prev)}
-                aria-expanded={showAdvancedFilters}
-                data-testid="worker-advanced-filters-toggle"
-                className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] hover:bg-[#F3F4F6] dark:hover:bg-[#334155] text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <SlidersHorizontal className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
-                <span>
-                  Filtros avançados
-                  {activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ''}
-                </span>
-                <ChevronDown
-                  className={`w-4 h-4 text-[#4B5563] dark:text-[#94A3B8] shrink-0 transition-transform ${
-                    showAdvancedFilters ? 'rotate-180' : ''
-                  }`}
-                  aria-hidden="true"
-                />
-              </button>
-
-              {activeAdvancedCount > 0 && (
+              <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   type="button"
-                  onClick={clearAdvancedFilters}
+                  onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                  aria-expanded={showAdvancedFilters}
+                  data-testid="worker-advanced-filters-toggle"
+                  className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] hover:bg-[#F3F4F6] dark:hover:bg-[#334155] text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 transition-colors cursor-pointer"
+                >
+                  <SlidersHorizontal className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                  <span>
+                    Filtros avançados
+                    {activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ''}
+                  </span>
+                  <ChevronDown
+                    className={`w-4 h-4 text-[#4B5563] dark:text-[#94A3B8] shrink-0 transition-transform ${
+                      showAdvancedFilters ? 'rotate-180' : ''
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setOnlyUrgentJobs((prev) => !prev)}
+                  aria-pressed={onlyUrgentJobs}
+                  data-testid="worker-urgent-filter-toggle"
+                  className={`min-h-[44px] px-4 py-2 rounded-xl border text-sm font-semibold inline-flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                    onlyUrgentJobs
+                      ? 'border-[#EA580C] dark:border-[#FB923C] bg-[#FFF7ED] dark:bg-[#2A1810] text-[#C93B1E] dark:text-[#FB923C]'
+                      : 'border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] hover:bg-[#FFF7ED] dark:hover:bg-[#241913] text-[#111827] dark:text-[#F8FAFC]'
+                  }`}
+                >
+                  <Flame
+                    className={`w-4 h-4 shrink-0 ${
+                      onlyUrgentJobs
+                        ? 'text-[#C93B1E] dark:text-[#FB923C] fill-current'
+                        : 'text-[#C93B1E] dark:text-[#FB923C]'
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <span className="tabular-nums">
+                    Somente urgentes ({urgentOpenJobsCount})
+                  </span>
+                </button>
+              </div>
+
+              {(activeAdvancedCount > 0 || onlyUrgentJobs) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearAdvancedFilters();
+                    setOnlyUrgentJobs(false);
+                  }}
                   className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 text-xs font-semibold text-[#C93B1E] dark:text-[#F06449] hover:underline cursor-pointer"
                 >
-                  Limpar filtros avançados
+                  Limpar filtros
                 </button>
               )}
             </div>
@@ -1217,7 +1262,9 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
                   {proximityFilter?.active
                     ? `Nenhuma vaga encontrada num raio de ${proximityFilter.radiusKm} km da sua localização`
-                    : 'Nenhuma vaga aberta para esse filtro'}
+                    : onlyUrgentJobs
+                      ? 'Nenhuma vaga urgente aberta para esse filtro'
+                      : 'Nenhuma vaga aberta para esse filtro'}
                 </p>
                 <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
                   {proximityFilter?.active
@@ -1244,6 +1291,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                       setSearchQuery('');
                       setProximityFilter(null);
                       setSelectedSkillTags([]);
+                      setOnlyUrgentJobs(false);
                       clearAdvancedFilters();
                     }}
                     className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] dark:bg-[#F8FAFC] text-white dark:text-[#0F172A] text-sm font-medium cursor-pointer"
@@ -1285,6 +1333,14 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                             'contratado'
                           )
                         : 0;
+                    const priorityMeta = getJobPriorityMeta(job.prioridade);
+                    const isUrgent = priorityMeta.value === 'urgente';
+                    const isHighPriority = priorityMeta.value === 'alta';
+                    const cardStyleClass = isUrgent
+                      ? 'bg-[#FFF7ED] dark:bg-[#1F1510] border-[#FDBA74] dark:border-[#9A3412] hover:border-[#EA580C] dark:hover:border-[#C2410C]'
+                      : isHighPriority
+                        ? 'bg-[#FFFBEB] dark:bg-[#1C1912] border-[#FCD34D] dark:border-[#854D0E] hover:border-[#D97706] dark:hover:border-[#A16207]'
+                        : 'bg-white dark:bg-[#111827] border-[#E5E7EB] dark:border-[#1E293B] hover:border-[#D1D5DB] dark:hover:border-[#334155]';
                     return (
                       <motion.article
                         key={job.id}
@@ -1293,7 +1349,8 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         animate={JOB_CARD_VARIANTS.animate}
                         exit={JOB_CARD_VARIANTS.exit}
                         transition={JOB_CARD_TRANSITION(index)}
-                        className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] hover:border-[#D1D5DB] dark:hover:border-[#334155] hover:shadow-sm transition-all rounded-2xl p-5 flex flex-col justify-between"
+                        data-priority={priorityMeta.value}
+                        className={`${cardStyleClass} border hover:shadow-sm transition-all rounded-2xl p-5 flex flex-col justify-between`}
                       >
                     <div>
                       <div className="flex items-start justify-between gap-3">
@@ -1307,6 +1364,28 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                             testId={`job-company-avatar-${job.id}`}
                           />
                           <div className="min-w-0">
+                            {priorityMeta.isHighlighted && (
+                              <p
+                                data-testid={`job-priority-indicator-${job.id}`}
+                                className={`mb-1 inline-flex items-center gap-1 text-xs font-bold ${
+                                  isUrgent
+                                    ? 'text-[#C93B1E] dark:text-[#FB923C]'
+                                    : 'text-[#B45309] dark:text-[#FBBF24]'
+                                }`}
+                              >
+                                <Flame
+                                  className={`w-3.5 h-3.5 shrink-0 ${
+                                    isUrgent ? 'fill-current' : ''
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                                <span>
+                                  {isUrgent
+                                    ? 'Urgente · Contratação imediata'
+                                    : 'Prioridade alta'}
+                                </span>
+                              </p>
+                            )}
                             <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
                               {job.funcao}
                             </h3>
