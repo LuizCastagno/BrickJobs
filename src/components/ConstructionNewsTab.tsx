@@ -1,3 +1,8 @@
+/**
+ * @file ConstructionNewsTab.tsx
+ * @description Aba "Notícias da Construção" do Portal do Trabalhador com headlines sobre obras e
+ *   infraestrutura em Mato Grosso, filtragem por categoria/texto e busca via Search Grounding.
+ */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ExternalLink,
@@ -79,13 +84,13 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
       <div className="rounded-2xl bg-gradient-to-r from-[#111827] via-[#1E293B] to-[#C93B1E]/80 text-white p-5 sm:p-7 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-sm">
-              <Newspaper className="w-3.5 h-3.5 text-[#F06449]" aria-hidden="true" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-lg bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-sm">
+              <Newspaper className="w-3.5 h-3.5 text-[#F06449] shrink-0" aria-hidden="true" />
               <span>Headlines de Mato Grosso</span>
               <span className="text-white/40">·</span>
               <span className="text-[#F06449]">Google Search Grounding</span>
             </div>
-            <h2 className="text-xl sm:text-3xl font-bold tracking-tight font-display">
+            <h2 className="text-xl sm:text-3xl font-bold tracking-tight font-display [text-wrap:balance]">
               Notícias da Construção e Infraestrutura
             </h2>
             <p className="text-xs sm:text-sm text-white/80 leading-relaxed">
@@ -100,7 +105,7 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
             className="self-start sm:self-center inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-xs sm:text-sm font-semibold text-white transition-all cursor-pointer disabled:opacity-50 shrink-0"
           >
             <RefreshCw
-              className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}
+              className={`w-4 h-4 shrink-0 ${isLoading ? 'animate-spin' : ''}`}
               aria-hidden="true"
             />
             <span>{isLoading ? 'Pesquisando na web...' : 'Atualizar Notícias'}</span>
@@ -119,7 +124,7 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
           <Search
-            className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8]"
+            className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] pointer-events-none shrink-0"
             aria-hidden="true"
           />
           <input
@@ -127,13 +132,13 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por rodovia, ferrovia, bairro, empresa ou função..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-xs sm:text-sm text-[#0F172A] dark:text-[#F8FAFC] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#C93B1E]"
+            className="w-full min-h-[44px] pl-10 pr-16 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-xs sm:text-sm text-[#0F172A] dark:text-[#F8FAFC] placeholder-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#C93B1E]"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-white cursor-pointer"
             >
               Limpar
             </button>
@@ -220,7 +225,7 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
                   {/* Impact on Job Opportunities */}
                   <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#0F172A]/50 border border-[#E2E8F0] dark:border-[#334155]/60 space-y-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-[#C93B1E] dark:text-[#F06449]">
-                      <TrendingUp className="w-3.5 h-3.5" />
+                      <TrendingUp className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                       <span>Impacto em Vagas e Empregos na Obra:</span>
                     </div>
                     <p className="text-xs text-[#334155] dark:text-[#CBD5E1] leading-relaxed">
@@ -231,8 +236,8 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
 
                 {/* Footer with Source & Read Action */}
                 <div className="mt-4 pt-3.5 border-t border-[#F1F5F9] dark:border-[#334155]/60 flex items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-1.5 text-[#64748B] dark:text-[#94A3B8]">
-                    <Globe className="w-3.5 h-3.5 text-[#94A3B8]" />
+                  <div className="flex items-center gap-1.5 text-[#64748B] dark:text-[#94A3B8] min-w-0">
+                    <Globe className="w-3.5 h-3.5 text-[#94A3B8] shrink-0" aria-hidden="true" />
                     <span className="truncate max-w-[150px] sm:max-w-[200px]">
                       {item.source}
                     </span>
@@ -242,10 +247,10 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
                     href={item.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#F1F5F9] dark:bg-[#334155] hover:bg-[#E2E8F0] dark:hover:bg-[#475569] font-semibold text-[#0F172A] dark:text-[#F8FAFC] transition-colors"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#F1F5F9] dark:bg-[#334155] hover:bg-[#E2E8F0] dark:hover:bg-[#475569] font-semibold text-[#0F172A] dark:text-[#F8FAFC] transition-colors shrink-0"
                   >
                     <span>Ler original</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
+                    <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   </a>
                 </div>
               </article>

@@ -1,3 +1,8 @@
+/**
+ * @file src/components/SafetyTipsCard.tsx
+ * @description Biblioteca de boas práticas de segurança no canteiro (NRs) e quiz diário interativo com pontuação.
+ */
+
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {

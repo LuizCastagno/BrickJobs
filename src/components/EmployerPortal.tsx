@@ -1,3 +1,8 @@
+/**
+ * @file EmployerPortal.tsx
+ * @description Portal da Construtora (Contratante): cadastro da empresa, publicação de vagas,
+ *   monitoramento meteorológico, dashboards mensais, gestão de candidaturas e busca de profissionais.
+ */
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -66,6 +71,7 @@ import { ProfileAvatar } from './ProfileAvatar';
 import { ProfilePhotoField } from './ProfilePhotoField';
 import { RainAlertsPanel } from './RainAlertsPanel';
 import { RequiredDocumentsSection } from './RequiredDocumentsSection';
+import { SelectWrapper } from './SelectWrapper';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 
 export type EmployerTab = 'vagas' | 'estatisticas' | 'cadastro' | 'profissionais';
@@ -335,11 +341,13 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
   const inputClass =
     'w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] placeholder:text-[#6B7280] dark:placeholder:text-[#94A3B8] focus:outline-none focus:border-[#C93B1E]';
 
+  const selectClass = `${inputClass} appearance-none pr-10 cursor-pointer`;
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-nav-safe md:pb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-nav-safe md:pb-12">
       {/* Header Context */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-5">
-        <div className="flex items-center gap-3.5 min-w-0">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 lg:gap-8 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-5">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
           <ProfileAvatar
             name={
               isCompanyRegistered
@@ -351,11 +359,11 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             size="lg"
             testId="employer-header-avatar"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
               Área do Contratante · Rondonópolis-MT
             </p>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words h-[112px] w-[149.59375px]">
+            <h1 className="font-display text-2xl sm:text-3xl lg:text-[2rem] font-bold tracking-tight leading-tight [text-wrap:balance] text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
               {isCompanyRegistered ? companyProfile.nomeFantasia : 'Painel da Construtora'}
             </h1>
             <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1 break-words">
@@ -366,7 +374,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 sm:gap-6 shrink-0">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-5 lg:gap-6 lg:justify-end shrink-0">
           <div>
             <p className="font-display text-2xl font-bold text-[#111827] dark:text-[#F8FAFC] tabular-nums">
               {totalOpenVacanciesByCompany}
@@ -408,7 +416,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             data-testid="employer-open-severance-button"
             className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F9FAFB] dark:hover:bg-[#334155] text-xs sm:text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 transition-colors cursor-pointer shrink-0"
           >
-            <Calculator className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+            <Calculator className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
             <span>Calculadora de rescisão</span>
           </button>
         </div>
@@ -461,19 +469,21 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                 >
                   Função / Ocupação *
                 </label>
-                <select
-                  id="job-role-select"
-                  value={selectedRoleOption}
-                  onChange={(e) => setSelectedRoleOption(e.target.value)}
-                  className={inputClass}
-                >
-                  {CONSTRUCTION_ROLES.map((roleName) => (
-                    <option key={roleName} value={roleName}>
-                      {roleName}
-                    </option>
-                  ))}
-                  <option value="Outra">Outra função...</option>
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="job-role-select"
+                    value={selectedRoleOption}
+                    onChange={(e) => setSelectedRoleOption(e.target.value)}
+                    className={selectClass}
+                  >
+                    {CONSTRUCTION_ROLES.map((roleName) => (
+                      <option key={roleName} value={roleName}>
+                        {roleName}
+                      </option>
+                    ))}
+                    <option value="Outra">Outra função...</option>
+                  </select>
+                </SelectWrapper>
               </div>
 
               {selectedRoleOption === 'Outra' && (
@@ -541,18 +551,20 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                   >
                     Bairro da obra *
                   </label>
-                  <select
-                    id="job-bairro"
-                    value={jobBairro}
-                    onChange={(e) => setJobBairro(e.target.value)}
-                    className={inputClass}
-                  >
-                    {RONDONOPOLIS_NEIGHBORHOODS.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectWrapper>
+                    <select
+                      id="job-bairro"
+                      value={jobBairro}
+                      onChange={(e) => setJobBairro(e.target.value)}
+                      className={selectClass}
+                    >
+                      {RONDONOPOLIS_NEIGHBORHOODS.map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
                 </div>
               </div>
 
@@ -564,18 +576,20 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                   >
                     Turno / Regime
                   </label>
-                  <select
-                    id="job-shift"
-                    value={jobTurno}
-                    onChange={(e) => setJobTurno(e.target.value)}
-                    className={inputClass}
-                  >
-                    {SHIFT_OPTIONS.map((shift) => (
-                      <option key={shift} value={shift}>
-                        {shift}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectWrapper>
+                    <select
+                      id="job-shift"
+                      value={jobTurno}
+                      onChange={(e) => setJobTurno(e.target.value)}
+                      className={selectClass}
+                    >
+                      {SHIFT_OPTIONS.map((shift) => (
+                        <option key={shift} value={shift}>
+                          {shift}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
                 </div>
 
                 <div>
@@ -604,18 +618,20 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                   >
                     Tipo de contrato
                   </label>
-                  <select
-                    id="job-contract"
-                    value={jobContrato}
-                    onChange={(e) => setJobContrato(e.target.value as ContractType)}
-                    className={inputClass}
-                  >
-                    {CONTRACT_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectWrapper>
+                    <select
+                      id="job-contract"
+                      value={jobContrato}
+                      onChange={(e) => setJobContrato(e.target.value as ContractType)}
+                      className={selectClass}
+                    >
+                      {CONTRACT_TYPE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
                 </div>
 
                 <div>
@@ -625,20 +641,22 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                   >
                     Nível de experiência
                   </label>
-                  <select
-                    id="job-experience"
-                    value={jobExperiencia}
-                    onChange={(e) =>
-                      setJobExperiencia(e.target.value as ExperienceLevel)
-                    }
-                    className={inputClass}
-                  >
-                    {EXPERIENCE_LEVEL_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectWrapper>
+                    <select
+                      id="job-experience"
+                      value={jobExperiencia}
+                      onChange={(e) =>
+                        setJobExperiencia(e.target.value as ExperienceLevel)
+                      }
+                      className={selectClass}
+                    >
+                      {EXPERIENCE_LEVEL_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
                 </div>
               </div>
 
@@ -979,7 +997,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             animate="animate"
             exit="exit"
             transition={TAB_TRANSITION_CONFIG}
-            className="mt-6 max-w-3xl bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-7"
+            className="mt-6 max-w-4xl mx-auto bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-7"
           >
           <h2 className="font-display text-xl font-bold text-[#111827] dark:text-[#F8FAFC]">
             Cadastro geral da construtora
@@ -1087,38 +1105,40 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                 >
                   Sexo do responsável *
                 </label>
-                <select
-                  id="comp-sexo-responsavel"
-                  data-testid="company-sex-select"
-                  aria-invalid={companySexError || undefined}
-                  value={companyForm.sexoResponsavel ?? ''}
-                  onChange={(e) => {
-                    const nextSex = e.target.value as CompanyProfile['sexoResponsavel'];
-                    setCompanyError('');
-                    setCompanySexError(false);
-                    if (nextSex !== 'masculino') {
-                      setCompanyMissingDocKeys((prev) =>
-                        prev.filter((k) => k !== 'reservistaOuCdi')
-                      );
-                    }
-                    setCompanyForm({
-                      ...companyForm,
-                      sexoResponsavel: nextSex,
-                    });
-                  }}
-                  className={`${inputClass} ${
-                    companySexError
-                      ? '!border-[#DC2626] dark:!border-[#F87171]'
-                      : ''
-                  }`}
-                >
-                  <option value="">Selecione...</option>
-                  {REGISTRANT_SEX_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="comp-sexo-responsavel"
+                    data-testid="company-sex-select"
+                    aria-invalid={companySexError || undefined}
+                    value={companyForm.sexoResponsavel ?? ''}
+                    onChange={(e) => {
+                      const nextSex = e.target.value as CompanyProfile['sexoResponsavel'];
+                      setCompanyError('');
+                      setCompanySexError(false);
+                      if (nextSex !== 'masculino') {
+                        setCompanyMissingDocKeys((prev) =>
+                          prev.filter((k) => k !== 'reservistaOuCdi')
+                        );
+                      }
+                      setCompanyForm({
+                        ...companyForm,
+                        sexoResponsavel: nextSex,
+                      });
+                    }}
+                    className={`${selectClass} ${
+                      companySexError
+                        ? '!border-[#DC2626] dark:!border-[#F87171]'
+                        : ''
+                    }`}
+                  >
+                    <option value="">Selecione...</option>
+                    {REGISTRANT_SEX_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </SelectWrapper>
                 {companySexError && (
                   <p
                     role="alert"
@@ -1198,20 +1218,22 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                 >
                   Bairro principal em Rondonópolis-MT
                 </label>
-                <select
-                  id="comp-bairro"
-                  value={companyForm.bairro}
-                  onChange={(e) =>
-                    setCompanyForm({ ...companyForm, bairro: e.target.value })
-                  }
-                  className={inputClass}
-                >
-                  {RONDONOPOLIS_NEIGHBORHOODS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="comp-bairro"
+                    value={companyForm.bairro}
+                    onChange={(e) =>
+                      setCompanyForm({ ...companyForm, bairro: e.target.value })
+                    }
+                    className={selectClass}
+                  >
+                    {RONDONOPOLIS_NEIGHBORHOODS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </SelectWrapper>
               </div>
 
               <div>
@@ -1424,13 +1446,13 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
               {filteredWorkers.map((worker) => {
                 const totalMonths = calculateTotalExperienceMonths(worker.experiencias);
                 return (
                   <article
                     key={worker.id}
-                    className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 flex flex-col justify-between"
+                    className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] hover:border-[#D1D5DB] dark:hover:border-[#334155] hover:shadow-sm transition-all rounded-2xl p-5 flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-3">

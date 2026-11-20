@@ -1,3 +1,8 @@
+/**
+ * @file UserSettingsMenu.tsx
+ * @description Modal responsivo (bottom sheet no mobile, diálogo central no desktop) com tema
+ *   claro/escuro, instalação PWA, push nativo, controle de sons de notificação, LGPD e tour guiado.
+ */
 import React, { useEffect, useState } from 'react';
 import {
   Check,
@@ -10,6 +15,8 @@ import {
   ShieldCheck,
   Smartphone,
   Sun,
+  Volume2,
+  VolumeX,
   X,
 } from 'lucide-react';
 import type { UsePWAInstallResult } from '../hooks/usePWAInstall';
@@ -42,6 +49,8 @@ interface UserSettingsMenuProps {
   lgpdConsent: LgpdConsentState;
   onOpenLgpdModal: (tab: LgpdModalTab) => void;
   pwaInstall: UsePWAInstallResult;
+  soundEnabled: boolean;
+  onToggleSoundEnabled: () => void;
 }
 
 export const UserSettingsMenu: React.FC<UserSettingsMenuProps> = ({
@@ -60,6 +69,8 @@ export const UserSettingsMenu: React.FC<UserSettingsMenuProps> = ({
   lgpdConsent,
   onOpenLgpdModal,
   pwaInstall,
+  soundEnabled,
+  onToggleSoundEnabled,
 }) => {
   const lgpdSummary = formatLgpdStatusSummary(lgpdConsent);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
@@ -392,6 +403,57 @@ export const UserSettingsMenu: React.FC<UserSettingsMenuProps> = ({
             onToggleEnabled={onTogglePushEnabled}
             onSendTestNotification={onTestNativePush}
           />
+        </div>
+
+        <div className="mt-5 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-semibold text-[#374151] dark:text-[#CBD5E1]">
+              Sons de notificação
+            </span>
+            <span className="text-xs font-medium text-[#C93B1E] dark:text-[#F06449]">
+              {soundEnabled ? 'Ativados' : 'Silenciados'}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={soundEnabled}
+            onClick={onToggleSoundEnabled}
+            data-testid="settings-sound-toggle"
+            className="w-full min-h-[52px] rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#0F172A] hover:border-[#111827] dark:hover:border-[#64748B] px-3.5 py-2.5 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              {soundEnabled ? (
+                <Volume2
+                  className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0"
+                  aria-hidden="true"
+                />
+              ) : (
+                <VolumeX
+                  className="w-4 h-4 text-[#6B7280] dark:text-[#94A3B8] shrink-0"
+                  aria-hidden="true"
+                />
+              )}
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                  Alertas sonoros no app
+                </p>
+                <p className="text-[11px] text-[#4B5563] dark:text-[#94A3B8]">
+                  Toca ao aceitar contrato ou receber avisos de obra.
+                </p>
+              </div>
+            </div>
+            <span
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold shrink-0 ${
+                soundEnabled
+                  ? 'bg-[#C93B1E] text-white'
+                  : 'bg-[#E5E7EB] dark:bg-[#1E293B] text-[#374151] dark:text-[#CBD5E1]'
+              }`}
+            >
+              {soundEnabled ? 'Ligado' : 'Mudo'}
+            </span>
+          </button>
         </div>
 
         <div className="mt-5 space-y-2.5">

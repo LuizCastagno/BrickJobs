@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node server.ts",
+    "prebuild": "node scripts/sync-readme.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "docs:sync": "node scripts/sync-readme.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

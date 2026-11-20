@@ -1,3 +1,8 @@
+/**
+ * @file src/components/WorkerProductivityPanel.tsx
+ * @description Painel de acompanhamento de horas trabalhadas, metas de produção por canteiro e registro diário do trabalhador.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -34,6 +39,7 @@ import {
   type SiteProductivityBreakdown,
   type SiteWorkEntry,
 } from '../utils/workerProductivity';
+import { SelectWrapper } from './SelectWrapper';
 
 interface WorkerProductivityPanelProps {
   workerRole?: string;
@@ -365,18 +371,20 @@ export const WorkerProductivityPanel: React.FC<WorkerProductivityPanelProps> = (
                 >
                   Canteiro de obra
                 </label>
-                <select
-                  id="prod-log-site"
-                  value={logSiteId}
-                  onChange={(e) => setLogSiteId(e.target.value)}
-                  className={inputClass}
-                >
-                  {RONDONOPOLIS_CONSTRUCTION_SITES.map((site) => (
-                    <option key={site.id} value={site.id}>
-                      {site.name} ({site.neighborhood})
-                    </option>
-                  ))}
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="prod-log-site"
+                    value={logSiteId}
+                    onChange={(e) => setLogSiteId(e.target.value)}
+                    className={`${inputClass} appearance-none pr-10 cursor-pointer`}
+                  >
+                    {RONDONOPOLIS_CONSTRUCTION_SITES.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name} ({site.neighborhood})
+                      </option>
+                    ))}
+                  </select>
+                </SelectWrapper>
               </div>
 
               <div>

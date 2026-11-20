@@ -1,3 +1,13 @@
+/**
+ * @file src/utils/jobSuggestions.ts
+ * @description Catálogo de modelos de descrição e requisitos rápidos por ocupação para agilizar a publicação de vagas.
+ */
+
+/**
+ * @file src/utils/jobSuggestions.ts
+ * @description Catálogo de modelos de descrição e requisitos rápidos por ocupação para agilizar a publicação de vagas.
+ */
+
 import type { ContractType, ExperienceLevel } from '../types/brickjobs';
 
 export interface JobSuggestionTemplate {

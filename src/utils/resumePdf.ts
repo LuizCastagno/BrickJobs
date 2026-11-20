@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/resumePdf.ts
+ * @description Geração e download de currículo profissional em PDF (via jsPDF) a partir das experiências do trabalhador.
+ */
+
 import { jsPDF } from 'jspdf';
 import type { WorkerProfile } from '../types/brickjobs';
 import {

@@ -1,3 +1,8 @@
+/**
+ * @file server.ts
+ * @description Servidor Express do BrickJobs. Fornece rotas `/api/rain-alerts`, `/api/career-tips`,
+ *   `/api/safety-weekly-reminders` e `/api/construction-news`, além de servir o Vite em dev e `dist/` em produção.
+ */
 import 'dotenv/config';
 import http from 'node:http';
 import express, { type Request, type Response } from 'express';

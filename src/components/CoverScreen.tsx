@@ -1,3 +1,13 @@
+/**
+ * @file CoverScreen.tsx
+ * @description Tela inicial (landing) do BrickJobs em Rondonópolis-MT com seleção de perfil
+ *   (Contratante/Contratado), busca rápida por proximidade GPS e vitrine de vagas abertas.
+ */
+/**
+ * @file CoverScreen.tsx
+ * @description Tela inicial (landing) do BrickJobs em Rondonópolis-MT com seleção de perfil
+ *   (Contratante/Contratado), busca rápida por proximidade GPS e vitrine de vagas abertas.
+ */
 import React, { useMemo, useState } from 'react';
 import {
   ArrowRight,
@@ -28,6 +38,7 @@ import {
 import type { LgpdModalTab } from '../utils/lgpdConsent';
 import coverHeroImg from '../assets/images/brickjobs_cover_hero_1794693694488.jpg';
 import { BrickLogo } from './BrickLogo';
+import { SelectWrapper } from './SelectWrapper';
 
 interface CoverScreenProps {
   onSelectRole: (role: UserRole) => void;
@@ -160,8 +171,8 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
     <div className="min-h-dvh bg-[#F4F5F7] dark:bg-[#0B1120] text-[#111827] dark:text-[#F8FAFC] flex flex-col">
       {/* Top Bar Contract: 3 zones */}
       <header className="pt-safe bg-white dark:bg-[#111827] border-b border-[#E5E7EB] dark:border-[#1E293B]">
-        <div className="bg-[#ffffff] dark:bg-[#111827] max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-4 sm:gap-8">
-          <a href="#inicio" className="min-h-[44px] inline-flex items-center focus-visible:outline-2 focus-visible:outline-[#C93B1E] rounded-md">
+        <div className="bg-[#ffffff] dark:bg-[#111827] max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-4 sm:gap-8">
+          <a href="#inicio" className="min-h-[44px] inline-flex items-center shrink-0 focus-visible:outline-2 focus-visible:outline-[#C93B1E] rounded-md">
             <BrickLogo />
           </a>
 
@@ -210,14 +221,14 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
       {/* Main Cover Content */}
       <main id="inicio" className="flex-1">
-        <section className="bg-[#e8a640] dark:bg-[#172033] max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-8 sm:pt-10 sm:pb-12">
+        <section className="bg-[#e8a640] dark:bg-[#172033] max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-8 sm:pt-10 sm:pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-stretch">
             {/* Left Column: Brand pitch + Two Entry Tabs */}
             <div className="lg:col-span-7 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <p className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1F2937] dark:text-[#CBD5E1]">
-                    <MapPin className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+                    <MapPin className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
                     <span>Rondonópolis e região, Mato Grosso</span>
                   </p>
 
@@ -228,7 +239,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                     aria-label="Abrir configurações de tema"
                     className="md:hidden min-h-[44px] px-3.5 py-2 rounded-xl bg-white/90 dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#334155] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-1.5 shrink-0 active:scale-[0.98] transition-transform cursor-pointer"
                   >
-                    <Settings className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+                    <Settings className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
                     <span>Tema</span>
                   </button>
                 </div>
@@ -379,27 +390,29 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
                   <label htmlFor="cover-max-distance-select" className="sr-only">
                     Distância máxima em quilômetros
                   </label>
-                  <select
-                    id="cover-max-distance-select"
-                    data-testid="cover-max-distance-select"
-                    value={proximityFilter?.active ? String(proximityFilter.radiusKm) : ''}
-                    disabled={locating}
-                    onChange={(e) => handleCoverMaxDistanceChange(e.target.value)}
-                    className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px] px-3 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E] disabled:opacity-60"
-                  >
-                    <option value="">Qualquer distância</option>
-                    {MAX_DISTANCE_OPTIONS_KM.map((km) => (
-                      <option key={km} value={String(km)}>
-                        Até {km} km
-                      </option>
-                    ))}
-                    {proximityFilter?.active &&
-                      !MAX_DISTANCE_OPTIONS_KM.includes(proximityFilter.radiusKm) && (
-                        <option value={String(proximityFilter.radiusKm)}>
-                          Até {proximityFilter.radiusKm} km
+                  <SelectWrapper>
+                    <select
+                      id="cover-max-distance-select"
+                      data-testid="cover-max-distance-select"
+                      value={proximityFilter?.active ? String(proximityFilter.radiusKm) : ''}
+                      disabled={locating}
+                      onChange={(e) => handleCoverMaxDistanceChange(e.target.value)}
+                      className="w-full sm:w-auto min-h-[48px] sm:min-h-[44px] appearance-none pl-3.5 pr-10 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E] disabled:opacity-60 cursor-pointer"
+                    >
+                      <option value="">Qualquer distância</option>
+                      {MAX_DISTANCE_OPTIONS_KM.map((km) => (
+                        <option key={km} value={String(km)}>
+                          Até {km} km
                         </option>
-                      )}
-                  </select>
+                      ))}
+                      {proximityFilter?.active &&
+                        !MAX_DISTANCE_OPTIONS_KM.includes(proximityFilter.radiusKm) && (
+                          <option value={String(proximityFilter.radiusKm)}>
+                            Até {proximityFilter.radiusKm} km
+                          </option>
+                        )}
+                    </select>
+                  </SelectWrapper>
                 </div>
 
                 <button
@@ -631,7 +644,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
 
         {/* How it works section */}
         <section id="como-funciona" className="bg-white dark:bg-[#111827] border-t border-[#E5E7EB] dark:border-[#1E293B] pb-safe">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
             <h2 className="font-display text-xl sm:text-2xl font-bold text-[#111827] dark:text-[#F8FAFC]">
               Como o BrickJobs funciona na prática
             </h2>
@@ -660,7 +673,7 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
       </main>
 
       <footer className="bg-[#F4F5F7] dark:bg-[#0B1120] border-t border-[#E5E7EB] dark:border-[#1E293B] pb-safe">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
             BrickJobs · Rondonópolis-MT · Tratamento de dados em conformidade com a LGPD (Lei nº 13.709/2018).
           </p>

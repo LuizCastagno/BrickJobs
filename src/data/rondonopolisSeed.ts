@@ -1,3 +1,13 @@
+/**
+ * @file src/data/rondonopolisSeed.ts
+ * @description Dados iniciais (seed) voltados para a construção civil em Rondonópolis-MT, incluindo regiões, categorias, vagas de exemplo e perfis vazios.
+ */
+
+/**
+ * @file src/data/rondonopolisSeed.ts
+ * @description Dados iniciais (seed) voltados para a construção civil em Rondonópolis-MT, incluindo regiões, categorias, vagas de exemplo e perfis vazios.
+ */
+
 import type {
   ChatMessage,
   CompanyProfile,

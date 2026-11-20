@@ -1,3 +1,8 @@
+/**
+ * @file src/components/NativePushPermissionCard.tsx
+ * @description Cartão e banner de gerenciamento de permissão e preferência de notificações nativas do navegador.
+ */
+
 import React from 'react';
 import { BellOff, BellRing, CheckCircle2, Send } from 'lucide-react';
 import {

@@ -1,3 +1,8 @@
+/**
+ * @file src/components/WorkerEarningsPanel.tsx
+ * @description Painel financeiro com gráfico Recharts de estimativa de ganhos mensais acumulados do trabalhador.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { Banknote, Briefcase, CalendarDays } from 'lucide-react';
 import {

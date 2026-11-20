@@ -1,3 +1,8 @@
+/**
+ * @file src/components/AppLoadingOverlay.tsx
+ * @description Overlay animado de carregamento inicial (splash screen) e de transição suave entre os portais da aplicação.
+ */
+
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { HardHat } from 'lucide-react';

@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/ratings.ts
+ * @description Validação e agregação de avaliações por estrelas feitas pelos trabalhadores às construtoras.
+ */
+
 import type {
   CompanyRating,
   JobApplication,

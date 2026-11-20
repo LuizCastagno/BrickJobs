@@ -1,3 +1,8 @@
+/**
+ * @file src/components/CookieConsentBanner.tsx
+ * @description Banner inferior de consentimento de cookies e preferências de privacidade conforme a LGPD.
+ */
+
 import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Cookie, ShieldCheck } from 'lucide-react';

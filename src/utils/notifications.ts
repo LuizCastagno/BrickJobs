@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/notifications.ts
+ * @description Filtragem de vagas compatíveis por região/categorias preferidas e criação de notificações internas do trabalhador.
+ */
+
 import type { JobPosting, WorkerNotification } from '../types/brickjobs';
 
 const ALL_REGIONS = 'Toda Rondonópolis e Região';

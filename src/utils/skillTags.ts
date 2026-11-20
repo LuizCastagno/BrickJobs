@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/skillTags.ts
+ * @description Extração, normalização e contagem de tags técnicas de especialidade a partir das vagas publicadas.
+ */
+
 import type { JobPosting } from '../types/brickjobs';
 
 export interface SkillTagSummary {

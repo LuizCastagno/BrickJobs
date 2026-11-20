@@ -1,3 +1,9 @@
+/**
+ * @file WorkerPortal.tsx
+ * @description Portal do Trabalhador (Contratado): busca de vagas por proximidade/tags,
+ *   dicas de segurança e EPIs, notícias de infraestrutura em MT, cadastro profissional,
+ *   currículo gerado em PDF e utilidades trabalhistas/climáticas.
+ */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -111,6 +117,7 @@ import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
 import { SafetyTipsCard } from './SafetyTipsCard';
 import { SafetyWeeklyRemindersCard } from './SafetyWeeklyRemindersCard';
 import { ConstructionNewsTab } from './ConstructionNewsTab';
+import { SelectWrapper } from './SelectWrapper';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
 import { WorkerEarningsPanel } from './WorkerEarningsPanel';
@@ -661,15 +668,17 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   const inputClass =
     'w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] placeholder:text-[#6B7280] dark:placeholder:text-[#94A3B8] focus:outline-none focus:border-[#C93B1E]';
 
+  const selectClass = `${inputClass} appearance-none pr-10 cursor-pointer`;
+
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-nav-safe md:pb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-nav-safe md:pb-12">
       {/* Header Context */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-5">
-        <div className="min-w-0">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 lg:gap-8 border-b border-[#E5E7EB] dark:border-[#1E293B] pb-5">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
             Área do Contratado · Rondonópolis-MT
           </p>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
+          <h1 className="font-display text-2xl sm:text-3xl lg:text-[2rem] font-bold tracking-tight leading-tight [text-wrap:balance] text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
             {isWorkerRegistered
               ? `Olá, ${workerProfile.nomeCompleto.split(' ')[0]}`
               : 'Vagas e Perfil Profissional'}
@@ -694,7 +703,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             }`}
           >
             <Bell
-              className={`w-4 h-4 ${
+              className={`w-4 h-4 shrink-0 ${
                 unreadCount > 0
                   ? 'text-[#C93B1E] dark:text-[#F06449]'
                   : 'text-[#4B5563] dark:text-[#94A3B8]'
@@ -1024,13 +1033,13 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 data-testid="worker-advanced-filters-toggle"
                 className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] hover:bg-[#F3F4F6] dark:hover:bg-[#334155] text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 transition-colors cursor-pointer"
               >
-                <SlidersHorizontal className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+                <SlidersHorizontal className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
                 <span>
                   Filtros avançados
                   {activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ''}
                 </span>
                 <ChevronDown
-                  className={`w-4 h-4 text-[#4B5563] dark:text-[#94A3B8] transition-transform ${
+                  className={`w-4 h-4 text-[#4B5563] dark:text-[#94A3B8] shrink-0 transition-transform ${
                     showAdvancedFilters ? 'rotate-180' : ''
                   }`}
                   aria-hidden="true"
@@ -1066,19 +1075,21 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   >
                     Ocupação específica
                   </label>
-                  <select
-                    id="filter-occupation"
-                    value={filterOccupation}
-                    onChange={(e) => setFilterOccupation(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="Todas">Todas as ocupações</option>
-                    {occupationFilterOptions.map((occ) => (
-                      <option key={occ} value={occ}>
-                        {occ}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectWrapper>
+                    <select
+                      id="filter-occupation"
+                      value={filterOccupation}
+                      onChange={(e) => setFilterOccupation(e.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="Todas">Todas as ocupações</option>
+                      {occupationFilterOptions.map((occ) => (
+                        <option key={occ} value={occ}>
+                          {occ}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
                 </div>
 
                 <div>
@@ -1088,19 +1099,21 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   >
                     Tipo de contrato
                   </label>
-                  <select
-                    id="filter-contract"
-                    value={filterContract}
-                    onChange={(e) => setFilterContract(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="Todos">Todos os contratos</option>
-                    {CONTRACT_TYPE_OPTIONS.map((ct) => (
-                      <option key={ct} value={ct}>
-                        {ct}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectWrapper>
+                    <select
+                      id="filter-contract"
+                      value={filterContract}
+                      onChange={(e) => setFilterContract(e.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="Todos">Todos os contratos</option>
+                      {CONTRACT_TYPE_OPTIONS.map((ct) => (
+                        <option key={ct} value={ct}>
+                          {ct}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
                 </div>
 
                 <div>
@@ -1110,19 +1123,21 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   >
                     Nível de experiência
                   </label>
-                  <select
-                    id="filter-experience"
-                    value={filterExperience}
-                    onChange={(e) => setFilterExperience(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="Todos">Todos os níveis</option>
-                    {EXPERIENCE_LEVEL_OPTIONS.map((lvl) => (
-                      <option key={lvl} value={lvl}>
-                        {lvl}
-                      </option>
-                    ))}
-                  </select>
+                  <SelectWrapper>
+                    <select
+                      id="filter-experience"
+                      value={filterExperience}
+                      onChange={(e) => setFilterExperience(e.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="Todos">Todos os níveis</option>
+                      {EXPERIENCE_LEVEL_OPTIONS.map((lvl) => (
+                        <option key={lvl} value={lvl}>
+                          {lvl}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
                 </div>
                 </motion.div>
               )}
@@ -1214,7 +1229,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.16 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5"
                 data-testid="available-jobs-list"
               >
                 <AnimatePresence mode="popLayout" initial={true}>
@@ -1248,7 +1263,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         animate={JOB_CARD_VARIANTS.animate}
                         exit={JOB_CARD_VARIANTS.exit}
                         transition={JOB_CARD_TRANSITION(index)}
-                        className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 flex flex-col justify-between"
+                        className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] hover:border-[#D1D5DB] dark:hover:border-[#334155] hover:shadow-sm transition-all rounded-2xl p-5 flex flex-col justify-between"
                       >
                     <div>
                       <div className="flex items-start justify-between gap-3">
@@ -1453,7 +1468,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             exit="exit"
             transition={TAB_TRANSITION_CONFIG}
             onSubmit={handleSaveWorker}
-            className="mt-6 space-y-6 max-w-4xl"
+            className="mt-6 space-y-6 max-w-5xl mx-auto"
           >
           {/* General Personal Information */}
           <section className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-6">
@@ -1501,38 +1516,40 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 >
                   Sexo *
                 </label>
-                <select
-                  id="worker-sexo"
-                  data-testid="worker-sex-select"
-                  aria-invalid={sexMissingError || undefined}
-                  value={form.sexo ?? ''}
-                  onChange={(e) => {
-                    const nextSex = e.target.value as WorkerProfile['sexo'];
-                    setFormError('');
-                    setSexMissingError(false);
-                    if (nextSex !== 'masculino') {
-                      setMissingDocKeys((prev) =>
-                        prev.filter((k) => k !== 'reservistaOuCdi')
-                      );
-                    }
-                    setForm({
-                      ...form,
-                      sexo: nextSex,
-                    });
-                  }}
-                  className={`${inputClass} ${
-                    sexMissingError
-                      ? '!border-[#DC2626] dark:!border-[#F87171]'
-                      : ''
-                  }`}
-                >
-                  <option value="">Selecione...</option>
-                  {REGISTRANT_SEX_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="worker-sexo"
+                    data-testid="worker-sex-select"
+                    aria-invalid={sexMissingError || undefined}
+                    value={form.sexo ?? ''}
+                    onChange={(e) => {
+                      const nextSex = e.target.value as WorkerProfile['sexo'];
+                      setFormError('');
+                      setSexMissingError(false);
+                      if (nextSex !== 'masculino') {
+                        setMissingDocKeys((prev) =>
+                          prev.filter((k) => k !== 'reservistaOuCdi')
+                        );
+                      }
+                      setForm({
+                        ...form,
+                        sexo: nextSex,
+                      });
+                    }}
+                    className={`${selectClass} ${
+                      sexMissingError
+                        ? '!border-[#DC2626] dark:!border-[#F87171]'
+                        : ''
+                    }`}
+                  >
+                    <option value="">Selecione...</option>
+                    {REGISTRANT_SEX_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </SelectWrapper>
                 {sexMissingError && (
                   <p
                     role="alert"
@@ -1585,18 +1602,20 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 >
                   Ocupação principal *
                 </label>
-                <select
-                  id="worker-funcao"
-                  value={form.funcaoPrincipal}
-                  onChange={(e) => setForm({ ...form, funcaoPrincipal: e.target.value })}
-                  className={inputClass}
-                >
-                  {CONSTRUCTION_ROLES.map((roleName) => (
-                    <option key={roleName} value={roleName}>
-                      {roleName}
-                    </option>
-                  ))}
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="worker-funcao"
+                    value={form.funcaoPrincipal}
+                    onChange={(e) => setForm({ ...form, funcaoPrincipal: e.target.value })}
+                    className={selectClass}
+                  >
+                    {CONSTRUCTION_ROLES.map((roleName) => (
+                      <option key={roleName} value={roleName}>
+                        {roleName}
+                      </option>
+                    ))}
+                  </select>
+                </SelectWrapper>
               </div>
 
               <div className="sm:col-span-2 rounded-xl border border-[#E5E7EB] dark:border-[#1E293B] bg-[#F9FAFB] dark:bg-[#0F172A] p-3.5 space-y-3">
@@ -1636,22 +1655,24 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     >
                       Bairro onde mora em Rondonópolis-MT
                     </label>
-                    <select
-                      id="worker-bairro"
-                      value={form.bairro}
-                      onChange={(e) => {
-                        hasEditedRegionFieldsRef.current = true;
-                        setRegistrationGeoInfo('');
-                        setForm({ ...form, bairro: e.target.value });
-                      }}
-                      className={inputClass}
-                    >
-                      {RONDONOPOLIS_NEIGHBORHOODS.map((b) => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                    </select>
+                    <SelectWrapper>
+                      <select
+                        id="worker-bairro"
+                        value={form.bairro}
+                        onChange={(e) => {
+                          hasEditedRegionFieldsRef.current = true;
+                          setRegistrationGeoInfo('');
+                          setForm({ ...form, bairro: e.target.value });
+                        }}
+                        className={selectClass}
+                      >
+                        {RONDONOPOLIS_NEIGHBORHOODS.map((b) => (
+                          <option key={b} value={b}>
+                            {b}
+                          </option>
+                        ))}
+                      </select>
+                    </SelectWrapper>
                   </div>
 
                   <div>
@@ -1661,22 +1682,24 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     >
                       Região de interesse para trabalhar
                     </label>
-                    <select
-                      id="worker-regiao"
-                      value={form.regiaoInteresse}
-                      onChange={(e) => {
-                        hasEditedRegionFieldsRef.current = true;
-                        setRegistrationGeoInfo('');
-                        setForm({ ...form, regiaoInteresse: e.target.value });
-                      }}
-                      className={inputClass}
-                    >
-                      {RONDONOPOLIS_REGIONS.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
+                    <SelectWrapper>
+                      <select
+                        id="worker-regiao"
+                        value={form.regiaoInteresse}
+                        onChange={(e) => {
+                          hasEditedRegionFieldsRef.current = true;
+                          setRegistrationGeoInfo('');
+                          setForm({ ...form, regiaoInteresse: e.target.value });
+                        }}
+                        className={selectClass}
+                      >
+                        {RONDONOPOLIS_REGIONS.map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                    </SelectWrapper>
                   </div>
                 </div>
 
@@ -1708,18 +1731,20 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 >
                   Disponibilidade de início
                 </label>
-                <select
-                  id="worker-disponibilidade"
-                  value={form.disponibilidade}
-                  onChange={(e) => setForm({ ...form, disponibilidade: e.target.value })}
-                  className={inputClass}
-                >
-                  {AVAILABILITY_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="worker-disponibilidade"
+                    value={form.disponibilidade}
+                    onChange={(e) => setForm({ ...form, disponibilidade: e.target.value })}
+                    className={selectClass}
+                  >
+                    {AVAILABILITY_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </SelectWrapper>
               </div>
 
               <div>

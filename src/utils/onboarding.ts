@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/onboarding.ts
+ * @description Passos do tour guiado de onboarding e controle de exibição por perfil no localStorage.
+ */
+
 import type { UserRole } from '../types/brickjobs';
 
 export interface OnboardingStep {

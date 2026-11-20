@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/rainAlerts.ts
+ * @description Classificação de severidade meteorológica, recomendações para canteiros de obras e integração Open-Meteo.
+ */
+
 import {
   NEIGHBORHOOD_COORDINATES,
   RONDONOPOLIS_CENTER,

@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/geolocation.ts
+ * @description Coordenadas de bairros de Rondonópolis-MT, cálculo de distância Haversine e filtro de vagas por proximidade GPS.
+ */
+
 import type { JobPosting } from '../types/brickjobs';
 
 export interface Coordinates {

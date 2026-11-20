@@ -1,3 +1,8 @@
+/**
+ * @file src/hooks/usePWAInstall.ts
+ * @description Hook React para gerenciar o fluxo de instalação PWA (`beforeinstallprompt`), detecção de modo standalone e instruções manuais/iOS.
+ */
+
 import { useCallback, useEffect, useState } from 'react';
 import {
   detectIsIOSUserAgent,

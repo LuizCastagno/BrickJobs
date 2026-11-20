@@ -1,3 +1,9 @@
+/**
+ * @file App.tsx
+ * @description Componente raiz da aplicação BrickJobs. Orquestra estado local persistido,
+ *   alternância entre capa/Contratante/Contratado, sincronização entre abas, lembretes de obra,
+ *   chat, sons de notificação e celebração com confetes exclusivamente na aceitação de contrato.
+ */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
@@ -17,6 +23,7 @@ import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { CoverScreen } from './components/CoverScreen';
 import { ApplicationChatModal } from './components/ApplicationChatModal';
 import { CompanyRatingModal } from './components/CompanyRatingModal';
+import { ContractAcceptedConfetti } from './components/ContractAcceptedConfetti';
 import { EmployerPortal, type EmployerTab } from './components/EmployerPortal';
 import { GuidedTourModal } from './components/GuidedTourModal';
 import { LgpdPrivacyModal } from './components/LgpdPrivacyModal';
@@ -98,6 +105,21 @@ import {
   PAGE_TRANSITION_VARIANTS,
   ROUTE_TRANSITION_DURATION_MS,
 } from './utils/motionPresets';
+import {
+  buildContractCelebrationEvent,
+  findUnseenAcceptedApplication,
+  loadSeenAcceptedApplicationIds,
+  markAcceptedApplicationsSeen,
+  saveSeenAcceptedApplicationIds,
+  type ContractCelebrationEvent,
+} from './utils/contractCelebration';
+import {
+  loadNotificationSoundEnabled,
+  playContractAcceptedSound,
+  playNotificationSound,
+  resolveSoundProfileForNotification,
+  saveNotificationSoundEnabled,
+} from './utils/notificationSound';
 
 type AppScreen = 'cover' | UserRole;
 
@@ -155,6 +177,14 @@ export default function App() {
   );
   const [isLgpdModalOpen, setIsLgpdModalOpen] = useState<boolean>(false);
   const [lgpdModalTab, setLgpdModalTab] = useState<LgpdModalTab>('cookies');
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() =>
+    loadNotificationSoundEnabled()
+  );
+  const [seenWorkerAcceptedIds, setSeenWorkerAcceptedIds] = useState<string[]>(
+    () => loadSeenAcceptedApplicationIds()
+  );
+  const [celebrationEvent, setCelebrationEvent] =
+    useState<ContractCelebrationEvent | null>(null);
   const pwaInstall = usePWAInstall();
 
   useEffect(() => {
@@ -217,6 +247,10 @@ export default function App() {
           (n) => !prevNotifIds.has(n.id)
         );
         for (const notif of incomingNotifs) {
+          playNotificationSound(
+            resolveSoundProfileForNotification(notif.type),
+            soundEnabled
+          );
           void dispatchNativeBrowserNotification(
             formatNativeNotificationPayload(notif),
             pushPreference
@@ -229,6 +263,7 @@ export default function App() {
         );
         for (const msg of incomingChats) {
           if (screen !== 'cover' && msg.senderRole !== screen) {
+            playNotificationSound('job_alert', soundEnabled);
             void dispatchNativeBrowserNotification(
               {
                 title: `BrickJobs · Nova mensagem de ${msg.senderName}`,
@@ -245,7 +280,7 @@ export default function App() {
     };
     window.addEventListener('storage', handleCrossTabStorage);
     return () => window.removeEventListener('storage', handleCrossTabStorage);
-  }, [pushPreference, screen]);
+  }, [pushPreference, screen, soundEnabled]);
 
   useEffect(() => {
     const processDueReminders = () => {
@@ -257,6 +292,10 @@ export default function App() {
       const createdNotifications = due.map((item) =>
         createWorkReminderNotification(item, now)
       );
+
+      if (createdNotifications.length > 0) {
+        playNotificationSound('reminder', soundEnabled);
+      }
 
       for (const notif of createdNotifications) {
         void dispatchNativeBrowserNotification(
@@ -306,7 +345,42 @@ export default function App() {
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [state.workReminders, pushPreference]);
+  }, [state.workReminders, pushPreference, soundEnabled]);
+
+  useEffect(() => {
+    if (screen !== 'contratado' || isInitialLoading || routeTransitionTarget) {
+      return;
+    }
+    const unseenApp = findUnseenAcceptedApplication(
+      state.applications,
+      seenWorkerAcceptedIds
+    );
+    if (!unseenApp) return;
+
+    const updatedSeen = markAcceptedApplicationsSeen(seenWorkerAcceptedIds, [
+      unseenApp.id,
+    ]);
+    saveSeenAcceptedApplicationIds(updatedSeen);
+    setSeenWorkerAcceptedIds(updatedSeen);
+
+    const relatedJob = state.jobs.find((j) => j.id === unseenApp.jobId) ?? null;
+    playContractAcceptedSound(soundEnabled);
+    setCelebrationEvent(
+      buildContractCelebrationEvent({
+        application: unseenApp,
+        job: relatedJob,
+        role: 'contratado',
+      })
+    );
+  }, [
+    screen,
+    isInitialLoading,
+    routeTransitionTarget,
+    state.applications,
+    state.jobs,
+    seenWorkerAcceptedIds,
+    soundEnabled,
+  ]);
 
   const openVacanciesCount = useMemo(
     () =>
@@ -370,6 +444,7 @@ export default function App() {
     const createdNotif = shouldNotify ? createNewJobNotification(newJob) : null;
 
     if (createdNotif) {
+      playNotificationSound('job_alert', soundEnabled);
       void dispatchNativeBrowserNotification(
         formatNativeNotificationPayload(createdNotif),
         pushPreference
@@ -455,6 +530,16 @@ export default function App() {
         pushPreference
       );
     }
+
+    playContractAcceptedSound(soundEnabled);
+    setCelebrationEvent(
+      buildContractCelebrationEvent({
+        application: { ...targetApp, status: 'aceita' },
+        job: targetJob,
+        role: 'contratante',
+        companyNameOverride: state.companyProfile.nomeFantasia,
+      })
+    );
 
     setState((prev) => ({
       ...prev,
@@ -589,6 +674,17 @@ export default function App() {
 
   const handleDismissPushBanner = () => {
     setPushPreference((prev) => ({ ...prev, dismissedBanner: true }));
+  };
+
+  const handleToggleSoundEnabled = () => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      saveNotificationSoundEnabled(next);
+      if (next) {
+        playNotificationSound('job_alert', true);
+      }
+      return next;
+    });
   };
 
   const handleTestNativePush = async () => {
@@ -994,6 +1090,7 @@ export default function App() {
                 }
               }}
               onBackToCover={() => {
+                setCelebrationEvent(null);
                 navigateWithTransition('cover', () => {
                   setIsTourOpen(false);
                   setIsChatOpen(false);
@@ -1001,6 +1098,7 @@ export default function App() {
                 });
               }}
               onSwitchRole={() => {
+                setCelebrationEvent(null);
                 setIsChatOpen(false);
                 setActiveChatApplicationId(null);
                 enterRoleScreen(
@@ -1013,7 +1111,7 @@ export default function App() {
             {storageWarning && (
               <div
                 role="alert"
-                className="max-w-6xl mx-auto px-4 sm:px-6 pt-3 w-full"
+                className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 w-full"
               >
                 <p className="p-3 rounded-xl bg-[#FEF2F2] dark:bg-[#7F1D1D]/30 border border-[#FECACA] dark:border-[#991B1B] text-xs font-medium text-[#B91C1C] dark:text-[#FCA5A5]">
                   {storageWarning}
@@ -1141,6 +1239,14 @@ export default function App() {
         lgpdConsent={lgpdConsent}
         onOpenLgpdModal={handleOpenLgpdModal}
         pwaInstall={pwaInstall}
+        soundEnabled={soundEnabled}
+        onToggleSoundEnabled={handleToggleSoundEnabled}
+      />
+
+      <ContractAcceptedConfetti
+        event={celebrationEvent}
+        onDismiss={() => setCelebrationEvent(null)}
+        onOpenChat={(appId) => handleOpenChat(appId)}
       />
 
       <GuidedTourModal

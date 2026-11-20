@@ -1,3 +1,8 @@
+/**
+ * @file src/components/GuidedTourModal.tsx
+ * @description Modal de tour guiado (onboarding) passo a passo para orientar novos contratantes e trabalhadores nos recursos do portal.
+ */
+
 import React, { useEffect } from 'react';
 import {
   ArrowLeft,

@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/pwaInstall.ts
+ * @description Detecção de plataforma iOS/standalone, resolução do modo de instalação PWA e passos manuais.
+ */
+
 export type PwaInstallMode =
   | 'installed'
   | 'native_prompt'

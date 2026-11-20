@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/workerProductivity.ts
+ * @description Persistência e consolidação de apontamentos diários de horas e produtividade do trabalhador por canteiro.
+ */
+
 export interface ConstructionSiteOption {
   id: string;
   name: string;

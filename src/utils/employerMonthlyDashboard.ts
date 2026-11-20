@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/employerMonthlyDashboard.ts
+ * @description Agregação mensal de vagas abertas e encerradas por construtora para o painel comparativo.
+ */
+
 import type { JobPosting } from '../types/brickjobs';
 import { formatMonthKeyLabelPtBr } from './employerPerformance';
 

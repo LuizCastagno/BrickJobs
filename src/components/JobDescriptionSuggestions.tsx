@@ -1,3 +1,8 @@
+/**
+ * @file src/components/JobDescriptionSuggestions.tsx
+ * @description Painel auxiliar para construtoras aplicarem modelos e requisitos rápidos de descrição de vagas conforme a função escolhida.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, FileText, Plus } from 'lucide-react';
 import type { ContractType, ExperienceLevel } from '../types/brickjobs';

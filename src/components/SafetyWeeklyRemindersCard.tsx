@@ -1,3 +1,13 @@
+/**
+ * @file SafetyWeeklyRemindersCard.tsx
+ * @description Seção educacional dinâmica "Dicas de Segurança no Canteiro" com lembretes
+ *   semanais sobre EPIs (NR-06, NR-18, NR-35), geração via Gemini com fallback local e checklist.
+ */
+/**
+ * @file SafetyWeeklyRemindersCard.tsx
+ * @description Seção educacional dinâmica "Dicas de Segurança no Canteiro" com lembretes
+ *   semanais sobre EPIs (NR-06, NR-18, NR-35), geração via Gemini com fallback local e checklist.
+ */
 import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -116,13 +126,13 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
       <div className="bg-gradient-to-r from-[#1E293B] via-[#0F172A] to-[#C93B1E]/90 text-white p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-sm">
-              <ShieldAlert className="w-3.5 h-3.5 text-[#F06449]" aria-hidden="true" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-lg bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-sm">
+              <ShieldAlert className="w-3.5 h-3.5 text-[#F06449] shrink-0" aria-hidden="true" />
               <span>{payload.weekLabel || weekInfo.weekLabel}</span>
               <span className="text-white/40">·</span>
               <span className="text-[#F06449]">Normas NR-06 & NR-18</span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight font-display">
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight font-display [text-wrap:balance]">
               {payload.themeTitle}
             </h2>
             <p className="text-xs sm:text-sm text-white/80 max-w-2xl leading-relaxed">
@@ -139,7 +149,7 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
               className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 text-xs font-semibold text-white transition-all cursor-pointer disabled:opacity-50"
             >
               <RefreshCw
-                className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 shrink-0 ${isLoading ? 'animate-spin' : ''}`}
                 aria-hidden="true"
               />
               <span>{isLoading ? 'Consultando IA...' : 'Atualizar IA'}</span>
@@ -151,7 +161,7 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
                 onClick={onOpenQuiz}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B3341A] text-xs font-semibold text-white shadow-sm transition-all cursor-pointer"
               >
-                <Award className="w-3.5 h-3.5" aria-hidden="true" />
+                <Award className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 <span>Mini-Quiz</span>
               </button>
             )}
@@ -161,7 +171,7 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
         {/* Progress Indicator for Daily Checklist */}
         <div className="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-[#F06449]" aria-hidden="true" />
+            <CheckCircle2 className="w-4 h-4 text-[#F06449] shrink-0" aria-hidden="true" />
             <span className="font-medium text-white/90">
               Checklist de Inspeção de EPIs da Obra:
             </span>
@@ -276,9 +286,9 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
                 >
                   <span>{isExpanded ? 'Menos detalhes' : 'Checklist e Riscos'}</span>
                   {isExpanded ? (
-                    <ChevronUp className="w-3.5 h-3.5" />
+                    <ChevronUp className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   ) : (
-                    <ChevronDown className="w-3.5 h-3.5" />
+                    <ChevronDown className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -291,7 +301,7 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
               <div className="mt-4 pt-4 border-t border-[#F1F5F9] dark:border-[#334155]/60 space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-[#0F172A] dark:text-[#F8FAFC]">
                   <span className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" aria-hidden="true" />
                     Inspeção Rápida de Campo (3 passos):
                   </span>
                   <span className="text-[11px] font-normal text-[#64748B] dark:text-[#94A3B8]">
@@ -337,7 +347,7 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
                 <div className="mt-4 pt-4 border-t border-[#F1F5F9] dark:border-[#334155]/60 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 space-y-1.5">
                     <span className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" aria-hidden="true" />
                       Erros frequentes no canteiro:
                     </span>
                     <ul className="list-disc list-inside space-y-1 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed">
@@ -349,7 +359,7 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
 
                   <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 space-y-1.5">
                     <span className="font-bold text-red-900 dark:text-red-200 flex items-center gap-1.5">
-                      <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
+                      <ShieldAlert className="w-3.5 h-3.5 text-red-600 shrink-0" aria-hidden="true" />
                       Risco direto do não uso:
                     </span>
                     <p className="text-red-800 dark:text-red-300 text-[11px] leading-relaxed">

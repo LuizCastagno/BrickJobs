@@ -1,3 +1,8 @@
+/**
+ * @file src/components/RequiredDocumentsSection.tsx
+ * @description Seção de anexo, validação e remoção dos documentos obrigatórios de cadastro para trabalhadores e construtoras.
+ */
+
 import React, { useRef, useState } from 'react';
 import {
   AlertCircle,

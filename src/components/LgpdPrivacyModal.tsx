@@ -1,3 +1,8 @@
+/**
+ * @file src/components/LgpdPrivacyModal.tsx
+ * @description Modal completo de transparência LGPD, gerenciamento granular de cookies e consulta aos direitos do titular e dados sensíveis.
+ */
+
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {

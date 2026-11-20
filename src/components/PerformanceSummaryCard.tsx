@@ -1,3 +1,8 @@
+/**
+ * @file src/components/PerformanceSummaryCard.tsx
+ * @description Cartão analítico com gráfico D3 de taxa de preenchimento de vagas por ocupação e mês.
+ */
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { BarChart3 } from 'lucide-react';
@@ -7,6 +12,7 @@ import {
   getAvailablePerformanceMonths,
   type PerformanceCategoryDatum,
 } from '../utils/employerPerformance';
+import { SelectWrapper } from './SelectWrapper';
 
 interface PerformanceSummaryCardProps {
   jobs: JobPosting[];
@@ -331,18 +337,20 @@ export const PerformanceSummaryCard: React.FC<PerformanceSummaryCardProps> = ({
             <label htmlFor="performance-month-select" className="sr-only">
               Selecionar mês de referência
             </label>
-            <select
-              id="performance-month-select"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="min-h-[44px] sm:min-h-[38px] px-3 py-1.5 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E]"
-            >
-              {availableMonths.map((m) => (
-                <option key={m.key} value={m.key}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
+            <SelectWrapper chevronClassName="right-3">
+              <select
+                id="performance-month-select"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="min-h-[44px] sm:min-h-[38px] appearance-none pl-3.5 pr-9 py-1.5 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E] cursor-pointer"
+              >
+                {availableMonths.map((m) => (
+                  <option key={m.key} value={m.key}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </SelectWrapper>
           </div>
         </div>
 

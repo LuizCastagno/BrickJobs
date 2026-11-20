@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/employerPerformance.ts
+ * @description Cálculos mensais de taxa de preenchimento de vagas por ocupação para os gráficos da construtora.
+ */
+
 import type { JobApplication, JobPosting } from '../types/brickjobs';
 
 export interface PerformanceCategoryDatum {

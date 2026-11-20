@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/theme.ts
+ * @description Persistência e aplicação do tema claro/escuro no elemento raiz da aplicação.
+ */
+
 export type ThemeMode = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'brickjobs_theme_v1';

@@ -1,3 +1,8 @@
+/**
+ * @file src/components/EmployerStatisticsTab.tsx
+ * @description Aba de estatísticas detalhadas da construtora (avaliações por ocupação, tempo médio de preenchimento, status de vagas e exportação em PDF).
+ */
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { BarChart3, Clock, FileText, Star, TrendingUp } from 'lucide-react';
 import {

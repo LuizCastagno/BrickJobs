@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/severanceCalculator.ts
+ * @description Motor de cálculo estimativo de rescisão trabalhista CLT com cenários pré-configurados da construção civil.
+ */
+
 export type TerminationReason =
   | 'sem_justa_causa'
   | 'pedido_demissao'

@@ -1,3 +1,8 @@
+/**
+ * @file src/components/ProfilePhotoField.tsx
+ * @description Campo de upload, validação e compressão automática de foto de perfil ou logotipo da empresa.
+ */
+
 import React, { useId, useRef, useState } from 'react';
 import { Camera, Trash2 } from 'lucide-react';
 import {

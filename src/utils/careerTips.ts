@@ -1,3 +1,13 @@
+/**
+ * @file src/utils/careerTips.ts
+ * @description Modelos, cache semanal local e fallback estruturado de dicas de carreira e entrevista para construção civil.
+ */
+
+/**
+ * @file src/utils/careerTips.ts
+ * @description Modelos, cache semanal local e fallback estruturado de dicas de carreira e entrevista para construção civil.
+ */
+
 export type CareerTipCategory = 'Currículo' | 'Entrevista';
 
 export type CareerTipFocus = 'todos' | 'curriculo' | 'entrevista';

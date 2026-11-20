@@ -1,3 +1,8 @@
+/**
+ * @file src/components/SeveranceCalculatorPanel.tsx
+ * @description Calculadora trabalhista CLT de estimativa de rescisão adaptada a cenários comuns da construção civil.
+ */
+
 import React, { useMemo, useState } from 'react';
 import { Calculator, Info, RotateCcw } from 'lucide-react';
 import {
@@ -10,9 +15,12 @@ import {
   type SeverancePreset,
   type TerminationReason,
 } from '../utils/severanceCalculator';
+import { SelectWrapper } from './SelectWrapper';
 
 const inputClass =
   'w-full min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] placeholder:text-[#6B7280] dark:placeholder:text-[#94A3B8] focus:outline-none focus:border-[#C93B1E] tabular-nums';
+
+const selectClass = `${inputClass} appearance-none pr-10 cursor-pointer`;
 
 function subtractMonthsIso(monthsAgo: number, baseDate = '2026-11-15'): string {
   const [y, m, d] = baseDate.split('-').map(Number);
@@ -220,19 +228,21 @@ export const SeveranceCalculatorPanel: React.FC = () => {
               >
                 Motivo do desligamento
               </label>
-              <select
-                id="sev-reason"
-                data-testid="severance-reason-select"
-                value={reason}
-                onChange={(e) => setReason(e.target.value as TerminationReason)}
-                className={inputClass}
-              >
-                {TERMINATION_REASON_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+              <SelectWrapper>
+                <select
+                  id="sev-reason"
+                  data-testid="severance-reason-select"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value as TerminationReason)}
+                  className={selectClass}
+                >
+                  {TERMINATION_REASON_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </SelectWrapper>
               {activeReasonMeta && (
                 <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mt-1">
                   {activeReasonMeta.summary}
@@ -248,17 +258,19 @@ export const SeveranceCalculatorPanel: React.FC = () => {
                 >
                   Aviso prévio
                 </label>
-                <select
-                  id="sev-notice"
-                  data-testid="severance-notice-select"
-                  value={noticeType}
-                  onChange={(e) => setNoticeType(e.target.value as NoticeType)}
-                  className={inputClass}
-                >
-                  <option value="indenizado">Indenizado (ou não cumprido)</option>
-                  <option value="trabalhado">Trabalhado</option>
-                  <option value="dispensado">Dispensado / Não se aplica</option>
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="sev-notice"
+                    data-testid="severance-notice-select"
+                    value={noticeType}
+                    onChange={(e) => setNoticeType(e.target.value as NoticeType)}
+                    className={selectClass}
+                  >
+                    <option value="indenizado">Indenizado (ou não cumprido)</option>
+                    <option value="trabalhado">Trabalhado</option>
+                    <option value="dispensado">Dispensado / Não se aplica</option>
+                  </select>
+                </SelectWrapper>
               </div>
 
               <div>
@@ -289,17 +301,19 @@ export const SeveranceCalculatorPanel: React.FC = () => {
                 >
                   Férias vencidas não gozadas
                 </label>
-                <select
-                  id="sev-overdue-vacations"
-                  data-testid="severance-overdue-select"
-                  value={overduePeriods}
-                  onChange={(e) => setOverduePeriods(e.target.value)}
-                  className={inputClass}
-                >
-                  <option value="0">Nenhuma (0 períodos)</option>
-                  <option value="1">1 período vencido</option>
-                  <option value="2">2 períodos vencidos</option>
-                </select>
+                <SelectWrapper>
+                  <select
+                    id="sev-overdue-vacations"
+                    data-testid="severance-overdue-select"
+                    value={overduePeriods}
+                    onChange={(e) => setOverduePeriods(e.target.value)}
+                    className={selectClass}
+                  >
+                    <option value="0">Nenhuma (0 períodos)</option>
+                    <option value="1">1 período vencido</option>
+                    <option value="2">2 períodos vencidos</option>
+                  </select>
+                </SelectWrapper>
               </div>
 
               <div>

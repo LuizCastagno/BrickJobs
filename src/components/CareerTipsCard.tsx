@@ -1,3 +1,8 @@
+/**
+ * @file src/components/CareerTipsCard.tsx
+ * @description Cartão de dicas semanais de carreira e preparação para entrevistas de obra, com suporte à geração via IA no servidor e cache local.
+ */
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,

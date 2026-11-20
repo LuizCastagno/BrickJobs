@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/chat.ts
+ * @description Regras de liberação do chat entre construtora e trabalhador, ordenação de mensagens e atalhos rápidos de conversa.
+ */
+
 import type {
   ChatMessage,
   JobApplication,

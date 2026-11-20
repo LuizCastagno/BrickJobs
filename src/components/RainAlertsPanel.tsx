@@ -1,3 +1,8 @@
+/**
+ * @file src/components/RainAlertsPanel.tsx
+ * @description Painel de previsão meteorológica e alertas de chuva por região de Rondonópolis para planejamento seguro de obras.
+ */
+
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -18,6 +23,7 @@ import type {
   RegionRainForecast,
 } from '../utils/rainAlerts';
 import { getWeatherDescriptionPtBr } from '../utils/rainAlerts';
+import { SelectWrapper } from './SelectWrapper';
 
 interface RainAlertsPanelProps {
   siteRegion: string;
@@ -314,9 +320,9 @@ export const RainAlertsPanel: React.FC<RainAlertsPanelProps> = ({
             >
               Canteiro:
             </label>
-            <div className="relative">
+            <SelectWrapper chevronClassName="right-2.5">
               <MapPin
-                className="w-3.5 h-3.5 text-[#C93B1E] dark:text-[#F06449] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                className="w-3.5 h-3.5 text-[#C93B1E] dark:text-[#F06449] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0"
                 aria-hidden="true"
               />
               <select
@@ -324,7 +330,7 @@ export const RainAlertsPanel: React.FC<RainAlertsPanelProps> = ({
                 data-testid={`rain-region-select-${variant}`}
                 value={activeRegion}
                 onChange={(e) => handleRegionChange(e.target.value)}
-                className="min-h-[44px] pl-8 pr-3 py-1.5 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-xs sm:text-sm font-medium text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E]"
+                className="min-h-[44px] appearance-none pl-8 pr-9 py-1.5 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-xs sm:text-sm font-medium text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E] cursor-pointer"
               >
                 {RONDONOPOLIS_NEIGHBORHOODS.map((n) => (
                   <option key={n} value={n}>
@@ -332,7 +338,7 @@ export const RainAlertsPanel: React.FC<RainAlertsPanelProps> = ({
                   </option>
                 ))}
               </select>
-            </div>
+            </SelectWrapper>
           </div>
 
           <button
@@ -343,7 +349,7 @@ export const RainAlertsPanel: React.FC<RainAlertsPanelProps> = ({
             className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] hover:bg-[#F3F4F6] dark:hover:bg-[#334155] disabled:opacity-60 text-xs sm:text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-1.5 cursor-pointer shrink-0"
           >
             <RefreshCw
-              className={`w-4 h-4 text-[#C93B1E] dark:text-[#F06449] ${
+              className={`w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0 ${
                 loading ? 'animate-spin' : ''
               }`}
               aria-hidden="true"

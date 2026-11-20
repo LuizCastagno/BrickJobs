@@ -1,3 +1,8 @@
+/**
+ * @file LocationRegionBar.tsx
+ * @description Barra de busca com seleção de região em Rondonópolis-MT, filtro de proximidade via
+ *   geolocalização (km) e pesquisa por comando de voz (Web Speech API).
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { LocateFixed, MapPin, Mic, Search, Square, X } from 'lucide-react';
 import { RONDONOPOLIS_REGIONS } from '../data/rondonopolisSeed';
@@ -21,6 +26,7 @@ import {
   parseVoiceJobCommand,
   type WebSpeechRecognitionInstance,
 } from '../utils/voiceSearch';
+import { SelectWrapper } from './SelectWrapper';
 
 interface LocationRegionBarProps {
   selectedRegion: string;
@@ -338,18 +344,24 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
       aria-label="Localização e filtros de busca"
       className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-4 sm:p-5"
     >
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 items-end">
-        {/* Region of interest selector */}
-        <div className={supportsProximity ? 'md:col-span-6 lg:col-span-3' : 'md:col-span-4'}>
+      <div
+        className={
+          supportsProximity
+            ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(210px,1.05fr)_minmax(290px,1.75fr)_minmax(160px,0.85fr)_auto] gap-3.5 items-end'
+            : 'grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end'
+        }
+      >
+        {/* Seletor de região de interesse */}
+        <div className={supportsProximity ? 'min-w-0' : 'md:col-span-4'}>
           <label
             htmlFor="brickjobs-region-select"
             className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
           >
             {regionLabel}
           </label>
-          <div className="relative">
+          <SelectWrapper>
             <MapPin
-              className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0"
               aria-hidden="true"
             />
             <select
@@ -362,7 +374,7 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
                 setGeoError('');
                 setGeoInfo('');
               }}
-              className="w-full min-h-[44px] pl-10 pr-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E]"
+              className="w-full min-h-[44px] appearance-none pl-10 pr-10 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E] cursor-pointer"
             >
               {RONDONOPOLIS_REGIONS.map((region) => (
                 <option key={region} value={region}>
@@ -370,11 +382,11 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
                 </option>
               ))}
             </select>
-          </div>
+          </SelectWrapper>
         </div>
 
-        {/* Search query */}
-        <div className={supportsProximity ? 'md:col-span-6 lg:col-span-4' : 'md:col-span-4'}>
+        {/* Busca textual e por voz */}
+        <div className={supportsProximity ? 'min-w-0' : 'md:col-span-4'}>
           <label
             htmlFor="brickjobs-search-input"
             className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
@@ -384,7 +396,7 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
           <div className="flex items-center gap-2">
             <div className="relative flex-1 min-w-0">
               <Search
-                className="w-4 h-4 text-[#6B7280] dark:text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                className="w-4 h-4 text-[#6B7280] dark:text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none shrink-0"
                 aria-hidden="true"
               />
               <input
@@ -454,40 +466,42 @@ export const LocationRegionBar: React.FC<LocationRegionBarProps> = ({
           </div>
         </div>
 
-        {/* Max Distance Filter (km) for Worker Job Search */}
+        {/* Filtro de distância máxima (km) */}
         {supportsProximity && (
-          <div className="md:col-span-6 lg:col-span-2">
+          <div className="min-w-0">
             <label
               htmlFor="brickjobs-max-distance-select"
               className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
             >
               Distância máxima (km)
             </label>
-            <select
-              id="brickjobs-max-distance-select"
-              data-testid="max-distance-select"
-              value={activeSelectValue}
-              disabled={locating}
-              onChange={(e) => handleMaxDistanceSelectChange(e.target.value)}
-              className="w-full min-h-[44px] px-3 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E] disabled:opacity-60"
-            >
-              <option value="">Qualquer distância</option>
-              {MAX_DISTANCE_OPTIONS_KM.map((km) => (
-                <option key={km} value={String(km)}>
-                  Até {km} km
-                </option>
-              ))}
-              {isCustomRadius && proximityFilter && (
-                <option value={String(proximityFilter.radiusKm)}>
-                  Até {proximityFilter.radiusKm} km
-                </option>
-              )}
-            </select>
+            <SelectWrapper>
+              <select
+                id="brickjobs-max-distance-select"
+                data-testid="max-distance-select"
+                value={activeSelectValue}
+                disabled={locating}
+                onChange={(e) => handleMaxDistanceSelectChange(e.target.value)}
+                className="w-full min-h-[44px] appearance-none pl-3.5 pr-10 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] text-base sm:text-sm text-[#111827] dark:text-[#F8FAFC] focus:outline-none focus:border-[#C93B1E] disabled:opacity-60 cursor-pointer"
+              >
+                <option value="">Qualquer distância</option>
+                {MAX_DISTANCE_OPTIONS_KM.map((km) => (
+                  <option key={km} value={String(km)}>
+                    Até {km} km
+                  </option>
+                ))}
+                {isCustomRadius && proximityFilter && (
+                  <option value={String(proximityFilter.radiusKm)}>
+                    Até {proximityFilter.radiusKm} km
+                  </option>
+                )}
+              </select>
+            </SelectWrapper>
           </div>
         )}
 
-        {/* GPS quick button */}
-        <div className={supportsProximity ? 'md:col-span-6 lg:col-span-3' : 'md:col-span-4'}>
+        {/* Ação rápida de geolocalização GPS */}
+        <div className={supportsProximity ? 'shrink-0' : 'md:col-span-4'}>
           <button
             type="button"
             onClick={handleUseLocation}

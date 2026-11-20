@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/workReminders.ts
+ * @description Agendamento e disparo de lembretes de início de trabalho com antecedência padrão configurada.
+ */
+
 import type {
   JobApplication,
   JobPosting,

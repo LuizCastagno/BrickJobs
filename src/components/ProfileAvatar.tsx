@@ -1,3 +1,8 @@
+/**
+ * @file src/components/ProfileAvatar.tsx
+ * @description Componente de avatar responsivo para trabalhadores e construtoras, com fallback automático para iniciais e paleta determinística.
+ */
+
 import React, { useEffect, useId, useMemo, useState } from 'react';
 import {
   extractAvatarInitials,

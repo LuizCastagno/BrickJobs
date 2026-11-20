@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/safetyTips.ts
+ * @description Dicas técnicas de segurança (NR-06, NR-18, NR-35), banco do quiz diário e placar regional simulado.
+ */
+
 export type SafetyTipCategory =
   | 'todos'
   | 'epis'

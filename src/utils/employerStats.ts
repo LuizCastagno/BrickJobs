@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/employerStats.ts
+ * @description Estatísticas por ocupação: notas médias, tempo de preenchimento em dias e proporção de vagas abertas/encerradas.
+ */
+
 import type { CompanyRating, JobPosting } from '../types/brickjobs';
 
 export interface CategoryRatingStat {

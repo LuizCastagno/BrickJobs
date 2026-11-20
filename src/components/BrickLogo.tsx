@@ -1,3 +1,8 @@
+/**
+ * @file src/components/BrickLogo.tsx
+ * @description Marca vetorial SVG e assinatura tipográfica BrickJobs reutilizada nas barras de navegação e tela inicial.
+ */
+
 import React from 'react';
 
 interface BrickLogoProps {

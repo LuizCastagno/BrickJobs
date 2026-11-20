@@ -1,3 +1,8 @@
+/**
+ * @file src/components/CompanyRatingModal.tsx
+ * @description Modal interativo para o trabalhador avaliar a construtora (estrelas e comentário) após a conclusão de um contrato.
+ */
+
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { CheckCircle2, Sparkles, Star, X } from 'lucide-react';

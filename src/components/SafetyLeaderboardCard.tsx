@@ -1,3 +1,8 @@
+/**
+ * @file src/components/SafetyLeaderboardCard.tsx
+ * @description Placar regional de pontuação e classificação de segurança do trabalhador nos quizzes diários.
+ */
+
 import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Award, Medal, ShieldCheck, Trophy } from 'lucide-react';

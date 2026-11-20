@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/employerReportPdf.ts
+ * @description Montagem e exportação de relatório gerencial em PDF (via jsPDF) com métricas da construtora.
+ */
+
 import { jsPDF } from 'jspdf';
 import type { CompanyProfile, CompanyRating, JobPosting } from '../types/brickjobs';
 import { sanitizePdfText } from './resumePdf';

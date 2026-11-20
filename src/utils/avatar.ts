@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/avatar.ts
+ * @description Utilitários de extração de iniciais, paletas determinísticas, validação e compressão client-side de avatares.
+ */
+
 export type AvatarEntityType = 'worker' | 'company';
 
 export interface AvatarPalette {

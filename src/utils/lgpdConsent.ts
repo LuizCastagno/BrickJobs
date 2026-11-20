@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/lgpdConsent.ts
+ * @description Persistência de consentimento de cookies, catálogo de dados sensíveis e direitos do titular conforme a LGPD.
+ */
+
 export const LGPD_CONSENT_STORAGE_KEY = 'brickjobs_lgpd_consent_v1';
 export const LGPD_POLICY_VERSION = '2025.1';
 

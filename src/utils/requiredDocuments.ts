@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/requiredDocuments.ts
+ * @description Regras de obrigatoriedade de documentos conforme sexo do titular, validação de MIME/tamanho e leitura em Data URL.
+ */
+
 import type {
   DocumentAttachment,
   RegistrantSex,

@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/nativeNotifications.ts
+ * @description Integração com Notification API e Service Worker para disparo de alertas nativos do navegador.
+ */
+
 import type { WorkerNotification } from '../types/brickjobs';
 
 export type NativePushPermission = 'default' | 'granted' | 'denied' | 'unsupported';

@@ -1,3 +1,8 @@
+/**
+ * @file storage.ts
+ * @description Persistência e migração retrocompatível do estado principal do BrickJobs em
+ *   `localStorage` (`brickjobs_rondonopolis_state_v1`).
+ */
 import { DEFAULT_APP_STATE, type BrickJobsAppState } from '../data/rondonopolisSeed';
 import {
   normalizeRegistrantSex,

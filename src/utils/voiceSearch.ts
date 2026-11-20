@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/voiceSearch.ts
+ * @description Wrapper tipado para Web Speech API (`SpeechRecognition`) em português do Brasil para busca de vagas por voz.
+ */
+
 export interface WebSpeechAlternative {
   transcript: string;
   confidence?: number;

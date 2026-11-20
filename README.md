@@ -74,10 +74,12 @@ O projeto oferece busca e publicação de vagas, candidaturas, chat entre contra
 ### Experiência geral
 
 - Tema claro e escuro.
-- Navegação animada e adaptações para mobile.
+- Navegação animada, barra superior centralizada sem cortes e adaptações responsivas para desktop e mobile.
 - Tela inicial com resumo de vagas, construtoras e trabalhadores.
 - Instalação PWA.
-- Barra de navegação desktop e mobile.
+- Sons de notificação sintetizados via Web Audio API com alternador em Configurações.
+- Animação celebratória com confetes (`canvas-confetti`) disparada exclusivamente quando um contrato é aceito para ambos os lados (construtora e trabalhador).
+- Caixas seletoras (`SelectWrapper`) e ícones vetoriais alinhados com precisão em todos os formulários.
 - Consentimento de cookies e controles LGPD.
 - Sincronização entre abas do mesmo navegador por `storage` events.
 - Notificações e lembretes em segundo plano onde suportado.
@@ -88,7 +90,8 @@ O projeto oferece busca e publicação de vagas, candidaturas, chat entre contra
 - **Build:** Vite 8.
 - **Servidor:** Node.js e Express, executado com `tsx` em desenvolvimento.
 - **PWA:** `vite-plugin-pwa` e Workbox.
-- **Interface:** `lucide-react` e `motion`.
+- **Interface e Efeitos:** `lucide-react`, `motion` e `canvas-confetti`.
+- **Áudio:** Web Audio API (`notificationSound.ts`) sem dependências externas.
 - **Dados visuais:** Recharts e D3.
 - **Documentos:** jsPDF.
 - **IA:** SDK `@google/genai`.
@@ -137,11 +140,12 @@ A integração de clima usa Open-Meteo e não exige chave no código atual.
 | Comando | Finalidade |
 | --- | --- |
 | `bun run dev` | Executa o servidor Express e Vite em desenvolvimento. |
-| `bun run build` | Gera o build estático em `dist/`. |
+| `bun run build` | Sincroniza o inventário no `README.md` (`prebuild`) e gera o build estático em `dist/`. |
 | `bun run preview` | Executa o preview do build do Vite. |
 | `bun run start` | Executa `server.ts`; antes da produção, gere `dist/`. |
 | `bun run lint` | Executa `tsc --noEmit`. |
 | `bun run clean` | Remove `dist` e `server.js`. |
+| `npm run docs:sync` | Atualiza automaticamente a seção de inventário do `README.md` via `scripts/sync-readme.mjs`. |
 
 Não há script `test` no `package.json`. Os testes são executados diretamente pelo runner do Node com `tsx`.
 
@@ -192,17 +196,102 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 
 ### Principais módulos atuais
 
-- Segurança semanal: `SafetyWeeklyRemindersCard.tsx` e `safetyWeeklyTips.ts`.
-- Notícias: `ConstructionNewsTab.tsx` e `constructionNews.ts`.
-- Produtividade: `WorkerProductivityPanel.tsx` e `workerProductivity.ts`.
-- Ganhos: `WorkerEarningsPanel.tsx` e `workerEarnings.ts`.
-- Estatísticas da construtora: `EmployerStatisticsTab.tsx` e `employerStats.ts`.
-- Relatórios em PDF: `employerReportPdf.ts`.
-- Fotos e avatares: `ProfilePhotoField.tsx`, `ProfileAvatar.tsx` e `avatar.ts`.
-- Documentos: `RequiredDocumentsSection.tsx` e `requiredDocuments.ts`.
-- Localização: `LocationRegionBar.tsx` e `geolocation.ts`.
-- PWA: `usePWAInstall.ts` e `pwaInstall.ts`.
-- LGPD: `LgpdPrivacyModal.tsx`, `CookieConsentBanner.tsx` e `lgpdConsent.ts`.
+<!-- AUTO_INVENTORY_START -->
+> Inventário gerado automaticamente via `scripts/sync-readme.mjs` (34 componentes React, 33 módulos utilitários, 32 suítes de teste e 8 scripts npm).
+
+### Núcleo, tipos, hooks e dados
+
+| Arquivo | Função |
+| --- | --- |
+| `server.ts` | Servidor Express do BrickJobs. Fornece rotas `/api/rain-alerts`, `/api/career-tips`, |
+| `src/App.tsx` | Componente raiz da aplicação BrickJobs. Orquestra estado local persistido, |
+| `src/main.tsx` | Ponto de entrada principal da aplicação React BrickJobs, responsável por montar o componente raiz e importar os estilos globais Tailwind. |
+| `src/types/brickjobs.ts` | Definições de tipos e interfaces centrais do domínio BrickJobs (perfis, vagas, candidaturas, chat, documentos obrigatórios, avaliações e estado persistido). |
+| `src/hooks/usePWAInstall.ts` | Hook React para gerenciar o fluxo de instalação PWA (`beforeinstallprompt`), detecção de modo standalone e instruções manuais/iOS. |
+| `src/data/rondonopolisSeed.ts` | Dados iniciais (seed) voltados para a construção civil em Rondonópolis-MT, incluindo regiões, categorias, vagas de exemplo e perfis vazios. |
+
+### Componentes de interface (`src/components/` — 34)
+
+| Componente | Responsabilidade |
+| --- | --- |
+| `ApplicationChatModal.tsx` | Modal de mensagens e agendamento de início de obra entre construtora e trabalhador após aprovação da candidatura. |
+| `AppLoadingOverlay.tsx` | Overlay animado de carregamento inicial (splash screen) e de transição suave entre os portais da aplicação. |
+| `BrickLogo.tsx` | Marca vetorial SVG e assinatura tipográfica BrickJobs reutilizada nas barras de navegação e tela inicial. |
+| `CareerTipsCard.tsx` | Cartão de dicas semanais de carreira e preparação para entrevistas de obra, com suporte à geração via IA no servidor e cache local. |
+| `CompanyRatingModal.tsx` | Modal interativo para o trabalhador avaliar a construtora (estrelas e comentário) após a conclusão de um contrato. |
+| `ConstructionNewsTab.tsx` | Aba "Notícias da Construção" do Portal do Trabalhador com headlines sobre obras e |
+| `ContractAcceptedConfetti.tsx` | Componente visual comemorativo usando `canvas-confetti`, acionado exclusivamente |
+| `CookieConsentBanner.tsx` | Banner inferior de consentimento de cookies e preferências de privacidade conforme a LGPD. |
+| `CoverScreen.tsx` | Tela inicial (landing) do BrickJobs em Rondonópolis-MT com seleção de perfil |
+| `EmployerMonthlyDashboard.tsx` | Painel mensal com gráfico comparativo de vagas abertas e encerradas da construtora ao longo dos meses. |
+| `EmployerPortal.tsx` | Portal da Construtora (Contratante): cadastro da empresa, publicação de vagas, |
+| `EmployerStatisticsTab.tsx` | Aba de estatísticas detalhadas da construtora (avaliações por ocupação, tempo médio de preenchimento, status de vagas e exportação em PDF). |
+| `GuidedTourModal.tsx` | Modal de tour guiado (onboarding) passo a passo para orientar novos contratantes e trabalhadores nos recursos do portal. |
+| `JobDescriptionSuggestions.tsx` | Painel auxiliar para construtoras aplicarem modelos e requisitos rápidos de descrição de vagas conforme a função escolhida. |
+| `LgpdPrivacyModal.tsx` | Modal completo de transparência LGPD, gerenciamento granular de cookies e consulta aos direitos do titular e dados sensíveis. |
+| `LocationRegionBar.tsx` | Barra de busca com seleção de região em Rondonópolis-MT, filtro de proximidade via |
+| `MobileBottomNav.tsx` | Barra inferior de navegação mobile com suporte a rolagem horizontal sem barra |
+| `NativePushPermissionCard.tsx` | Cartão e banner de gerenciamento de permissão e preferência de notificações nativas do navegador. |
+| `PerformanceSummaryCard.tsx` | Cartão analítico com gráfico D3 de taxa de preenchimento de vagas por ocupação e mês. |
+| `ProfileAvatar.tsx` | Componente de avatar responsivo para trabalhadores e construtoras, com fallback automático para iniciais e paleta determinística. |
+| `ProfilePhotoField.tsx` | Campo de upload, validação e compressão automática de foto de perfil ou logotipo da empresa. |
+| `RainAlertsPanel.tsx` | Painel de previsão meteorológica e alertas de chuva por região de Rondonópolis para planejamento seguro de obras. |
+| `RequiredDocumentsSection.tsx` | Seção de anexo, validação e remoção dos documentos obrigatórios de cadastro para trabalhadores e construtoras. |
+| `SafetyLeaderboardCard.tsx` | Placar regional de pontuação e classificação de segurança do trabalhador nos quizzes diários. |
+| `SafetyTipsCard.tsx` | Biblioteca de boas práticas de segurança no canteiro (NRs) e quiz diário interativo com pontuação. |
+| `SafetyWeeklyRemindersCard.tsx` | Seção educacional dinâmica "Dicas de Segurança no Canteiro" com lembretes |
+| `SelectWrapper.tsx` | Wrapper reutilizável para controles `<select>` nativos com seta vetorial ChevronDown |
+| `SeveranceCalculatorPanel.tsx` | Calculadora trabalhista CLT de estimativa de rescisão adaptada a cenários comuns da construção civil. |
+| `SkillTagFilterBar.tsx` | Barra de filtragem rápida por especialidades e tags técnicas das vagas de obra. |
+| `TopNavBar.tsx` | Barra de navegação superior fixa para desktop/tablet com marca, abas de seção |
+| `UserSettingsMenu.tsx` | Modal responsivo (bottom sheet no mobile, diálogo central no desktop) com tema |
+| `WorkerEarningsPanel.tsx` | Painel financeiro com gráfico Recharts de estimativa de ganhos mensais acumulados do trabalhador. |
+| `WorkerPortal.tsx` | Portal do Trabalhador (Contratado): busca de vagas por proximidade/tags, |
+| `WorkerProductivityPanel.tsx` | Painel de acompanhamento de horas trabalhadas, metas de produção por canteiro e registro diário do trabalhador. |
+
+### Utilitários e regras de negócio (`src/utils/` — 33)
+
+| Módulo | Responsabilidade |
+| --- | --- |
+| `avatar.ts` | Utilitários de extração de iniciais, paletas determinísticas, validação e compressão client-side de avatares. |
+| `careerTips.ts` | Modelos, cache semanal local e fallback estruturado de dicas de carreira e entrevista para construção civil. |
+| `chat.ts` | Regras de liberação do chat entre construtora e trabalhador, ordenação de mensagens e atalhos rápidos de conversa. |
+| `constructionNews.ts` | Módulo do sistema BrickJobs. |
+| `contractCelebration.ts` | Regras puras para o fluxo de celebração de contrato aceito (`status === 'aceita'`). |
+| `duration.ts` | Cálculo de duração de experiências profissionais, formatação em pt-BR e filtragem combinada de vagas. |
+| `employerMonthlyDashboard.ts` | Agregação mensal de vagas abertas e encerradas por construtora para o painel comparativo. |
+| `employerPerformance.ts` | Cálculos mensais de taxa de preenchimento de vagas por ocupação para os gráficos da construtora. |
+| `employerReportPdf.ts` | Montagem e exportação de relatório gerencial em PDF (via jsPDF) com métricas da construtora. |
+| `employerStats.ts` | Estatísticas por ocupação: notas médias, tempo de preenchimento em dias e proporção de vagas abertas/encerradas. |
+| `geolocation.ts` | Coordenadas de bairros de Rondonópolis-MT, cálculo de distância Haversine e filtro de vagas por proximidade GPS. |
+| `jobSuggestions.ts` | Catálogo de modelos de descrição e requisitos rápidos por ocupação para agilizar a publicação de vagas. |
+| `lgpdConsent.ts` | Persistência de consentimento de cookies, catálogo de dados sensíveis e direitos do titular conforme a LGPD. |
+| `motionPresets.ts` | Curvas de easing, variantes de animação Motion para transições de abas, modais, splash screen e troca de portais. |
+| `nativeNotifications.ts` | Integração com Notification API e Service Worker para disparo de alertas nativos do navegador. |
+| `notifications.ts` | Filtragem de vagas compatíveis por região/categorias preferidas e criação de notificações internas do trabalhador. |
+| `notificationSound.ts` | Motor de síntese sonora via Web Audio API para alertas do BrickJobs |
+| `onboarding.ts` | Passos do tour guiado de onboarding e controle de exibição por perfil no localStorage. |
+| `pwaInstall.ts` | Detecção de plataforma iOS/standalone, resolução do modo de instalação PWA e passos manuais. |
+| `rainAlerts.ts` | Classificação de severidade meteorológica, recomendações para canteiros de obras e integração Open-Meteo. |
+| `ratings.ts` | Validação e agregação de avaliações por estrelas feitas pelos trabalhadores às construtoras. |
+| `requiredDocuments.ts` | Regras de obrigatoriedade de documentos conforme sexo do titular, validação de MIME/tamanho e leitura em Data URL. |
+| `resumePdf.ts` | Geração e download de currículo profissional em PDF (via jsPDF) a partir das experiências do trabalhador. |
+| `safetyTips.ts` | Dicas técnicas de segurança (NR-06, NR-18, NR-35), banco do quiz diário e placar regional simulado. |
+| `safetyWeeklyTips.ts` | Módulo do sistema BrickJobs. |
+| `severanceCalculator.ts` | Motor de cálculo estimativo de rescisão trabalhista CLT com cenários pré-configurados da construção civil. |
+| `skillTags.ts` | Extração, normalização e contagem de tags técnicas de especialidade a partir das vagas publicadas. |
+| `storage.ts` | Persistência e migração retrocompatível do estado principal do BrickJobs em |
+| `theme.ts` | Persistência e aplicação do tema claro/escuro no elemento raiz da aplicação. |
+| `voiceSearch.ts` | Wrapper tipado para Web Speech API (`SpeechRecognition`) em português do Brasil para busca de vagas por voz. |
+| `workerEarnings.ts` | Parser de faixas salariais/diárias e projeção mensal acumulada de ganhos do trabalhador. |
+| `workerProductivity.ts` | Persistência e consolidação de apontamentos diários de horas e produtividade do trabalhador por canteiro. |
+| `workReminders.ts` | Agendamento e disparo de lembretes de início de trabalho com antecedência padrão configurada. |
+
+### Suítes de teste automatizados (`src/utils/*.test.ts` — 32)
+
+`avatar.test.ts` · `careerTips.test.ts` · `chat.test.ts` · `constructionNews.test.ts` · `contractCelebration.test.ts` · `duration.test.ts` · `employerMonthlyDashboard.test.ts` · `employerPerformance.test.ts` · `employerReportPdf.test.ts` · `employerStats.test.ts` · `geolocation.test.ts` · `jobSuggestions.test.ts` · `lgpdConsent.test.ts` · `motionPresets.test.ts` · `nativeNotifications.test.ts` · `notifications.test.ts` · `notificationSound.test.ts` · `onboarding.test.ts` · `pwaInstall.test.ts` · `rainAlerts.test.ts` · `ratings.test.ts` · `requiredDocuments.test.ts` · `resumePdf.test.ts` · `safetyTips.test.ts` · `safetyWeeklyTips.test.ts` · `severanceCalculator.test.ts` · `skillTags.test.ts` · `theme.test.ts` · `voiceSearch.test.ts` · `workerEarnings.test.ts` · `workerProductivity.test.ts` · `workReminders.test.ts`
+
+<!-- AUTO_INVENTORY_END -->
 
 ## Persistência e APIs
 
@@ -267,21 +356,13 @@ O histórico abaixo foi reconstruído a partir dos commits registrados no branch
 
 ## Modificações atuais
 
-As alterações mais recentes adicionadas no commit `be4fe6cdee9ae94a891510709615f1a0e4451860` foram:
+As alterações mais recentes adicionadas nesta iteração incluem:
 
-1. Nova aba **Segurança** no portal do trabalhador.
-2. Checklist semanal de EPIs com persistência local.
-3. Conteúdo baseado em NR-06, NR-18 e NR-35.
-4. Geração dinâmica dos lembretes por IA.
-5. Fallback completo caso Gemini esteja indisponível.
-6. Nova aba **Notícias da Construção**.
-7. Notícias sobre ferrovia, rodovias, obras urbanas, habitação e mercado.
-8. Filtragem de notícias por categoria e texto.
-9. Integração com Google Search Grounding no servidor.
-10. Cache de notícias por 15 minutos.
-11. Navegação mobile ampliada para acomodar as novas abas.
-12. Barras de rolagem ocultadas globalmente enquanto mantido o comportamento de rolagem.
-13. Novos testes para dados de segurança e notícias.
+1. **Animação de contrato aceito (`canvas-confetti`):** componente dedicado `ContractAcceptedConfetti.tsx` + utilitário `contractCelebration.ts` disparando exclusivamente quando um contrato muda para `aceita` tanto para a construtora quanto para o trabalhador.
+2. **Sons de notificação (`Web Audio API`):** módulo `notificationSound.ts` com feedback sonoro para aceitação de contrato, lembretes de obra, novas vagas compatíveis e mensagens, além de controle de ativação em `UserSettingsMenu.tsx`.
+3. **Correções visuais e responsividade desktop:** ajuste de centralização em `TopNavBar.tsx` (eliminando cortes laterais em `1440px`), colunas proporcionais em `LocationRegionBar.tsx`, alinhamento uniforme de ícones vetoriais e seletores (`SelectWrapper.tsx`), cabeçalhos flexíveis (`text-wrap: balance`) e elevação sutil nos cards em hover.
+4. **Documentação automática e comentários JSDoc:** todos os componentes, utilitários, tipos, hooks, dados e rotas do servidor documentados com cabeçalhos `@file` / `@description`, além do script `scripts/sync-readme.mjs` conectado aos scripts `docs:sync` e `prebuild` para atualizar o `README.md` automaticamente a cada alteração/build.
+5. **Base anterior consolidada (`be4fe6cd`):** aba **Segurança** com lembretes semanais de EPIs (NR-06, NR-18, NR-35) via Gemini/fallback, aba **Notícias da Construção** com Google Search Grounding e cache de 15 min, e ocultação global das barras de rolagem.
 
 ## Limitações
 

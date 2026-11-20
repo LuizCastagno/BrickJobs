@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/motionPresets.ts
+ * @description Curvas de easing, variantes de animação Motion para transições de abas, modais, splash screen e troca de portais.
+ */
+
 export const MOTION_EASE_SETTLE: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 export const INITIAL_SPLASH_DURATION_MS = 720;

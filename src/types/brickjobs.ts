@@ -1,3 +1,8 @@
+/**
+ * @file src/types/brickjobs.ts
+ * @description Definições de tipos e interfaces centrais do domínio BrickJobs (perfis, vagas, candidaturas, chat, documentos obrigatórios, avaliações e estado persistido).
+ */
+
 export type UserRole = 'contratante' | 'contratado';
 
 export type RegistrantSex = 'masculino' | 'feminino' | 'outro';

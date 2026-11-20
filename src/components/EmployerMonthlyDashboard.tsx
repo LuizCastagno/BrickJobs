@@ -1,3 +1,8 @@
+/**
+ * @file src/components/EmployerMonthlyDashboard.tsx
+ * @description Painel mensal com gráfico comparativo de vagas abertas e encerradas da construtora ao longo dos meses.
+ */
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { BarChart2 } from 'lucide-react';
 import {

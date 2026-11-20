@@ -1,3 +1,13 @@
+/**
+ * @file MobileBottomNav.tsx
+ * @description Barra inferior de navegação mobile com suporte a rolagem horizontal sem barra
+ *   visível quando há 6+ abas no Portal do Trabalhador e botão de configurações.
+ */
+/**
+ * @file MobileBottomNav.tsx
+ * @description Barra inferior de navegação mobile com suporte a rolagem horizontal sem barra
+ *   visível quando há 6+ abas no Portal do Trabalhador e botão de configurações.
+ */
 import React from 'react';
 import { Settings } from 'lucide-react';
 
@@ -24,15 +34,13 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 }) => {
   const totalCols = onOpenSettings ? items.length + 1 : items.length;
   const gridClass =
-    totalCols >= 7
-      ? 'grid-cols-7'
-      : totalCols === 6
-        ? 'grid-cols-6'
-        : totalCols === 5
-          ? 'grid-cols-5'
-          : totalCols === 4
-            ? 'grid-cols-4'
-            : 'grid-cols-3';
+    totalCols >= 6
+      ? 'grid-flow-col auto-cols-[minmax(64px,1fr)] overflow-x-auto'
+      : totalCols === 5
+        ? 'grid-cols-5'
+        : totalCols === 4
+          ? 'grid-cols-4'
+          : 'grid-cols-3';
 
   return (
     <nav
@@ -61,12 +69,12 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               {isActive && (
                 <span
                   aria-hidden="true"
-                  className="absolute top-0 w-10 h-0.5 bg-[#C93B1E] dark:bg-[#F06449] rounded-b-full"
+                  className="absolute top-0 w-9 h-0.5 bg-[#C93B1E] dark:bg-[#F06449] rounded-b-full"
                 />
               )}
               <Icon className="w-5 h-5 shrink-0" aria-hidden={true} />
               <span
-                className={`text-[11px] tracking-tight whitespace-nowrap ${
+                className={`text-[10.5px] leading-tight tracking-tight whitespace-nowrap ${
                   isActive ? 'font-bold' : 'font-medium'
                 }`}
               >
@@ -84,7 +92,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             className="relative min-h-[48px] flex flex-col items-center justify-center gap-0.5 px-1.5 text-[#6B7280] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-[#F8FAFC] active:scale-95 transition-transform cursor-pointer"
           >
             <Settings className="w-5 h-5 shrink-0" aria-hidden={true} />
-            <span className="text-[11px] font-medium tracking-tight whitespace-nowrap">
+            <span className="text-[10.5px] leading-tight font-medium tracking-tight whitespace-nowrap">
               Ajustes
             </span>
           </button>

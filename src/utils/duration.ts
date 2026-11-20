@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/duration.ts
+ * @description Cálculo de duração de experiências profissionais, formatação em pt-BR e filtragem combinada de vagas.
+ */
+
 import type { JobPosting, WorkExperience } from '../types/brickjobs';
 import { filterJobsBySkillTags, getJobSkillTags } from './skillTags';
 

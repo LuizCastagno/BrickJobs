@@ -1,3 +1,8 @@
+/**
+ * @file src/components/SkillTagFilterBar.tsx
+ * @description Barra de filtragem rápida por especialidades e tags técnicas das vagas de obra.
+ */
+
 import React from 'react';
 import { Check, Tag, X } from 'lucide-react';
 import type { SkillTagSummary } from '../utils/skillTags';

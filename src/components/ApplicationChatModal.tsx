@@ -1,3 +1,8 @@
+/**
+ * @file src/components/ApplicationChatModal.tsx
+ * @description Modal de mensagens e agendamento de início de obra entre construtora e trabalhador após aprovação da candidatura.
+ */
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { BellRing, CalendarClock, MessageSquare, Send, X } from 'lucide-react';

@@ -1,3 +1,8 @@
+/**
+ * @file src/utils/workerEarnings.ts
+ * @description Parser de faixas salariais/diárias e projeção mensal acumulada de ganhos do trabalhador.
+ */
+
 import type { JobApplication, JobPosting } from '../types/brickjobs';
 
 export const STANDARD_WORK_DAYS_PER_MONTH = 22;
