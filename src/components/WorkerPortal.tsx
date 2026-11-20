@@ -79,7 +79,11 @@ import {
   computeCompanyRatingSummary,
   getRatingForApplication,
 } from '../utils/ratings';
-import { exportWorkerResumePdf } from '../utils/resumePdf';
+import {
+  canGenerateDraftResumePdf,
+  exportWorkerResumePdf,
+  prepareWorkerDraftForPdf,
+} from '../utils/resumePdf';
 import {
   formatReminderSchedulePtBr,
   formatReminderTimeOnlyPtBr,
@@ -225,6 +229,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   const [applyFeedback, setApplyFeedback] = useState<string>('');
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const [pdfExportFeedback, setPdfExportFeedback] = useState<string>('');
+  const [cadastroPdfFeedback, setCadastroPdfFeedback] = useState<string>('');
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [safetyStats, setSafetyStats] = useState<WorkerSafetyQuizStats>(() =>
     loadWorkerSafetyStats()
@@ -659,6 +664,31 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
         setPdfExportFeedback(`Currículo exportado: ${result.fileName}`);
       } else {
         setPdfExportFeedback(result.error);
+      }
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
+  const handleExportCadastroPdf = () => {
+    setFormError('');
+    setCadastroPdfFeedback('');
+
+    const validation = canGenerateDraftResumePdf(form);
+    if (!validation.valid) {
+      setFormError(validation.error);
+      focusWorkerControl('#worker-nome');
+      return;
+    }
+
+    setIsExportingPdf(true);
+    try {
+      const draftProfile = prepareWorkerDraftForPdf(form);
+      const result = exportWorkerResumePdf(draftProfile);
+      if (result.ok) {
+        setCadastroPdfFeedback(`Resumo profissional em PDF gerado: ${result.fileName}`);
+      } else {
+        setFormError(result.error);
       }
     } finally {
       setIsExportingPdf(false);
@@ -2286,17 +2316,40 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             </p>
           )}
 
+          {cadastroPdfFeedback && (
+            <p
+              role="status"
+              data-testid="cadastro-export-pdf-feedback"
+              className="text-sm font-medium text-[#047857] dark:text-[#34D399] inline-flex items-center gap-1.5"
+            >
+              <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+              <span>{cadastroPdfFeedback}</span>
+            </p>
+          )}
+
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
               Ao salvar, o BrickJobs gera automaticamente seu perfil para as construtoras.
             </p>
-            <button
-              type="submit"
-              data-testid="save-worker-profile"
-              className="w-full sm:w-auto min-h-[48px] px-7 py-3 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
-            >
-              Salvar e gerar perfil
-            </button>
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <button
+                type="button"
+                onClick={handleExportCadastroPdf}
+                disabled={isExportingPdf}
+                data-testid="cadastro-export-pdf-button"
+                className="w-full sm:w-auto min-h-[48px] px-5 py-3 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F9FAFB] dark:hover:bg-[#334155] disabled:opacity-60 text-[#111827] dark:text-[#F8FAFC] text-sm font-semibold inline-flex items-center justify-center gap-2 whitespace-nowrap transition-all active:scale-[0.98] cursor-pointer"
+              >
+                <Download className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                <span>{isExportingPdf ? 'Gerando PDF...' : 'Baixar Resumo em PDF'}</span>
+              </button>
+              <button
+                type="submit"
+                data-testid="save-worker-profile"
+                className="w-full sm:w-auto min-h-[48px] px-7 py-3 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
+              >
+                Salvar e gerar perfil
+              </button>
+            </div>
           </div>
           </motion.form>
         )}

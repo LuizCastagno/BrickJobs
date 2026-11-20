@@ -114,6 +114,46 @@ export function buildResumePdfData(
   };
 }
 
+export function canGenerateDraftResumePdf(
+  profile: Pick<WorkerProfile, 'nomeCompleto'>
+): { valid: true } | { valid: false; error: string } {
+  if (!profile.nomeCompleto || !profile.nomeCompleto.trim()) {
+    return {
+      valid: false,
+      error: 'Informe seu nome completo para gerar e baixar o resumo em PDF.',
+    };
+  }
+  return { valid: true };
+}
+
+export function prepareWorkerDraftForPdf(profile: WorkerProfile): WorkerProfile {
+  const sanitizedExperiences =
+    profile.tipoHistorico === 'experiencias'
+      ? profile.experiencias
+          .filter(
+            (exp) =>
+              Boolean(exp.empresaLocal?.trim()) ||
+              Boolean(exp.funcao?.trim()) ||
+              Boolean(exp.atividades?.trim())
+          )
+          .map((exp) => ({
+            ...exp,
+            empresaLocal: exp.empresaLocal.trim(),
+            funcao: exp.funcao.trim(),
+            atividades: exp.atividades?.trim() || '',
+          }))
+      : [];
+
+  return {
+    ...profile,
+    nomeCompleto: profile.nomeCompleto.trim(),
+    telefone: profile.telefone.trim(),
+    email: profile.email.trim(),
+    resumoProfissional: profile.resumoProfissional.trim(),
+    experiencias: sanitizedExperiences,
+  };
+}
+
 export function createWorkerResumePdfDocument(
   profile: WorkerProfile,
   now: Date = new Date()

@@ -4,7 +4,9 @@ import type { WorkerProfile } from '../types/brickjobs';
 import {
   buildResumePdfData,
   buildResumePdfFilename,
+  canGenerateDraftResumePdf,
   generateWorkerResumePdfBuffer,
+  prepareWorkerDraftForPdf,
 } from './resumePdf';
 
 const sampleWorker: WorkerProfile = {
@@ -73,4 +75,55 @@ test('generateWorkerResumePdfBuffer outputs valid binary PDF starting with %PDF-
 
   const header = new TextDecoder().decode(result.bytes.slice(0, 5));
   assert.equal(header, '%PDF-');
+});
+
+test('canGenerateDraftResumePdf rejects empty name and accepts valid draft', () => {
+  const invalid = canGenerateDraftResumePdf({ nomeCompleto: '   ' });
+  assert.equal(invalid.valid, false);
+  assert.ok(invalid.error.length > 0);
+
+  const valid = canGenerateDraftResumePdf({ nomeCompleto: '  Carlos Souza  ' });
+  assert.equal(valid.valid, true);
+});
+
+test('prepareWorkerDraftForPdf drops blank draft experiences and sanitizes filled entries', () => {
+  const draft: WorkerProfile = {
+    ...sampleWorker,
+    nomeCompleto: '  Carlos Souza  ',
+    telefone: '  (66) 99900-1122 ',
+    resumoProfissional: '  Experiência em obras comerciais.  ',
+    experiencias: [
+      {
+        id: 'empty-row',
+        empresaLocal: '   ',
+        funcao: '',
+        dataInicio: '2025-01',
+        dataFim: '',
+        atual: true,
+        atividades: '   ',
+      },
+      {
+        id: 'filled-row',
+        empresaLocal: '  Obra Centro  ',
+        funcao: '  Pedreiro  ',
+        dataInicio: '2024-01',
+        dataFim: '2024-12',
+        atual: false,
+        atividades: '  Alvenaria e contrapiso  ',
+      },
+    ],
+  };
+
+  const prepared = prepareWorkerDraftForPdf(draft);
+  assert.equal(prepared.nomeCompleto, 'Carlos Souza');
+  assert.equal(prepared.telefone, '(66) 99900-1122');
+  assert.equal(prepared.resumoProfissional, 'Experiência em obras comerciais.');
+  assert.equal(prepared.experiencias.length, 1);
+  assert.equal(prepared.experiencias[0].empresaLocal, 'Obra Centro');
+  assert.equal(prepared.experiencias[0].funcao, 'Pedreiro');
+  assert.equal(prepared.experiencias[0].atividades, 'Alvenaria e contrapiso');
+
+  const pdf = generateWorkerResumePdfBuffer(prepared, new Date('2026-11-14T15:00:00.000Z'));
+  assert.equal(pdf.fileName, 'curriculo-carlos-souza-brickjobs.pdf');
+  assert.equal(new TextDecoder().decode(pdf.bytes.slice(0, 5)), '%PDF-');
 });
