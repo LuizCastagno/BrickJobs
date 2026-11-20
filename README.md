@@ -197,7 +197,7 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 ### Principais módulos atuais
 
 <!-- AUTO_INVENTORY_START -->
-> Inventário gerado automaticamente via `scripts/sync-readme.mjs` (34 componentes React, 34 módulos utilitários, 33 suítes de teste e 8 scripts npm).
+> Inventário gerado automaticamente via `scripts/sync-readme.mjs` (34 componentes React, 35 módulos utilitários, 34 suítes de teste e 8 scripts npm).
 
 ### Núcleo, tipos, hooks e dados
 
@@ -249,7 +249,7 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 | `WorkerPortal.tsx` | Portal do Trabalhador (Contratado): busca de vagas por proximidade/tags, |
 | `WorkerProductivityPanel.tsx` | Painel de acompanhamento de horas trabalhadas, metas de produção por canteiro e registro diário do trabalhador. |
 
-### Utilitários e regras de negócio (`src/utils/` — 34)
+### Utilitários e regras de negócio (`src/utils/` — 35)
 
 | Módulo | Responsabilidade |
 | --- | --- |
@@ -264,6 +264,7 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 | `employerReportPdf.ts` | Montagem e exportação de relatório gerencial em PDF (via jsPDF) com métricas da construtora. |
 | `employerStats.ts` | Estatísticas por ocupação: notas médias, tempo de preenchimento em dias e proporção de vagas abertas/encerradas. |
 | `geolocation.ts` | Coordenadas de bairros de Rondonópolis-MT, cálculo de distância Haversine e filtro de vagas por proximidade GPS. |
+| `jobAdvancedFilters.ts` | Regras puras para o sistema de filtros avançados da listagem de vagas |
 | `jobPriority.ts` | Utilitários puros para normalização, classificação, ordenação, filtragem e |
 | `jobSuggestions.ts` | Catálogo de modelos de descrição e requisitos rápidos por ocupação para agilizar a publicação de vagas. |
 | `lgpdConsent.ts` | Persistência de consentimento de cookies, catálogo de dados sensíveis e direitos do titular conforme a LGPD. |
@@ -288,9 +289,9 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 | `workerProductivity.ts` | Persistência e consolidação de apontamentos diários de horas e produtividade do trabalhador por canteiro. |
 | `workReminders.ts` | Agendamento e disparo de lembretes de início de trabalho com antecedência padrão configurada. |
 
-### Suítes de teste automatizados (`src/utils/*.test.ts` — 33)
+### Suítes de teste automatizados (`src/utils/*.test.ts` — 34)
 
-`avatar.test.ts` · `careerTips.test.ts` · `chat.test.ts` · `constructionNews.test.ts` · `contractCelebration.test.ts` · `duration.test.ts` · `employerMonthlyDashboard.test.ts` · `employerPerformance.test.ts` · `employerReportPdf.test.ts` · `employerStats.test.ts` · `geolocation.test.ts` · `jobPriority.test.ts` · `jobSuggestions.test.ts` · `lgpdConsent.test.ts` · `motionPresets.test.ts` · `nativeNotifications.test.ts` · `notifications.test.ts` · `notificationSound.test.ts` · `onboarding.test.ts` · `pwaInstall.test.ts` · `rainAlerts.test.ts` · `ratings.test.ts` · `requiredDocuments.test.ts` · `resumePdf.test.ts` · `safetyTips.test.ts` · `safetyWeeklyTips.test.ts` · `severanceCalculator.test.ts` · `skillTags.test.ts` · `theme.test.ts` · `voiceSearch.test.ts` · `workerEarnings.test.ts` · `workerProductivity.test.ts` · `workReminders.test.ts`
+`avatar.test.ts` · `careerTips.test.ts` · `chat.test.ts` · `constructionNews.test.ts` · `contractCelebration.test.ts` · `duration.test.ts` · `employerMonthlyDashboard.test.ts` · `employerPerformance.test.ts` · `employerReportPdf.test.ts` · `employerStats.test.ts` · `geolocation.test.ts` · `jobAdvancedFilters.test.ts` · `jobPriority.test.ts` · `jobSuggestions.test.ts` · `lgpdConsent.test.ts` · `motionPresets.test.ts` · `nativeNotifications.test.ts` · `notifications.test.ts` · `notificationSound.test.ts` · `onboarding.test.ts` · `pwaInstall.test.ts` · `rainAlerts.test.ts` · `ratings.test.ts` · `requiredDocuments.test.ts` · `resumePdf.test.ts` · `safetyTips.test.ts` · `safetyWeeklyTips.test.ts` · `severanceCalculator.test.ts` · `skillTags.test.ts` · `theme.test.ts` · `voiceSearch.test.ts` · `workerEarnings.test.ts` · `workerProductivity.test.ts` · `workReminders.test.ts`
 
 <!-- AUTO_INVENTORY_END -->
 

@@ -27,6 +27,7 @@ import {
   Star,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react';
 import {
   AVAILABILITY_OPTIONS,
@@ -51,13 +52,20 @@ import { countUnreadMessagesForApplication } from '../utils/chat';
 import {
   calculateExperienceMonths,
   calculateTotalExperienceMonths,
-  countActiveAdvancedFilters,
-  filterJobsByLocationAndQuery,
   formatDurationPtBr,
   formatFileSizePtBr,
   formatMonthYearPtBr,
   resolveNearestRondonopolisRegion,
 } from '../utils/duration';
+import {
+  DEFAULT_REGION_LABEL,
+  filterJobsAdvanced,
+  getActiveAdvancedFilterItems,
+  getAvailableServiceTypeOptions,
+  SALARY_BAND_OPTIONS,
+  type ActiveAdvancedFilterItem,
+  type SalaryBandKey,
+} from '../utils/jobAdvancedFilters';
 import { countUnreadNotifications } from '../utils/notifications';
 import {
   filterAndSortJobsByProximity,
@@ -228,7 +236,9 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [proximityFilter, setProximityFilter] =
     useState<ProximityFilterState | null>(initialProximityFilter);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(true);
+  const [filterSalaryBand, setFilterSalaryBand] = useState<SalaryBandKey>('Todas');
+  const [filterServiceType, setFilterServiceType] = useState<string>('Todos');
   const [filterOccupation, setFilterOccupation] = useState<string>('Todas');
   const [filterContract, setFilterContract] = useState<string>('Todos');
   const [filterExperience, setFilterExperience] = useState<string>('Todos');
@@ -396,15 +406,34 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     return Array.from(set);
   }, [jobs]);
 
-  const activeAdvancedCount = useMemo(
-    () =>
-      countActiveAdvancedFilters({
-        occupation: filterOccupation,
-        contractType: filterContract,
-        experienceLevel: filterExperience,
-      }),
-    [filterOccupation, filterContract, filterExperience]
+  const serviceTypeOptions = useMemo(
+    () => getAvailableServiceTypeOptions(jobs),
+    [jobs]
   );
+
+  const activeFilterItems = useMemo(
+    () =>
+      getActiveAdvancedFilterItems({
+        region: selectedRegion,
+        salaryBand: filterSalaryBand,
+        serviceType: filterServiceType,
+        contractType: filterContract,
+        occupation: filterOccupation,
+        experienceLevel: filterExperience,
+        onlyUrgent: onlyUrgentJobs,
+      }),
+    [
+      selectedRegion,
+      filterSalaryBand,
+      filterServiceType,
+      filterContract,
+      filterOccupation,
+      filterExperience,
+      onlyUrgentJobs,
+    ]
+  );
+
+  const activeAdvancedCount = activeFilterItems.length;
 
   const openJobs = useMemo(
     () => jobs.filter((job) => job.status === 'aberta'),
@@ -412,13 +441,15 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   );
 
   const { scopedJobsBeforeTags, distanceByJobId } = useMemo(() => {
-    const baseFiltered = filterJobsByLocationAndQuery(jobs, {
+    const baseFiltered = filterJobsAdvanced(jobs, {
       region: selectedRegion,
       query: searchQuery,
       onlyOpen: true,
       occupation: filterOccupation,
       contractType: filterContract,
       experienceLevel: filterExperience,
+      salaryBand: filterSalaryBand,
+      serviceType: filterServiceType,
     });
 
     if (!proximityFilter?.active) {
@@ -448,6 +479,8 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     filterOccupation,
     filterContract,
     filterExperience,
+    filterSalaryBand,
+    filterServiceType,
     proximityFilter,
   ]);
 
@@ -470,9 +503,23 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   }, [scopedJobsBeforeTags, selectedSkillTags, onlyUrgentJobs, proximityFilter]);
 
   const clearAdvancedFilters = () => {
+    onChangeRegion(DEFAULT_REGION_LABEL);
+    setFilterSalaryBand('Todas');
+    setFilterServiceType('Todos');
     setFilterOccupation('Todas');
     setFilterContract('Todos');
     setFilterExperience('Todos');
+    setOnlyUrgentJobs(false);
+  };
+
+  const handleRemoveSingleFilter = (key: ActiveAdvancedFilterItem['key']) => {
+    if (key === 'region') onChangeRegion(DEFAULT_REGION_LABEL);
+    if (key === 'salaryBand') setFilterSalaryBand('Todas');
+    if (key === 'serviceType') setFilterServiceType('Todos');
+    if (key === 'contractType') setFilterContract('Todos');
+    if (key === 'occupation') setFilterOccupation('Todas');
+    if (key === 'experienceLevel') setFilterExperience('Todos');
+    if (key === 'onlyUrgent') setOnlyUrgentJobs(false);
   };
 
   const applicationsByJobId = useMemo(() => {
@@ -1118,19 +1165,46 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 </button>
               </div>
 
-              {(activeAdvancedCount > 0 || onlyUrgentJobs) && (
+              {activeAdvancedCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => {
-                    clearAdvancedFilters();
-                    setOnlyUrgentJobs(false);
-                  }}
+                  onClick={clearAdvancedFilters}
+                  data-testid="worker-clear-all-filters"
                   className="min-h-[44px] sm:min-h-[40px] px-3 py-1.5 text-xs font-semibold text-[#C93B1E] dark:text-[#F06449] hover:underline cursor-pointer"
                 >
-                  Limpar filtros
+                  Limpar filtros ({activeAdvancedCount})
                 </button>
               )}
             </div>
+
+            {activeFilterItems.length > 0 && (
+              <div
+                className="mt-3 flex flex-wrap items-center gap-2"
+                data-testid="worker-active-filters-summary"
+              >
+                <span className="text-xs font-medium text-[#4B5563] dark:text-[#94A3B8]">
+                  Ativos:
+                </span>
+                {activeFilterItems.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => handleRemoveSingleFilter(item.key)}
+                    aria-label={`Remover filtro ${item.label}: ${item.value}`}
+                    data-testid={`remove-filter-${item.key}`}
+                    className="min-h-[34px] px-2.5 py-1 rounded-lg border border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#1E293B] hover:bg-[#F3F4F6] dark:hover:bg-[#334155] text-xs font-medium text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>
+                      <span className="text-[#4B5563] dark:text-[#94A3B8]">
+                        {item.label}:
+                      </span>{' '}
+                      {item.value}
+                    </span>
+                    <X className="w-3.5 h-3.5 text-[#6B7280] dark:text-[#94A3B8] shrink-0" aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             <AnimatePresence initial={false}>
               {showAdvancedFilters && (
@@ -1141,8 +1215,108 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   animate={PANEL_REVEAL_VARIANTS.animate}
                   exit={PANEL_REVEAL_VARIANTS.exit}
                   transition={PANEL_REVEAL_TRANSITION}
-                  className="mt-4 pt-4 border-t border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 md:grid-cols-3 gap-4"
+                  className="mt-4 pt-4 border-t border-[#E5E7EB] dark:border-[#1E293B] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
                 >
+                <div>
+                  <label
+                    htmlFor="filter-region"
+                    className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                  >
+                    Região de atuação
+                  </label>
+                  <SelectWrapper>
+                    <select
+                      id="filter-region"
+                      data-testid="filter-region-select"
+                      value={selectedRegion}
+                      onChange={(e) => onChangeRegion(e.target.value)}
+                      className={selectClass}
+                    >
+                      {RONDONOPOLIS_REGIONS.map((region) => (
+                        <option key={region} value={region}>
+                          {region}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="filter-salary-band"
+                    className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                  >
+                    Faixa salarial estimada
+                  </label>
+                  <SelectWrapper>
+                    <select
+                      id="filter-salary-band"
+                      data-testid="filter-salary-band-select"
+                      value={filterSalaryBand}
+                      onChange={(e) =>
+                        setFilterSalaryBand(e.target.value as SalaryBandKey)
+                      }
+                      className={selectClass}
+                    >
+                      {SALARY_BAND_OPTIONS.map((band) => (
+                        <option key={band.value} value={band.value}>
+                          {band.label}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="filter-service-type"
+                    className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                  >
+                    Tipo de serviço
+                  </label>
+                  <SelectWrapper>
+                    <select
+                      id="filter-service-type"
+                      data-testid="filter-service-type-select"
+                      value={filterServiceType}
+                      onChange={(e) => setFilterServiceType(e.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="Todos">Todos os tipos de serviço</option>
+                      {serviceTypeOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="filter-contract"
+                    className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
+                  >
+                    Modelo de Contrato
+                  </label>
+                  <SelectWrapper>
+                    <select
+                      id="filter-contract"
+                      data-testid="filter-contract-select"
+                      value={filterContract}
+                      onChange={(e) => setFilterContract(e.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="Todos">Todos os modelos</option>
+                      {CONTRACT_TYPE_OPTIONS.map((ct) => (
+                        <option key={ct} value={ct}>
+                          {ct}
+                        </option>
+                      ))}
+                    </select>
+                  </SelectWrapper>
+                </div>
+
                 <div>
                   <label
                     htmlFor="filter-occupation"
@@ -1161,30 +1335,6 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                       {occupationFilterOptions.map((occ) => (
                         <option key={occ} value={occ}>
                           {occ}
-                        </option>
-                      ))}
-                    </select>
-                  </SelectWrapper>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="filter-contract"
-                    className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1] mb-1.5"
-                  >
-                    Tipo de contrato
-                  </label>
-                  <SelectWrapper>
-                    <select
-                      id="filter-contract"
-                      value={filterContract}
-                      onChange={(e) => setFilterContract(e.target.value)}
-                      className={selectClass}
-                    >
-                      <option value="Todos">Todos os contratos</option>
-                      {CONTRACT_TYPE_OPTIONS.map((ct) => (
-                        <option key={ct} value={ct}>
-                          {ct}
                         </option>
                       ))}
                     </select>
@@ -1287,11 +1437,9 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      onChangeRegion('Toda Rondonópolis e Região');
                       setSearchQuery('');
                       setProximityFilter(null);
                       setSelectedSkillTags([]);
-                      setOnlyUrgentJobs(false);
                       clearAdvancedFilters();
                     }}
                     className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] dark:bg-[#F8FAFC] text-white dark:text-[#0F172A] text-sm font-medium cursor-pointer"
