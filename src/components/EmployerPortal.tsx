@@ -1,7 +1,8 @@
 /**
  * @file EmployerPortal.tsx
  * @description Portal da Construtora (Contratante): cadastro da empresa, publicação de vagas,
- *   monitoramento meteorológico, dashboards mensais, gestão de candidaturas e busca de profissionais.
+ *   monitoramento meteorológico, calculadora de rescisão CLT,
+ *   dashboards mensais, gestão de candidaturas e busca de profissionais.
  */
 import React, { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -78,10 +79,13 @@ import {
   isValidDocumentAttachment,
   validateRequiredRegistrationDocuments,
 } from '../utils/requiredDocuments';
+import {
+  buildEmployerProfessionalsDirectory,
+  type ProfessionalDirectoryFilter,
+} from '../utils/employerProfessionals';
 import { EmployerMonthlyDashboard } from './EmployerMonthlyDashboard';
 import { EmployerStatisticsTab } from './EmployerStatisticsTab';
 import { JobDescriptionSuggestions } from './JobDescriptionSuggestions';
-import { LocationRegionBar } from './LocationRegionBar';
 import { PerformanceSummaryCard } from './PerformanceSummaryCard';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfilePhotoField } from './ProfilePhotoField';
@@ -90,7 +94,11 @@ import { RequiredDocumentsSection } from './RequiredDocumentsSection';
 import { SelectWrapper } from './SelectWrapper';
 import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 
-export type EmployerTab = 'vagas' | 'estatisticas' | 'cadastro' | 'profissionais';
+export type EmployerTab =
+  | 'vagas'
+  | 'estatisticas'
+  | 'cadastro'
+  | 'profissionais';
 
 interface EmployerPortalProps {
   activeTab: EmployerTab;
@@ -162,8 +170,9 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
   const [jobError, setJobError] = useState<string>('');
   const [jobSavedMsg, setJobSavedMsg] = useState<string>('');
 
-  // Workers search state
-  const [workerSearch, setWorkerSearch] = useState<string>('');
+  // Read-only professionals directory filter ('todos' | 'registrados' | 'disponiveis')
+  const [professionalView, setProfessionalView] =
+    useState<ProfessionalDirectoryFilter>('todos');
   const [employerModalMode, setEmployerModalMode] = useState<'severance' | 'rain' | null>(null);
 
   const isCompanyRegistered = Boolean(
@@ -203,33 +212,16 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
     [companyRatings, companyProfile.id, companyProfile.nomeFantasia]
   );
 
-  const filteredWorkers = useMemo(() => {
-    const q = workerSearch.trim().toLowerCase();
-    return workers.filter((w) => {
-      if (!w.nomeCompleto.trim()) return false;
-      if (
-        selectedRegion !== 'Toda Rondonópolis e Região' &&
-        w.regiaoInteresse !== 'Toda Rondonópolis e Região' &&
-        w.bairro.toLowerCase() !== selectedRegion.toLowerCase() &&
-        w.regiaoInteresse.toLowerCase() !== selectedRegion.toLowerCase()
-      ) {
-        return false;
-      }
-      if (q) {
-        const hay = [
-          w.nomeCompleto,
-          w.funcaoPrincipal,
-          w.bairro,
-          w.resumoProfissional,
-          ...w.experiencias.map((e) => `${e.funcao} ${e.empresaLocal}`),
-        ]
-          .join(' ')
-          .toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [workers, selectedRegion, workerSearch]);
+  const professionalsDirectory = useMemo(
+    () =>
+      buildEmployerProfessionalsDirectory({
+        workers,
+        applications,
+        jobs,
+        companyName: companyProfile.nomeFantasia,
+      }),
+    [workers, applications, jobs, companyProfile.nomeFantasia]
+  );
 
   const focusControlBySelector = (selector: string) => {
     if (typeof document === 'undefined') return;
@@ -410,12 +402,30 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
               Área do Contratante · Rondonópolis-MT
             </p>
             <h1 className="font-display text-2xl sm:text-3xl lg:text-[2rem] font-bold tracking-tight leading-tight [text-wrap:balance] text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
-              {isCompanyRegistered ? companyProfile.nomeFantasia : 'Painel da Construtora'}
+              {activeTab === 'vagas'
+                ? 'Painel da Construtora - Criar Vagas'
+                : activeTab === 'estatisticas'
+                  ? 'Estatísticas de Avaliações e Preenchimento'
+                  : activeTab === 'cadastro'
+                    ? 'Cadastro da Empresa'
+                    : activeTab === 'profissionais'
+                      ? 'Profissionais Registrados/Disponíveis'
+                      : isCompanyRegistered
+                        ? companyProfile.nomeFantasia
+                        : 'Painel da Construtora'}
             </h1>
             <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1 break-words">
-              {isCompanyRegistered
-                ? `${companyProfile.bairro} · Resp.: ${companyProfile.responsavel} · ${companyProfile.telefone}`
-                : 'Cadastre os dados gerais da empresa e publique buscas por função e número de vagas.'}
+              {activeTab === 'vagas'
+                ? 'Publique vagas na região por função, número de vagas e salário ofertado e tipo de modalidade de contrato'
+                : activeTab === 'estatisticas'
+                  ? 'Registros e Avaliações de funcionários, tempo de preenchimento das vagas, recursos estatísticos e calculadora de rescisão'
+                  : activeTab === 'cadastro'
+                    ? 'Cadastro geral da empresa'
+                    : activeTab === 'profissionais'
+                      ? 'Profissionais disponíveis e registrados na Empresa'
+                      : isCompanyRegistered
+                        ? `${companyProfile.bairro} · Resp.: ${companyProfile.responsavel} · ${companyProfile.telefone}`
+                        : 'Cadastre os dados gerais da empresa e publique buscas por função e número de vagas.'}
             </p>
           </div>
         </div>
@@ -430,9 +440,9 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
           <div className="h-8 w-px bg-[#E5E7EB] dark:bg-[#1E293B]" aria-hidden="true" />
           <div>
             <p className="font-display text-2xl font-bold text-[#111827] dark:text-[#F8FAFC] tabular-nums">
-              {filteredWorkers.length}
+              {professionalsDirectory.disponiveis.length}
             </p>
-            <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">Profissionais na região</p>
+            <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">Profissionais disponíveis</p>
           </div>
           <div className="h-8 w-px bg-[#E5E7EB] dark:bg-[#1E293B]" aria-hidden="true" />
           <div data-testid="employer-header-rating">
@@ -456,15 +466,17 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setEmployerModalMode('severance')}
-            data-testid="employer-open-severance-button"
-            className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F9FAFB] dark:hover:bg-[#334155] text-xs sm:text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 transition-colors cursor-pointer shrink-0"
-          >
-            <Calculator className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
-            <span>Calculadora de rescisão</span>
-          </button>
+          {activeTab === 'estatisticas' && (
+            <button
+              type="button"
+              onClick={() => setEmployerModalMode('severance')}
+              data-testid="employer-open-severance-button"
+              className="min-h-[44px] px-4 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F9FAFB] dark:hover:bg-[#334155] text-xs sm:text-sm font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+            >
+              <Calculator className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+              <span>Calculadora de rescisão</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1664,7 +1676,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
           </motion.section>
         )}
 
-        {/* TAB 3: Profissionais disponíveis na região */}
+        {/* TAB 3: Visualização de Profissionais Registrados e Disponíveis */}
         {activeTab === 'profissionais' && (
           <motion.div
             key="employer-tab-profissionais"
@@ -1673,148 +1685,326 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             animate="animate"
             exit="exit"
             transition={TAB_TRANSITION_CONFIG}
-            className="mt-6 space-y-5"
+            className="mt-6 space-y-6"
           >
-          <LocationRegionBar
-            selectedRegion={selectedRegion}
-            onChangeRegion={onChangeRegion}
-            searchQuery={workerSearch}
-            onChangeSearchQuery={setWorkerSearch}
-            searchPlaceholder="Buscar profissional por função ou nome (ex: Armador)"
-            regionLabel="Filtrar profissionais por região de interesse"
-          />
+            {/* Read-only directory filter & counters */}
+            <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold text-[#C93B1E] dark:text-[#F06449]">
+                  Painel de consulta somente leitura
+                </p>
+                <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-0.5 tabular-nums">
+                  {professionalsDirectory.registrados.length}{' '}
+                  {professionalsDirectory.registrados.length === 1
+                    ? 'contratado registrado na empresa'
+                    : 'contratados registrados na empresa'}{' '}
+                  · {professionalsDirectory.disponiveis.length}{' '}
+                  {professionalsDirectory.disponiveis.length === 1
+                    ? 'profissional disponível para serviço'
+                    : 'profissionais disponíveis para serviço'}
+                </p>
+              </div>
 
-          {filteredWorkers.length === 0 ? (
-            <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-8 text-center">
-              <Users className="w-8 h-8 text-[#6B7280] dark:text-[#94A3B8] mx-auto mb-2" aria-hidden="true" />
-              <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
-                Nenhum profissional encontrado nessa região
-              </p>
-              <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
-                Amplie o filtro para visualizar trabalhadores de toda Rondonópolis-MT.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  onChangeRegion('Toda Rondonópolis e Região');
-                  setWorkerSearch('');
-                }}
-                className="mt-4 min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] dark:bg-[#F8FAFC] text-white dark:text-[#0F172A] text-sm font-medium cursor-pointer"
+              <div
+                role="group"
+                aria-label="Filtrar visualização de profissionais"
+                className="inline-flex flex-wrap items-center gap-1 p-1 rounded-xl bg-[#F4F5F7] dark:bg-[#0F172A] border border-[#E5E7EB] dark:border-[#1E293B]"
               >
-                Ver toda Rondonópolis
-              </button>
+                {(
+                  [
+                    {
+                      id: 'todos',
+                      label: `Todos (${
+                        professionalsDirectory.registrados.length +
+                        professionalsDirectory.disponiveis.length
+                      })`,
+                    },
+                    {
+                      id: 'registrados',
+                      label: `Registrados na Empresa (${professionalsDirectory.registrados.length})`,
+                    },
+                    {
+                      id: 'disponiveis',
+                      label: `Disponíveis para Serviço (${professionalsDirectory.disponiveis.length})`,
+                    },
+                  ] as const
+                ).map((option) => {
+                  const isActive = professionalView === option.id;
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setProfessionalView(option.id)}
+                      aria-pressed={isActive}
+                      data-testid={`profissionais-filter-${option.id}`}
+                      className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-[#C93B1E] text-white'
+                          : 'text-[#374151] dark:text-[#CBD5E1] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
-              {filteredWorkers.map((worker) => {
-                const totalMonths = calculateTotalExperienceMonths(worker.experiencias);
-                return (
-                  <article
-                    key={worker.id}
-                    className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] hover:border-[#D1D5DB] dark:hover:border-[#334155] hover:shadow-sm transition-all rounded-2xl p-5 flex flex-col justify-between"
+
+            {/* Section 1: Contratados registrados na empresa */}
+            {(professionalView === 'todos' || professionalView === 'registrados') && (
+              <section
+                aria-labelledby="heading-profissionais-registrados"
+                data-testid="employer-registered-workers-section"
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h2
+                    id="heading-profissionais-registrados"
+                    className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]"
                   >
-                    <div>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <ProfileAvatar
-                            name={worker.nomeCompleto}
-                            photoUrl={worker.fotoPerfilUrl}
-                            entityType="worker"
-                            size="md"
-                            testId={`worker-directory-avatar-${worker.id}`}
-                          />
-                          <div className="min-w-0">
-                            <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
-                              {worker.nomeCompleto}
-                            </h3>
-                            <p className="text-sm font-medium text-[#C93B1E] dark:text-[#F06449]">
-                              {worker.funcaoPrincipal}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-medium text-[#4B5563] dark:text-[#94A3B8] whitespace-nowrap shrink-0">
-                          {worker.disponibilidade}
-                        </span>
-                      </div>
+                    Contratados registrados na empresa ({professionalsDirectory.registrados.length})
+                  </h2>
+                </div>
 
-                      <p className="mt-2 text-xs text-[#4B5563] dark:text-[#94A3B8] flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#6B7280] dark:text-[#94A3B8] shrink-0" aria-hidden="true" />
-                        <span>
-                          Mora em {worker.bairro} · Interesse: {worker.regiaoInteresse}
-                        </span>
-                      </p>
-
-                      {worker.resumoProfissional && (
-                        <p className="mt-3 text-sm text-[#374151] dark:text-[#CBD5E1] leading-relaxed">
-                          {worker.resumoProfissional}
-                        </p>
-                      )}
-
-                      {worker.tipoHistorico === 'pdf' && worker.pdfCurriculo ? (
-                        <div className="mt-4 p-3 rounded-xl bg-[#F9FAFB] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <FileText className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
-                            <span className="text-xs font-medium text-[#111827] dark:text-[#F8FAFC] truncate">
-                              {worker.pdfCurriculo.fileName}
-                            </span>
-                          </div>
-                          <a
-                            href={worker.pdfCurriculo.dataUrl}
-                            download={worker.pdfCurriculo.fileName}
-                            className="min-h-[44px] sm:min-h-0 inline-flex items-center text-xs font-semibold text-[#C93B1E] dark:text-[#F06449] hover:underline whitespace-nowrap shrink-0"
-                          >
-                            Baixar PDF
-                          </a>
-                        </div>
-                      ) : (
-                        <div className="mt-4 pt-3 border-t border-[#F3F4F6] dark:border-[#1E293B] space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-semibold text-[#374151] dark:text-[#CBD5E1]">
-                              Experiências ({worker.experiencias.length})
-                            </span>
-                            <span className="font-semibold text-[#111827] dark:text-[#F8FAFC] tabular-nums">
-                              Total: {formatDurationPtBr(totalMonths)}
-                            </span>
-                          </div>
-                          {worker.experiencias.slice(0, 2).map((exp) => {
-                            const dur = calculateExperienceMonths(
-                              exp.dataInicio,
-                              exp.dataFim,
-                              exp.atual
-                            );
-                            return (
-                              <div key={exp.id} className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
-                                <span className="font-medium text-[#111827] dark:text-[#F8FAFC]">{exp.funcao}</span>{' '}
-                                — {exp.empresaLocal} ({formatMonthYearPtBr(exp.dataInicio)} –{' '}
-                                {exp.atual ? 'Atual' : formatMonthYearPtBr(exp.dataFim)} ·{' '}
-                                {dur.valid ? formatDurationPtBr(dur.months) : '—'})
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-[#F3F4F6] dark:border-[#1E293B] flex items-center justify-between gap-3">
-                      <span className="text-xs font-medium text-[#374151] dark:text-[#CBD5E1] inline-flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-[#6B7280] dark:text-[#94A3B8]" aria-hidden="true" />
-                        <span>{worker.telefone}</span>
-                      </span>
-
-                      <a
-                        href={`tel:${worker.telefone.replace(/\D/g, '')}`}
-                        className="min-h-[44px] sm:min-h-[40px] px-3.5 py-1.5 rounded-lg bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs font-semibold inline-flex items-center active:scale-[0.98] transition-all"
+                {professionalsDirectory.registrados.length === 0 ? (
+                  <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-6 text-center">
+                    <Users className="w-7 h-7 text-[#6B7280] dark:text-[#94A3B8] mx-auto mb-2" aria-hidden="true" />
+                    <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                      Nenhum contratado registrado na empresa ainda
+                    </p>
+                    <p className="text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
+                      Os colaboradores vinculados ou com serviços concluídos pela construtora aparecem automaticamente aqui para consulta.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
+                    {professionalsDirectory.registrados.map((item) => (
+                      <article
+                        key={item.key}
+                        data-testid={`registered-worker-card-${item.applicationId}`}
+                        className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 flex flex-col justify-between"
                       >
-                        Entrar em contato
-                      </a>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
+                        <div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <ProfileAvatar
+                                name={item.nomeCompleto}
+                                photoUrl={item.fotoPerfilUrl}
+                                entityType="worker"
+                                size="md"
+                                testId={`registered-worker-avatar-${item.applicationId}`}
+                              />
+                              <div className="min-w-0">
+                                <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
+                                  {item.nomeCompleto}
+                                </h3>
+                                <p className="text-sm font-medium text-[#C93B1E] dark:text-[#F06449]">
+                                  {item.funcaoContratada}
+                                </p>
+                              </div>
+                            </div>
+                            <span
+                              className={`text-xs font-semibold px-2.5 py-1 rounded-md whitespace-nowrap shrink-0 ${
+                                item.status === 'aceita'
+                                  ? 'bg-[#ECFDF5] text-[#047857] dark:bg-[#064E3B]/50 dark:text-[#34D399]'
+                                  : 'bg-[#F3F4F6] text-[#374151] dark:bg-[#1E293B] dark:text-[#CBD5E1]'
+                              }`}
+                            >
+                              {item.statusLabel}
+                            </span>
+                          </div>
+
+                          <p className="mt-2.5 text-xs text-[#4B5563] dark:text-[#94A3B8] flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-[#6B7280] dark:text-[#94A3B8] shrink-0" aria-hidden="true" />
+                            <span>
+                              {item.empresaContratante} · Obra em {item.bairroObra} · Registrado em{' '}
+                              {item.appliedAt}
+                              {item.completedAt ? ` · Concluído em ${item.completedAt}` : ''}
+                            </span>
+                          </p>
+
+                          {item.resumoProfissional && (
+                            <p className="mt-3 text-sm text-[#374151] dark:text-[#CBD5E1] leading-relaxed">
+                              {item.resumoProfissional}
+                            </p>
+                          )}
+
+                          {item.pdfFileName ? (
+                            <div className="mt-4 p-3 rounded-xl bg-[#F9FAFB] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] flex items-center gap-2 min-w-0">
+                              <FileText className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                              <span className="text-xs font-medium text-[#111827] dark:text-[#F8FAFC] truncate">
+                                Currículo anexado: {item.pdfFileName}
+                              </span>
+                            </div>
+                          ) : item.experiencias.length > 0 ? (
+                            <div className="mt-4 pt-3 border-t border-[#F3F4F6] dark:border-[#1E293B] space-y-2">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-[#374151] dark:text-[#CBD5E1]">
+                                  Experiências ({item.experiencias.length})
+                                </span>
+                                <span className="font-semibold text-[#111827] dark:text-[#F8FAFC] tabular-nums">
+                                  Total: {formatDurationPtBr(item.totalExperienceMonths)}
+                                </span>
+                              </div>
+                              {item.experiencias.slice(0, 2).map((exp) => {
+                                const dur = calculateExperienceMonths(
+                                  exp.dataInicio,
+                                  exp.dataFim,
+                                  exp.atual
+                                );
+                                return (
+                                  <div key={exp.id} className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
+                                    <span className="font-medium text-[#111827] dark:text-[#F8FAFC]">{exp.funcao}</span>{' '}
+                                    — {exp.empresaLocal} ({formatMonthYearPtBr(exp.dataInicio)} –{' '}
+                                    {exp.atual ? 'Atual' : formatMonthYearPtBr(exp.dataFim)} ·{' '}
+                                    {dur.valid ? formatDurationPtBr(dur.months) : '—'})
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                        </div>
+
+                        {item.telefone && (
+                          <div className="mt-4 pt-3 border-t border-[#F3F4F6] dark:border-[#1E293B] flex items-center gap-1.5 text-xs font-medium text-[#374151] dark:text-[#CBD5E1]">
+                            <Phone className="w-3.5 h-3.5 text-[#6B7280] dark:text-[#94A3B8] shrink-0" aria-hidden="true" />
+                            <span>Registro de contato: {item.telefone}</span>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Section 2: Disponíveis para serviço */}
+            {(professionalView === 'todos' || professionalView === 'disponiveis') && (
+              <section
+                aria-labelledby="heading-profissionais-disponiveis"
+                data-testid="employer-available-workers-section"
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h2
+                    id="heading-profissionais-disponiveis"
+                    className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]"
+                  >
+                    Disponíveis para serviço ({professionalsDirectory.disponiveis.length})
+                  </h2>
+                </div>
+
+                {professionalsDirectory.disponiveis.length === 0 ? (
+                  <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-6 text-center">
+                    <Users className="w-7 h-7 text-[#6B7280] dark:text-[#94A3B8] mx-auto mb-2" aria-hidden="true" />
+                    <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                      Nenhum profissional disponível para serviço no momento
+                    </p>
+                    <p className="text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
+                      Novos trabalhadores cadastrados na plataforma serão exibidos aqui com sua disponibilidade.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-5">
+                    {professionalsDirectory.disponiveis.map(({ worker, totalExperienceMonths, statusLabel }) => (
+                      <article
+                        key={worker.id}
+                        data-testid={`available-worker-card-${worker.id}`}
+                        className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <ProfileAvatar
+                                name={worker.nomeCompleto}
+                                photoUrl={worker.fotoPerfilUrl}
+                                entityType="worker"
+                                size="md"
+                                testId={`worker-directory-avatar-${worker.id}`}
+                              />
+                              <div className="min-w-0">
+                                <h3 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC] break-words">
+                                  {worker.nomeCompleto}
+                                </h3>
+                                <p className="text-sm font-medium text-[#C93B1E] dark:text-[#F06449]">
+                                  {worker.funcaoPrincipal}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-md bg-[#FFF7ED] text-[#9A3412] dark:bg-[#431407]/50 dark:text-[#FDBA74] whitespace-nowrap">
+                                {statusLabel}
+                              </span>
+                              <p className="text-[11px] font-medium text-[#4B5563] dark:text-[#94A3B8] mt-1 whitespace-nowrap">
+                                Início: {worker.disponibilidade}
+                              </p>
+                            </div>
+                          </div>
+
+                          <p className="mt-2.5 text-xs text-[#4B5563] dark:text-[#94A3B8] flex items-center gap-1.5">
+                            <MapPin className="w-3.5 h-3.5 text-[#6B7280] dark:text-[#94A3B8] shrink-0" aria-hidden="true" />
+                            <span>
+                              Mora em {worker.bairro} · Interesse: {worker.regiaoInteresse}
+                            </span>
+                          </p>
+
+                          {worker.resumoProfissional && (
+                            <p className="mt-3 text-sm text-[#374151] dark:text-[#CBD5E1] leading-relaxed">
+                              {worker.resumoProfissional}
+                            </p>
+                          )}
+
+                          {worker.tipoHistorico === 'pdf' && worker.pdfCurriculo ? (
+                            <div className="mt-4 p-3 rounded-xl bg-[#F9FAFB] dark:bg-[#1E293B] border border-[#E5E7EB] dark:border-[#334155] flex items-center gap-2 min-w-0">
+                              <FileText className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                              <span className="text-xs font-medium text-[#111827] dark:text-[#F8FAFC] truncate">
+                                Currículo anexado: {worker.pdfCurriculo.fileName}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="mt-4 pt-3 border-t border-[#F3F4F6] dark:border-[#1E293B] space-y-2">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-[#374151] dark:text-[#CBD5E1]">
+                                  Experiências ({worker.experiencias.length})
+                                </span>
+                                <span className="font-semibold text-[#111827] dark:text-[#F8FAFC] tabular-nums">
+                                  Total: {formatDurationPtBr(totalExperienceMonths)}
+                                </span>
+                              </div>
+                              {worker.experiencias.slice(0, 2).map((exp) => {
+                                const dur = calculateExperienceMonths(
+                                  exp.dataInicio,
+                                  exp.dataFim,
+                                  exp.atual
+                                );
+                                return (
+                                  <div key={exp.id} className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
+                                    <span className="font-medium text-[#111827] dark:text-[#F8FAFC]">{exp.funcao}</span>{' '}
+                                    — {exp.empresaLocal} ({formatMonthYearPtBr(exp.dataInicio)} –{' '}
+                                    {exp.atual ? 'Atual' : formatMonthYearPtBr(exp.dataFim)} ·{' '}
+                                    {dur.valid ? formatDurationPtBr(dur.months) : '—'})
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {worker.telefone && (
+                          <div className="mt-4 pt-3 border-t border-[#F3F4F6] dark:border-[#1E293B] flex items-center gap-1.5 text-xs font-medium text-[#374151] dark:text-[#CBD5E1]">
+                            <Phone className="w-3.5 h-3.5 text-[#6B7280] dark:text-[#94A3B8] shrink-0" aria-hidden="true" />
+                            <span>Registro de contato: {worker.telefone}</span>
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
           </motion.div>
         )}
+
       </AnimatePresence>
 
       {/* Employer Tools Modal (Calculadora de Rescisão / Avisos de Chuva Completos) */}
@@ -1837,18 +2027,20 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                 aria-label="Ferramentas da construtora"
                 className="inline-flex items-center gap-1 p-1 rounded-xl bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B]"
               >
-                <button
-                  type="button"
-                  onClick={() => setEmployerModalMode('severance')}
-                  aria-pressed={employerModalMode === 'severance'}
-                  className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                    employerModalMode === 'severance'
-                      ? 'bg-[#C93B1E] text-white'
-                      : 'text-[#374151] dark:text-[#CBD5E1] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
-                  }`}
-                >
-                  Calculadora de Rescisão
-                </button>
+                {(activeTab === 'estatisticas' || employerModalMode === 'severance') && (
+                  <button
+                    type="button"
+                    onClick={() => setEmployerModalMode('severance')}
+                    aria-pressed={employerModalMode === 'severance'}
+                    className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                      employerModalMode === 'severance'
+                        ? 'bg-[#C93B1E] text-white'
+                        : 'text-[#374151] dark:text-[#CBD5E1] hover:text-[#111827] dark:hover:text-[#F8FAFC]'
+                    }`}
+                  >
+                    Calculadora de Rescisão
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setEmployerModalMode('rain')}

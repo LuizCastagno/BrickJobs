@@ -9,7 +9,6 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
   BarChart3,
   Building2,
-  Calculator,
   ClipboardList,
   FileCheck,
   HardHat,
@@ -1010,7 +1009,6 @@ export default function App() {
     { id: 'noticias', label: 'Notícias da Construção' },
     { id: 'cadastro', label: 'Meu Cadastro' },
     { id: 'perfil', label: 'Perfil Gerado' },
-    { id: 'utilidades', label: 'Rescisão e Clima' },
   ];
 
   const workerMobileTabs: MobileTabItem[] = [
@@ -1019,7 +1017,6 @@ export default function App() {
     { id: 'noticias', label: 'Notícias', icon: Newspaper },
     { id: 'cadastro', label: 'Cadastro', icon: HardHat },
     { id: 'perfil', label: 'Perfil', icon: FileCheck },
-    { id: 'utilidades', label: 'Clima/CLT', icon: Calculator },
   ];
 
   const activePortalRole: UserRole =

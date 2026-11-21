@@ -1,8 +1,8 @@
 /**
  * @file WorkerPortal.tsx
  * @description Portal do Trabalhador (Contratado): busca de vagas por proximidade/tags,
- *   dicas de segurança e EPIs, notícias de infraestrutura em MT, cadastro profissional,
- *   currículo gerado em PDF e utilidades trabalhistas/climáticas.
+ *   dicas de segurança e EPIs, notícias de infraestrutura em MT, cadastro profissional
+ *   e currículo gerado em PDF.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -131,14 +131,12 @@ import { LocationRegionBar } from './LocationRegionBar';
 import { NativePushPermissionCard } from './NativePushPermissionCard';
 import { ProfileAvatar } from './ProfileAvatar';
 import { ProfilePhotoField } from './ProfilePhotoField';
-import { RainAlertsPanel } from './RainAlertsPanel';
 import { RequiredDocumentsSection } from './RequiredDocumentsSection';
 import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
 import { SafetyTipsCard } from './SafetyTipsCard';
 import { SafetyWeeklyRemindersCard } from './SafetyWeeklyRemindersCard';
 import { ConstructionNewsTab } from './ConstructionNewsTab';
 import { SelectWrapper } from './SelectWrapper';
-import { SeveranceCalculatorPanel } from './SeveranceCalculatorPanel';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
 import { WorkerEarningsPanel } from './WorkerEarningsPanel';
 import { WorkerProductivityPanel } from './WorkerProductivityPanel';
@@ -156,8 +154,7 @@ export type WorkerTab =
   | 'seguranca'
   | 'noticias'
   | 'cadastro'
-  | 'perfil'
-  | 'utilidades';
+  | 'perfil';
 
 interface WorkerPortalProps {
   activeTab: WorkerTab;
@@ -773,14 +770,30 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             Área do Contratado · Rondonópolis-MT
           </p>
           <h1 className="font-display text-2xl sm:text-3xl lg:text-[2rem] font-bold tracking-tight leading-tight [text-wrap:balance] text-[#111827] dark:text-[#F8FAFC] mt-1 break-words">
-            {isWorkerRegistered
-              ? `Olá, ${workerProfile.nomeCompleto.split(' ')[0]}`
-              : 'Vagas e Perfil Profissional'}
+            {activeTab === 'seguranca'
+              ? 'Segurança e Boas Práticas na Obra'
+              : activeTab === 'noticias'
+                ? 'Notícias Regionais'
+                : activeTab === 'cadastro'
+                  ? 'Cadastro Pessoal'
+                  : activeTab === 'perfil'
+                    ? 'Perfil Profissional'
+                    : isWorkerRegistered
+                      ? `Olá, ${workerProfile.nomeCompleto.split(' ')[0]}`
+                      : 'Vagas e Perfil Profissional'}
           </h1>
           <p className="text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1 break-words">
-            {isWorkerRegistered
-              ? `${workerProfile.funcaoPrincipal} · Região de interesse: ${workerProfile.regiaoInteresse}`
-              : 'Busque vagas por região em Rondonópolis-MT ou monte seu perfil com PDF ou experiências.'}
+            {activeTab === 'seguranca'
+              ? "Avaliações de NR's e Check List de Segurança no trabalho"
+              : activeTab === 'noticias'
+                ? 'Manchetes atualizadas sobre o cenário regional da construção'
+                : activeTab === 'cadastro'
+                  ? 'Cadastro Completo de Colaborador para as empresas'
+                  : activeTab === 'perfil'
+                    ? 'Visão geral do perfil profissional do colaborador'
+                    : isWorkerRegistered
+                      ? `${workerProfile.funcaoPrincipal} · Região de interesse: ${workerProfile.regiaoInteresse}`
+                      : 'Busque vagas por região em Rondonópolis-MT ou monte seu perfil com PDF ou experiências.'}
           </p>
         </div>
 
@@ -1085,18 +1098,6 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             }}
             autoDetectWhenGranted={true}
             enableVoiceSearch={true}
-          />
-
-          <RainAlertsPanel
-            variant="compact"
-            siteRegion={selectedRegion}
-            onChangeSiteRegion={onChangeRegion}
-            gpsCoordinates={
-              proximityFilter?.active
-                ? { lat: proximityFilter.userLat, lng: proximityFilter.userLng }
-                : null
-            }
-            onOpenFullPanel={() => onChangeTab('utilidades')}
           />
 
           <SkillTagFilterBar
@@ -2995,32 +2996,6 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               </aside>
             </div>
           )}
-          </motion.div>
-        )}
-
-        {/* TAB 4: Rescisão CLT e Avisos de Chuva */}
-        {activeTab === 'utilidades' && (
-          <motion.div
-            key="worker-tab-utilidades"
-            variants={TAB_TRANSITION_VARIANTS}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={TAB_TRANSITION_CONFIG}
-            className="mt-6 space-y-6"
-          >
-            <SeveranceCalculatorPanel />
-
-            <RainAlertsPanel
-              variant="full"
-              siteRegion={selectedRegion}
-              onChangeSiteRegion={onChangeRegion}
-              gpsCoordinates={
-                proximityFilter?.active
-                  ? { lat: proximityFilter.userLat, lng: proximityFilter.userLng }
-                  : null
-              }
-            />
           </motion.div>
         )}
 
