@@ -22,7 +22,6 @@ interface TopNavBarProps {
   onSelectTab: (tabId: string) => void;
   onBackToCover: () => void;
   onSwitchRole: () => void;
-  onOpenSettings: () => void;
 }
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
@@ -33,7 +32,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onSelectTab,
   onBackToCover,
   onSwitchRole,
-  onOpenSettings,
 }) => {
   const switchLabel = role === 'contratante' ? 'Ir para Contratado' : 'Ir para Contratante';
 
@@ -77,14 +75,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 </button>
               );
             })}
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              data-testid="open-settings-nav"
-              className="min-h-[40px] py-1.5 text-xs lg:text-[13px] font-medium whitespace-nowrap shrink-0 border-b-2 border-transparent text-[#4B5563] dark:text-[#94A3B8] hover:text-[#111827] dark:hover:text-[#F8FAFC] inline-flex items-center transition-colors cursor-pointer"
-            >
-              Configurações
-            </button>
           </div>
         </nav>
 

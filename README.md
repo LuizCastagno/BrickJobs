@@ -35,18 +35,11 @@ O projeto oferece busca e publicação de vagas, candidaturas, chat entre contra
 
 ### Para construtoras
 
-- Cadastro da empresa, responsável, dados de contato e endereço.
-- Anexo e validação de documentos obrigatórios.
-- Publicação, alteração e encerramento de vagas.
-- Busca de profissionais por função e região.
-- Gestão de candidaturas e aceitação de candidatos.
-- Chat liberado após a aprovação da candidatura.
-- Agendamento de início das obras e lembretes.
-- Avaliação dos profissionais.
-- Estatísticas por ocupação, tempo de preenchimento e vagas abertas/encerradas.
-- Exportação de relatório em PDF.
-- Painel mensal e indicadores de desempenho.
-- Foto ou logotipo da construtora com fallback de iniciais.
+- **Vagas e Busca (`Painel da Construtora - Criar Vagas`):** publicação, ajuste de vagas e encerramento de oportunidades por função, número de vagas, salário ofertado e modalidade de contrato, com painel integrado de **Avisos de Chuva** (`RainAlertsPanel`) em versão compacta e modal completo.
+- **Estatísticas (`Estatísticas de Avaliações e Preenchimento`):** registros e avaliações dos funcionários, tempo de preenchimento das vagas, painel mensal, gráficos de desempenho por ocupação, exportação de relatório em PDF e acesso exclusivo à **Calculadora de rescisão CLT**.
+- **Dados da Empresa (`Cadastro da Empresa`):** cadastro geral da construtora, responsável, dados de contato, endereço, foto/logotipo com fallback de iniciais e anexo/validação de documentos obrigatórios.
+- **Profissionais (`Profissionais Registrados/Disponíveis`):** painel de visualização somente leitura para consultar os contratados registrados na empresa (em serviço ou concluídos) e os profissionais disponíveis para serviço, com filtro rápido (`Todos`, `Registrados na Empresa`, `Disponíveis para Serviço`) e exportação da lista de registrados para **PDF** ou **CSV**.
+- Gestão de candidaturas, aceitação de candidatos, chat liberado após aprovação da candidatura e agendamento de início das obras com lembretes.
 
 ### Para trabalhadores
 
@@ -73,11 +66,14 @@ O projeto oferece busca e publicação de vagas, candidaturas, chat entre contra
 
 ### Experiência geral
 
-- Tema claro e escuro.
+- Tema claro e escuro com alternador no menu **Configurações** (acessível diretamente pela tela inicial).
+- Navegação adaptada por portal, sem botão de Configurações/Ajustes nas barras internas de navegação:
+  - **Contratante (4 abas):** `Vagas e Busca`, `Estatísticas`, `Dados da Empresa` e `Profissionais`.
+  - **Contratado (5 abas):** `Vagas Disponíveis`, `Dicas de Segurança`, `Notícias da Construção`, `Meu Cadastro` e `Perfil Gerado`.
 - Navegação animada, barra superior centralizada sem cortes e adaptações responsivas para desktop e mobile.
-- Tela inicial com resumo de vagas, construtoras e trabalhadores.
+- Tela inicial com resumo de vagas, construtoras, trabalhadores e acesso às configurações e LGPD.
 - Instalação PWA.
-- Sons de notificação sintetizados via Web Audio API com alternador em Configurações.
+- Sons de notificação sintetizados via Web Audio API com controle de ativação em Configurações (na tela inicial).
 - Animação celebratória com confetes (`canvas-confetti`) disparada exclusivamente quando um contrato é aceito para ambos os lados (construtora e trabalhador).
 - Caixas seletoras (`SelectWrapper`) e ícones vetoriais alinhados com precisão em todos os formulários.
 - Consentimento de cookies e controles LGPD.
@@ -197,7 +193,7 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 ### Principais módulos atuais
 
 <!-- AUTO_INVENTORY_START -->
-> Inventário gerado automaticamente via `scripts/sync-readme.mjs` (34 componentes React, 35 módulos utilitários, 34 suítes de teste e 8 scripts npm).
+> Inventário gerado automaticamente via `scripts/sync-readme.mjs` (34 componentes React, 37 módulos utilitários, 36 suítes de teste e 8 scripts npm).
 
 ### Núcleo, tipos, hooks e dados
 
@@ -249,7 +245,7 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 | `WorkerPortal.tsx` | Portal do Trabalhador (Contratado): busca de vagas por proximidade/tags, |
 | `WorkerProductivityPanel.tsx` | Painel de acompanhamento de horas trabalhadas, metas de produção por canteiro e registro diário do trabalhador. |
 
-### Utilitários e regras de negócio (`src/utils/` — 35)
+### Utilitários e regras de negócio (`src/utils/` — 37)
 
 | Módulo | Responsabilidade |
 | --- | --- |
@@ -261,6 +257,8 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 | `duration.ts` | Cálculo de duração de experiências profissionais, formatação em pt-BR e filtragem combinada de vagas. |
 | `employerMonthlyDashboard.ts` | Agregação mensal de vagas abertas e encerradas por construtora para o painel comparativo. |
 | `employerPerformance.ts` | Cálculos mensais de taxa de preenchimento de vagas por ocupação para os gráficos da construtora. |
+| `employerProfessionals.ts` | Classificação e visualização somente leitura de profissionais registrados na empresa (contratados/concluídos) e profissionais disponíveis para serviço. |
+| `employerProfessionalsExport.ts` | Geração e exportação da lista de profissionais registrados da construtora em arquivos CSV (UTF-8 com BOM) e PDF (via jsPDF). |
 | `employerReportPdf.ts` | Montagem e exportação de relatório gerencial em PDF (via jsPDF) com métricas da construtora. |
 | `employerStats.ts` | Estatísticas por ocupação: notas médias, tempo de preenchimento em dias e proporção de vagas abertas/encerradas. |
 | `geolocation.ts` | Coordenadas de bairros de Rondonópolis-MT, cálculo de distância Haversine e filtro de vagas por proximidade GPS. |
@@ -289,9 +287,9 @@ Não há script `test` no `package.json`. Os testes são executados diretamente 
 | `workerProductivity.ts` | Persistência e consolidação de apontamentos diários de horas e produtividade do trabalhador por canteiro. |
 | `workReminders.ts` | Agendamento e disparo de lembretes de início de trabalho com antecedência padrão configurada. |
 
-### Suítes de teste automatizados (`src/utils/*.test.ts` — 34)
+### Suítes de teste automatizados (`src/utils/*.test.ts` — 36)
 
-`avatar.test.ts` · `careerTips.test.ts` · `chat.test.ts` · `constructionNews.test.ts` · `contractCelebration.test.ts` · `duration.test.ts` · `employerMonthlyDashboard.test.ts` · `employerPerformance.test.ts` · `employerReportPdf.test.ts` · `employerStats.test.ts` · `geolocation.test.ts` · `jobAdvancedFilters.test.ts` · `jobPriority.test.ts` · `jobSuggestions.test.ts` · `lgpdConsent.test.ts` · `motionPresets.test.ts` · `nativeNotifications.test.ts` · `notifications.test.ts` · `notificationSound.test.ts` · `onboarding.test.ts` · `pwaInstall.test.ts` · `rainAlerts.test.ts` · `ratings.test.ts` · `requiredDocuments.test.ts` · `resumePdf.test.ts` · `safetyTips.test.ts` · `safetyWeeklyTips.test.ts` · `severanceCalculator.test.ts` · `skillTags.test.ts` · `theme.test.ts` · `voiceSearch.test.ts` · `workerEarnings.test.ts` · `workerProductivity.test.ts` · `workReminders.test.ts`
+`avatar.test.ts` · `careerTips.test.ts` · `chat.test.ts` · `constructionNews.test.ts` · `contractCelebration.test.ts` · `duration.test.ts` · `employerMonthlyDashboard.test.ts` · `employerPerformance.test.ts` · `employerProfessionals.test.ts` · `employerProfessionalsExport.test.ts` · `employerReportPdf.test.ts` · `employerStats.test.ts` · `geolocation.test.ts` · `jobAdvancedFilters.test.ts` · `jobPriority.test.ts` · `jobSuggestions.test.ts` · `lgpdConsent.test.ts` · `motionPresets.test.ts` · `nativeNotifications.test.ts` · `notifications.test.ts` · `notificationSound.test.ts` · `onboarding.test.ts` · `pwaInstall.test.ts` · `rainAlerts.test.ts` · `ratings.test.ts` · `requiredDocuments.test.ts` · `resumePdf.test.ts` · `safetyTips.test.ts` · `safetyWeeklyTips.test.ts` · `severanceCalculator.test.ts` · `skillTags.test.ts` · `theme.test.ts` · `voiceSearch.test.ts` · `workerEarnings.test.ts` · `workerProductivity.test.ts` · `workReminders.test.ts`
 
 <!-- AUTO_INVENTORY_END -->
 
@@ -325,15 +323,15 @@ Outros dados locais incluem:
 
 ## Testes
 
-Execute todos os testes utilitários:
+Execute todos os testes utilitários (36 suítes e 183 testes automatizados):
 
 ```bash
-bunx tsx --test src/utils/*.test.ts
-bun run lint
-bun run build
+npx tsx --test src/utils/*.test.ts
+npm run lint
+npm run build
 ```
 
-Os testes cobrem persistência, geolocalização, chat, notificações, documentos, avaliações, segurança, clima, produtividade, ganhos, PWA, LGPD, rescisão, currículos e relatórios.
+Os testes cobrem persistência, geolocalização, diretório de profissionais do contratante e exportação PDF/CSV, chat, notificações, documentos, avaliações, segurança, clima, produtividade, ganhos, PWA, LGPD, rescisão, currículos e relatórios.
 
 ## Histórico completo de mudanças
 
@@ -358,13 +356,24 @@ O histórico abaixo foi reconstruído a partir dos commits registrados no branch
 
 ## Modificações atuais
 
-As alterações mais recentes adicionadas nesta iteração incluem:
+As alterações mais recentes aplicadas no projeto incluem:
 
-1. **Animação de contrato aceito (`canvas-confetti`):** componente dedicado `ContractAcceptedConfetti.tsx` + utilitário `contractCelebration.ts` disparando exclusivamente quando um contrato muda para `aceita` tanto para a construtora quanto para o trabalhador.
-2. **Sons de notificação (`Web Audio API`):** módulo `notificationSound.ts` com feedback sonoro para aceitação de contrato, lembretes de obra, novas vagas compatíveis e mensagens, além de controle de ativação em `UserSettingsMenu.tsx`.
-3. **Correções visuais e responsividade desktop:** ajuste de centralização em `TopNavBar.tsx` (eliminando cortes laterais em `1440px`), colunas proporcionais em `LocationRegionBar.tsx`, alinhamento uniforme de ícones vetoriais e seletores (`SelectWrapper.tsx`), cabeçalhos flexíveis (`text-wrap: balance`) e elevação sutil nos cards em hover.
-4. **Documentação automática e comentários JSDoc:** todos os componentes, utilitários, tipos, hooks, dados e rotas do servidor documentados com cabeçalhos `@file` / `@description`, além do script `scripts/sync-readme.mjs` conectado aos scripts `docs:sync` e `prebuild` para atualizar o `README.md` automaticamente a cada alteração/build.
-5. **Base anterior consolidada (`be4fe6cd`):** aba **Segurança** com lembretes semanais de EPIs (NR-06, NR-18, NR-35) via Gemini/fallback, aba **Notícias da Construção** com Google Search Grounding e cache de 15 min, e ocultação global das barras de rolagem.
+1. **Exportação de profissionais registrados em PDF e CSV (`EmployerPortal.tsx`, `employerProfessionalsExport.ts` e `employerProfessionalsExport.test.ts`):**
+   - Adicionados botões **Exportar PDF** e **Exportar CSV** na seção **Contratados registrados na empresa** da aba **Profissionais**, gerando arquivo CSV (UTF-8 com BOM, proteção contra formula injection e dados completos) ou relatório PDF estruturado via `jsPDF` para gerenciamento externo.
+2. **Remoção das Configurações das barras internas de navegação (`TopNavBar.tsx`, `MobileBottomNav.tsx` e `App.tsx`):**
+   - Removido o botão **Configurações** da barra superior desktop e o atalho **Ajustes** da barra inferior mobile dentro dos portais **Contratado** e **Contratante**, mantendo o menu `UserSettingsMenu.tsx` acessível pela tela inicial (`CoverScreen.tsx`).
+3. **Aba `Profissionais` do Contratante em modo somente leitura (`EmployerPortal.tsx`, `employerProfessionals.ts` e `employerProfessionals.test.ts`):**
+   - Convertida a aba **Profissionais** em um painel de visualização somente leitura para consultar **Contratados registrados na empresa** (em serviço e concluídos) e **Profissionais disponíveis para serviço**, com filtros rápidos (`Todos`, `Registrados na Empresa`, `Disponíveis para Serviço`) e remoção da barra de localização e dos botões de contato/download de PDF nessa aba.
+4. **Reorganização da calculadora de rescisão e remoção da aba `Clima/CLT` no Contratante (`EmployerPortal.tsx` e `App.tsx`):**
+   - Removida a aba dedicada **Clima/CLT** da área do contratante, mantendo o painel de **Avisos de Chuva** (`RainAlertsPanel`) integrado na aba **Vagas e Busca** (cartão compacto e modal completo).
+   - Removidos os acessos duplicados da **Calculadora de rescisão** das abas **Vagas e Busca**, **Dados da Empresa** e **Profissionais**, restringindo a abertura e alternância do modal da calculadora exclusivamente à aba **Estatísticas**.
+5. **Atualização dos cabeçalhos (`h1` e `p`) das abas do Portal do Contratante (`EmployerPortal.tsx`):**
+   - **Vagas e Busca:** *Painel da Construtora - Criar Vagas* — *"Publique vagas na região por função, número de vagas e salário ofertado e tipo de modalidade de contrato"*.
+   - **Estatísticas:** *Estatísticas de Avaliações e Preenchimento* — *"Registros e Avaliações de funcionários, tempo de preenchimento das vagas, recursos estatísticos e calculadora de rescisão"*.
+   - **Dados da Empresa:** *Cadastro da Empresa* — *"Cadastro geral da empresa"*.
+   - **Profissionais:** *Profissionais Registrados/Disponíveis* — *"Profissionais disponíveis e registrados na Empresa"*.
+6. **Base funcional e visual consolidada:**
+   - Animação de contrato aceito (`ContractAcceptedConfetti.tsx` + `contractCelebration.ts`), sons de notificação via Web Audio API (`notificationSound.ts`), centralização sem cortes em `TopNavBar.tsx`, colunas proporcionais em `LocationRegionBar.tsx`, alinhamento uniforme em `SelectWrapper.tsx`, aba de Segurança com lembretes semanais de EPIs (NR-06, NR-18, NR-35), aba de Notícias da Construção com Search Grounding e sincronização automática de inventário via `scripts/sync-readme.mjs`.
 
 ## Limitações
 

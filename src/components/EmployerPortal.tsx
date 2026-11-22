@@ -11,6 +11,7 @@ import {
   Calculator,
   Check,
   CheckCircle2,
+  Download,
   FileText,
   Flame,
   MapPin,
@@ -83,6 +84,10 @@ import {
   buildEmployerProfessionalsDirectory,
   type ProfessionalDirectoryFilter,
 } from '../utils/employerProfessionals';
+import {
+  exportRegisteredProfessionalsCsv,
+  exportRegisteredProfessionalsPdf,
+} from '../utils/employerProfessionalsExport';
 import { EmployerMonthlyDashboard } from './EmployerMonthlyDashboard';
 import { EmployerStatisticsTab } from './EmployerStatisticsTab';
 import { JobDescriptionSuggestions } from './JobDescriptionSuggestions';
@@ -173,6 +178,11 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
   // Read-only professionals directory filter ('todos' | 'registrados' | 'disponiveis')
   const [professionalView, setProfessionalView] =
     useState<ProfessionalDirectoryFilter>('todos');
+  const [isExportingRegistered, setIsExportingRegistered] = useState<boolean>(false);
+  const [registeredExportFeedback, setRegisteredExportFeedback] = useState<{
+    kind: 'success' | 'error';
+    message: string;
+  } | null>(null);
   const [employerModalMode, setEmployerModalMode] = useState<'severance' | 'rain' | null>(null);
 
   const isCompanyRegistered = Boolean(
@@ -222,6 +232,56 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
       }),
     [workers, applications, jobs, companyProfile.nomeFantasia]
   );
+
+  const handleExportRegisteredPdf = () => {
+    setRegisteredExportFeedback(null);
+    setIsExportingRegistered(true);
+    setTimeout(() => {
+      const res = exportRegisteredProfessionalsPdf(
+        companyProfile,
+        professionalsDirectory.registrados
+      );
+      setIsExportingRegistered(false);
+      if (res.ok) {
+        setRegisteredExportFeedback({
+          kind: 'success',
+          message: `PDF ${res.fileName} exportado com ${res.exportedCount} ${
+            res.exportedCount === 1
+              ? 'profissional registrado'
+              : 'profissionais registrados'
+          }.`,
+        });
+      } else {
+        setRegisteredExportFeedback({
+          kind: 'error',
+          message: res.error,
+        });
+      }
+    }, 150);
+  };
+
+  const handleExportRegisteredCsv = () => {
+    setRegisteredExportFeedback(null);
+    const res = exportRegisteredProfessionalsCsv(
+      companyProfile,
+      professionalsDirectory.registrados
+    );
+    if (res.ok) {
+      setRegisteredExportFeedback({
+        kind: 'success',
+        message: `CSV ${res.fileName} exportado com ${res.exportedCount} ${
+          res.exportedCount === 1
+            ? 'profissional registrado'
+            : 'profissionais registrados'
+        }.`,
+      });
+    } else {
+      setRegisteredExportFeedback({
+        kind: 'error',
+        message: res.error,
+      });
+    }
+  };
 
   const focusControlBySelector = (selector: string) => {
     if (typeof document === 'undefined') return;
@@ -1757,14 +1817,67 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                 data-testid="employer-registered-workers-section"
                 className="space-y-3"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <h2
-                    id="heading-profissionais-registrados"
-                    className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]"
-                  >
-                    Contratados registrados na empresa ({professionalsDirectory.registrados.length})
-                  </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h2
+                      id="heading-profissionais-registrados"
+                      className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]"
+                    >
+                      Contratados registrados na empresa ({professionalsDirectory.registrados.length})
+                    </h2>
+                    {professionalsDirectory.registrados.length === 0 && (
+                      <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mt-0.5">
+                        Aprove ou conclua ao menos uma candidatura para habilitar a exportação da lista.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleExportRegisteredPdf}
+                      disabled={
+                        professionalsDirectory.registrados.length === 0 ||
+                        isExportingRegistered
+                      }
+                      data-testid="export-registered-professionals-pdf"
+                      aria-label="Exportar profissionais registrados em PDF"
+                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-xs sm:text-sm font-semibold inline-flex items-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    >
+                      <FileText className="w-4 h-4 shrink-0" aria-hidden="true" />
+                      <span>{isExportingRegistered ? 'Gerando PDF...' : 'Exportar PDF'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleExportRegisteredCsv}
+                      disabled={
+                        professionalsDirectory.registrados.length === 0 ||
+                        isExportingRegistered
+                      }
+                      data-testid="export-registered-professionals-csv"
+                      aria-label="Exportar profissionais registrados em CSV"
+                      className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#1E293B] hover:bg-[#F9FAFB] dark:hover:bg-[#334155] text-[#111827] dark:text-[#F8FAFC] text-xs sm:text-sm font-semibold inline-flex items-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                    >
+                      <Download className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                      <span>Exportar CSV</span>
+                    </button>
+                  </div>
                 </div>
+
+                {registeredExportFeedback && (
+                  <p
+                    role="status"
+                    data-testid="registered-professionals-export-feedback"
+                    className={`text-xs font-semibold px-3.5 py-2.5 rounded-xl border ${
+                      registeredExportFeedback.kind === 'success'
+                        ? 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0] dark:bg-[#064E3B]/40 dark:text-[#34D399] dark:border-[#065F46]'
+                        : 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA] dark:bg-[#7F1D1D]/30 dark:text-[#FCA5A5] dark:border-[#991B1B]'
+                    }`}
+                  >
+                    {registeredExportFeedback.message}
+                  </p>
+                )}
 
                 {professionalsDirectory.registrados.length === 0 ? (
                   <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-6 text-center">

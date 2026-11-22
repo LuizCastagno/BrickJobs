@@ -1104,7 +1104,6 @@ export default function App() {
                   activePortalRole === 'contratante' ? 'contratado' : 'contratante'
                 );
               }}
-              onOpenSettings={() => setIsSettingsOpen(true)}
             />
 
             {storageWarning && (
@@ -1191,7 +1190,6 @@ export default function App() {
                   setWorkerTab(tabId as WorkerTab);
                 }
               }}
-              onOpenSettings={() => setIsSettingsOpen(true)}
             />
           </motion.div>
         )}
