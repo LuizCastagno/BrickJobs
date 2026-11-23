@@ -51,7 +51,11 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
         const data = (await res.json()) as ConstructionNewsPayload;
         setPayload(data);
         if (forced) {
-          setFeedback('Manchetes e projetos de infraestrutura atualizados com sucesso.');
+          setFeedback(
+            data.source === 'gemini_search'
+              ? 'Manchetes e projetos de infraestrutura atualizados com sucesso.'
+              : 'Feed verificado de Mato Grosso atualizado com orientações locais.'
+          );
         }
       } else {
         setPayload(getCuratedConstructionNews());

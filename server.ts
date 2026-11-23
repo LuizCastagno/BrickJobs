@@ -34,6 +34,7 @@ import {
   parseConstructionNewsPayload,
   type ConstructionNewsPayload,
 } from './src/utils/constructionNews.ts';
+import { createGeminiCooldownGuard } from './src/utils/geminiQuota.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,6 +56,14 @@ const careerTipsCache = new Map<
   string,
   { expiresAt: number; payload: WeeklyCareerTipsBundle }
 >();
+
+const SAFETY_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const safetyWeeklyCache = new Map<
+  string,
+  { expiresAt: number; payload: SafetyWeeklyPayload }
+>();
+
+const geminiCooldown = createGeminiCooldownGuard();
 
 async function fetchOpenMeteoWeather(lat: number, lng: number): Promise<unknown> {
   const controller = new AbortController();
@@ -216,13 +225,15 @@ async function startServer() {
 
       const ai = getGeminiClient();
 
-      if (!ai) {
+      if (!ai || geminiCooldown.isActive()) {
         const fallback = getCuratedCareerTips({
           role: workerRole,
           focus,
           weekKey: weekInfo.weekKey,
           weekLabel: weekInfo.weekLabel,
-          notice: 'Modo offline: exibindo orientações semanais verificadas para sua função.',
+          notice: !ai
+            ? 'Modo offline: exibindo orientações semanais verificadas para sua função.'
+            : 'Exibindo orientações semanais curadas enquanto o serviço de IA se recupera.',
         });
         res.json(fallback);
         return;
@@ -325,11 +336,10 @@ async function startServer() {
       });
       res.json(result);
     } catch (err) {
-      const message =
-        err instanceof Error && err.message
-          ? err.message
-          : 'Erro ao consultar o serviço do Gemini.';
-      console.warn('Falha em /api/career-tips, aplicando fallback curado:', message);
+      const failure = geminiCooldown.recordFailure('/api/career-tips', err);
+      if (failure.logMessage) {
+        console.info(failure.logMessage);
+      }
       const fallback = getCuratedCareerTips({
         role: workerRole,
         focus,
@@ -338,36 +348,54 @@ async function startServer() {
         notice:
           'Exibindo orientações semanais curadas enquanto o serviço de IA se recupera.',
       });
+      careerTipsCache.set(cacheKey, {
+        expiresAt: Math.min(
+          Date.now() + CAREER_TIPS_CACHE_TTL_MS,
+          geminiCooldown.getExpiresAt()
+        ),
+        payload: fallback,
+      });
       res.json(fallback);
     }
   });
 
   app.post('/api/safety-weekly-reminders', async (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as {
+      weekKey?: string;
+      role?: string;
+      focusEpi?: string;
+    };
+
+    const workerRole =
+      typeof body.role === 'string' && body.role.trim()
+        ? body.role.trim()
+        : 'Operário da Construção Civil';
+
+    const focusEpi =
+      typeof body.focusEpi === 'string' ? body.focusEpi.trim() : '';
+
+    const weekInfo = getIsoWeekString(new Date());
+    const safetyCacheKey = `${weekInfo.weekKey}:${workerRole.toLowerCase()}:${focusEpi.toLowerCase()}`;
+
     try {
-      const body = (req.body ?? {}) as {
-        weekKey?: string;
-        role?: string;
-        focusEpi?: string;
-      };
-
-      const weekInfo = getIsoWeekString(new Date());
-      const ai = getGeminiClient();
-
-      if (!ai) {
-        const fallback = getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
-        res.json({
-          ...fallback,
-          weekKey: weekInfo.weekKey,
-          weekLabel: weekInfo.weekLabel,
-          notice: 'Modo offline: exibindo ciclo verificado de proteção e EPIs da obra.',
-        });
+      const cached = safetyWeeklyCache.get(safetyCacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        res.json(cached.payload);
         return;
       }
 
-      const workerRole =
-        typeof body.role === 'string' && body.role.trim()
-          ? body.role.trim()
-          : 'Operário da Construção Civil';
+      const ai = getGeminiClient();
+
+      if (!ai || geminiCooldown.isActive()) {
+        const baseFallback = getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
+        const fallback: SafetyWeeklyPayload = {
+          ...baseFallback,
+          weekKey: weekInfo.weekKey,
+          weekLabel: weekInfo.weekLabel,
+        };
+        res.json(fallback);
+        return;
+      }
 
       const prompt = [
         `Gere os Lembretes Semanais de Segurança no Canteiro e Uso de EPIs para a ${weekInfo.weekLabel} (${weekInfo.weekKey}) para trabalhadores de canteiros de obra em Rondonópolis e Mato Grosso, incluindo obras residenciais, construções industriais, montagem de pré-moldados e sistemas sustentáveis.`,
@@ -475,19 +503,33 @@ async function startServer() {
         response.text ?? '',
         weekInfo.weekKey
       );
+      safetyWeeklyCache.set(safetyCacheKey, {
+        expiresAt: Date.now() + SAFETY_CACHE_TTL_MS,
+        payload: parsed,
+      });
       res.json(parsed);
     } catch (err) {
-      console.warn(
-        'Falha em /api/safety-weekly-reminders, aplicando fallback verificado:',
+      const failure = geminiCooldown.recordFailure(
+        '/api/safety-weekly-reminders',
         err
       );
-      const weekInfo = getIsoWeekString(new Date());
-      const fallback = getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
-      res.json({
-        ...fallback,
+      if (failure.logMessage) {
+        console.info(failure.logMessage);
+      }
+      const baseFallback = getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
+      const fallback: SafetyWeeklyPayload = {
+        ...baseFallback,
         weekKey: weekInfo.weekKey,
         weekLabel: weekInfo.weekLabel,
+      };
+      safetyWeeklyCache.set(safetyCacheKey, {
+        expiresAt: Math.min(
+          Date.now() + SAFETY_CACHE_TTL_MS,
+          geminiCooldown.getExpiresAt()
+        ),
+        payload: fallback,
       });
+      res.json(fallback);
     }
   });
 
@@ -499,7 +541,7 @@ async function startServer() {
       }
 
       const ai = getGeminiClient();
-      if (!ai) {
+      if (!ai || geminiCooldown.isActive()) {
         const fallback = getCuratedConstructionNews();
         res.json(fallback);
         return;
@@ -533,11 +575,18 @@ async function startServer() {
 
       res.json(parsed);
     } catch (err) {
-      console.warn(
-        'Falha ao consultar notícias via Search Grounding, retornando feed curado:',
-        err
-      );
+      const failure = geminiCooldown.recordFailure('/api/construction-news', err);
+      if (failure.logMessage) {
+        console.info(failure.logMessage);
+      }
       const fallback = getCuratedConstructionNews();
+      newsCache = {
+        expiresAt: Math.min(
+          Date.now() + NEWS_CACHE_TTL_MS,
+          geminiCooldown.getExpiresAt()
+        ),
+        payload: fallback,
+      };
       res.json(fallback);
     }
   });

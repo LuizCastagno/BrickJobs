@@ -3,11 +3,6 @@
  * @description Seção educacional dinâmica "Dicas de Segurança no Canteiro" com lembretes
  *   semanais sobre EPIs (NR-06, NR-18, NR-35), geração via Gemini com fallback local e checklist.
  */
-/**
- * @file SafetyWeeklyRemindersCard.tsx
- * @description Seção educacional dinâmica "Dicas de Segurança no Canteiro" com lembretes
- *   semanais sobre EPIs (NR-06, NR-18, NR-35), geração via Gemini com fallback local e checklist.
- */
 import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -76,7 +71,9 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
         setPayload(data);
         setFeedback(
           forced
-            ? 'Lembretes atualizados via IA com base nas normas vigentes do canteiro.'
+            ? data.source === 'gemini'
+              ? 'Lembretes atualizados via IA com base nas normas vigentes do canteiro.'
+              : 'Diretrizes de segurança e EPIs carregadas com ciclo verificado da semana.'
             : ''
         );
       } else {
