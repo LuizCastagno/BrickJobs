@@ -3,7 +3,13 @@
  * @description Estatísticas por ocupação: notas médias, tempo de preenchimento em dias e proporção de vagas abertas/encerradas.
  */
 
-import type { CompanyRating, JobPosting } from '../types/brickjobs';
+import type {
+  CompanyRating,
+  JobApplication,
+  JobPosting,
+} from '../types/brickjobs';
+import { formatShortMonthLabelPtBr } from './employerMonthlyDashboard';
+import { formatMonthKeyLabelPtBr } from './employerPerformance';
 
 export interface CategoryRatingStat {
   category: string;
@@ -341,4 +347,174 @@ export function buildCategoryOpenVsClosedStats(params: {
       (a, b) =>
         b.total - a.total || a.category.localeCompare(b.category, 'pt-BR')
     );
+}
+
+export interface MonthlyFinalizedHiringDatum {
+  monthKey: string;
+  shortMonthLabel: string;
+  fullMonthLabel: string;
+  finalizadas: number;
+  vagasEncerradas: number;
+  candidaturasConcluidas: number;
+}
+
+export interface MonthlyFinalizedHiringsSummary {
+  months: MonthlyFinalizedHiringDatum[];
+  totalFinalized: number;
+  peakMonth: MonthlyFinalizedHiringDatum | null;
+  averagePerMonth: number;
+}
+
+function buildRecentMonthKeys(referenceDate: Date, monthCount: number): string[] {
+  const safeCount = Math.max(1, Math.floor(monthCount));
+  const baseYear = referenceDate.getFullYear();
+  const baseMonthIndex = referenceDate.getMonth();
+  const keys: string[] = [];
+
+  for (let offset = safeCount - 1; offset >= 0; offset -= 1) {
+    const dt = new Date(baseYear, baseMonthIndex - offset, 1);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, '0');
+    keys.push(`${yyyy}-${mm}`);
+  }
+
+  return keys;
+}
+
+export function buildMonthlyFinalizedHiringsHistory(params: {
+  jobs: JobPosting[];
+  applications?: JobApplication[];
+  companyId?: string;
+  monthCount?: number;
+  referenceDate?: Date;
+}): MonthlyFinalizedHiringsSummary {
+  const {
+    jobs,
+    applications = [],
+    companyId,
+    monthCount = 6,
+    referenceDate = new Date(),
+  } = params;
+
+  const monthKeys = buildRecentMonthKeys(referenceDate, monthCount);
+  const bucketMap = new Map<
+    string,
+    {
+      vagasEncerradas: number;
+      candidaturasConcluidas: number;
+      finalizadas: number;
+    }
+  >();
+
+  for (const key of monthKeys) {
+    bucketMap.set(key, {
+      vagasEncerradas: 0,
+      candidaturasConcluidas: 0,
+      finalizadas: 0,
+    });
+  }
+
+  const scopedJobs = jobs.filter(
+    (job) => !companyId || job.companyId === companyId
+  );
+  const scopedJobIds = new Set(scopedJobs.map((job) => job.id));
+
+  // Group completed applications per job so closed postings and completed applications don't double-count
+  const completedAppsByJob = new Map<string, string[]>();
+  for (const app of applications) {
+    if (app.status !== 'concluida') continue;
+    if (companyId && !scopedJobIds.has(app.jobId)) continue;
+    const rawDate = (app.completedAt || app.appliedAt || '').trim();
+    const monthMatch = /^(\d{4}-\d{2})/.exec(rawDate);
+    if (!monthMatch) continue;
+    const monthKey = monthMatch[1];
+    const list = completedAppsByJob.get(app.jobId) ?? [];
+    list.push(monthKey);
+    completedAppsByJob.set(app.jobId, list);
+  }
+
+  for (const job of scopedJobs) {
+    const appMonths = completedAppsByJob.get(job.id) ?? [];
+
+    if (job.status === 'encerrada') {
+      const rawClosedDate = (job.closedAt || job.createdAt || '').trim();
+      const closedMatch = /^(\d{4}-\d{2})/.exec(rawClosedDate);
+      const closedMonthKey = closedMatch ? closedMatch[1] : null;
+      const closedVacancies = Math.max(1, Math.floor(job.quantidadeVagas || 1));
+
+      if (closedMonthKey) {
+        const closedBucket = bucketMap.get(closedMonthKey);
+        if (closedBucket) {
+          closedBucket.vagasEncerradas += closedVacancies;
+          closedBucket.finalizadas += closedVacancies;
+        }
+      }
+
+      let coveredByJobClosure = closedVacancies;
+      for (const appMonthKey of appMonths) {
+        const appBucket = bucketMap.get(appMonthKey);
+        if (appBucket) {
+          appBucket.candidaturasConcluidas += 1;
+          if (coveredByJobClosure > 0) {
+            coveredByJobClosure -= 1;
+          } else {
+            appBucket.finalizadas += 1;
+          }
+        }
+      }
+    } else {
+      for (const appMonthKey of appMonths) {
+        const appBucket = bucketMap.get(appMonthKey);
+        if (appBucket) {
+          appBucket.candidaturasConcluidas += 1;
+          appBucket.finalizadas += 1;
+        }
+      }
+    }
+  }
+
+  // Handle completed applications referencing jobs not present in jobs array (global scope only)
+  if (!companyId) {
+    for (const [jobId, appMonths] of completedAppsByJob.entries()) {
+      if (scopedJobIds.has(jobId)) continue;
+      for (const appMonthKey of appMonths) {
+        const appBucket = bucketMap.get(appMonthKey);
+        if (appBucket) {
+          appBucket.candidaturasConcluidas += 1;
+          appBucket.finalizadas += 1;
+        }
+      }
+    }
+  }
+
+  const months: MonthlyFinalizedHiringDatum[] = monthKeys.map((monthKey) => {
+    const bucket = bucketMap.get(monthKey)!;
+    return {
+      monthKey,
+      shortMonthLabel: formatShortMonthLabelPtBr(monthKey),
+      fullMonthLabel: formatMonthKeyLabelPtBr(monthKey),
+      finalizadas: bucket.finalizadas,
+      vagasEncerradas: bucket.vagasEncerradas,
+      candidaturasConcluidas: bucket.candidaturasConcluidas,
+    };
+  });
+
+  const totalFinalized = months.reduce((sum, item) => sum + item.finalizadas, 0);
+  const peakMonth =
+    totalFinalized > 0
+      ? months.reduce((best, item) =>
+          item.finalizadas >= best.finalizadas ? item : best
+        )
+      : null;
+  const averagePerMonth =
+    months.length > 0
+      ? Math.round((totalFinalized / months.length) * 10) / 10
+      : 0;
+
+  return {
+    months,
+    totalFinalized,
+    peakMonth,
+    averagePerMonth,
+  };
 }

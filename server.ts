@@ -10,9 +10,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GoogleGenAI, Type } from '@google/genai';
 import {
+  getCuratedCareerTips,
   getIsoWeekInfo,
   parseCareerTipsPayload,
   type CareerTipFocus,
+  type WeeklyCareerTipsBundle,
 } from './src/utils/careerTips.ts';
 import { RONDONOPOLIS_CENTER } from './src/utils/geolocation.ts';
 import {
@@ -47,6 +49,12 @@ const rainAlertCache = new Map<
 
 const NEWS_CACHE_TTL_MS = 15 * 60 * 1000;
 let newsCache: { expiresAt: number; payload: ConstructionNewsPayload } | null = null;
+
+const CAREER_TIPS_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const careerTipsCache = new Map<
+  string,
+  { expiresAt: number; payload: WeeklyCareerTipsBundle }
+>();
 
 async function fetchOpenMeteoWeather(lat: number, lng: number): Promise<unknown> {
   const controller = new AbortController();
@@ -179,32 +187,44 @@ async function startServer() {
   });
 
   app.post('/api/career-tips', async (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as {
+      role?: string;
+      focus?: CareerTipFocus;
+      experienceCount?: number;
+      hasPdfResume?: boolean;
+    };
+
+    const workerRole =
+      typeof body.role === 'string' && body.role.trim()
+        ? body.role.trim()
+        : 'Profissional da Construção Civil';
+
+    const focus: CareerTipFocus =
+      body.focus === 'curriculo' || body.focus === 'entrevista'
+        ? body.focus
+        : 'todos';
+
+    const weekInfo = getIsoWeekInfo(new Date());
+    const cacheKey = `${weekInfo.weekKey}:${workerRole.toLowerCase()}:${focus}`;
+
     try {
-      const body = (req.body ?? {}) as {
-        role?: string;
-        focus?: CareerTipFocus;
-        experienceCount?: number;
-        hasPdfResume?: boolean;
-      };
+      const cached = careerTipsCache.get(cacheKey);
+      if (cached && cached.expiresAt > Date.now()) {
+        res.json(cached.payload);
+        return;
+      }
 
-      const workerRole =
-        typeof body.role === 'string' && body.role.trim()
-          ? body.role.trim()
-          : 'Profissional da Construção Civil';
-
-      const focus: CareerTipFocus =
-        body.focus === 'curriculo' || body.focus === 'entrevista'
-          ? body.focus
-          : 'todos';
-
-      const weekInfo = getIsoWeekInfo(new Date());
       const ai = getGeminiClient();
 
       if (!ai) {
-        res.status(503).json({
-          error:
-            'Chave GEMINI_API_KEY não configurada no servidor. Configure-a em Settings > Secrets para gerar as Dicas de Carreira com o Gemini.',
+        const fallback = getCuratedCareerTips({
+          role: workerRole,
+          focus,
+          weekKey: weekInfo.weekKey,
+          weekLabel: weekInfo.weekLabel,
+          notice: 'Modo offline: exibindo orientações semanais verificadas para sua função.',
         });
+        res.json(fallback);
         return;
       }
 
@@ -290,7 +310,7 @@ async function startServer() {
       });
 
       const parsed = parseCareerTipsPayload(response.text ?? '');
-      res.json({
+      const result: WeeklyCareerTipsBundle = {
         weekKey: weekInfo.weekKey,
         weekLabel: weekInfo.weekLabel,
         role: workerRole,
@@ -298,16 +318,27 @@ async function startServer() {
         summary: parsed.summary,
         tips: parsed.tips,
         generatedAt: new Date().toISOString(),
+      };
+      careerTipsCache.set(cacheKey, {
+        expiresAt: Date.now() + CAREER_TIPS_CACHE_TTL_MS,
+        payload: result,
       });
+      res.json(result);
     } catch (err) {
       const message =
         err instanceof Error && err.message
           ? err.message
           : 'Erro ao consultar o serviço do Gemini.';
-      console.error('Erro em /api/career-tips:', message);
-      res.status(502).json({
-        error: `Não foi possível gerar as dicas semanais agora: ${message}`,
+      console.warn('Falha em /api/career-tips, aplicando fallback curado:', message);
+      const fallback = getCuratedCareerTips({
+        role: workerRole,
+        focus,
+        weekKey: weekInfo.weekKey,
+        weekLabel: weekInfo.weekLabel,
+        notice:
+          'Exibindo orientações semanais curadas enquanto o serviço de IA se recupera.',
       });
+      res.json(fallback);
     }
   });
 

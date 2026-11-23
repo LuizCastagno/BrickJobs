@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   filterCareerTipsByFocus,
+  getCuratedCareerTips,
   getIsoWeekInfo,
   normalizeCareerTipCategory,
   parseCareerTipsPayload,
@@ -65,4 +66,19 @@ test('filterCareerTipsByFocus filters Currículo and Entrevista cleanly', () => 
   assert.equal(filterCareerTipsByFocus(tips, 'todos').length, 2);
   assert.equal(filterCareerTipsByFocus(tips, 'curriculo').length, 1);
   assert.equal(filterCareerTipsByFocus(tips, 'entrevista').length, 1);
+});
+
+test('getCuratedCareerTips returns balanced fallback tips tailored to role and focus', () => {
+  const bundle = getCuratedCareerTips({
+    role: 'Eletricista Predial',
+    focus: 'todos',
+    notice: 'Modo offline',
+    now: new Date(2026, 10, 23),
+  });
+
+  assert.equal(bundle.role, 'Eletricista Predial');
+  assert.equal(bundle.tips.length, 4);
+  assert.equal(filterCareerTipsByFocus(bundle.tips, 'curriculo').length, 2);
+  assert.equal(filterCareerTipsByFocus(bundle.tips, 'entrevista').length, 2);
+  assert.equal(bundle.notice, 'Modo offline');
 });

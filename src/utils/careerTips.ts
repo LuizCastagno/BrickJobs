@@ -3,11 +3,6 @@
  * @description Modelos, cache semanal local e fallback estruturado de dicas de carreira e entrevista para construção civil.
  */
 
-/**
- * @file src/utils/careerTips.ts
- * @description Modelos, cache semanal local e fallback estruturado de dicas de carreira e entrevista para construção civil.
- */
-
 export type CareerTipCategory = 'Currículo' | 'Entrevista';
 
 export type CareerTipFocus = 'todos' | 'curriculo' | 'entrevista';
@@ -27,6 +22,7 @@ export interface WeeklyCareerTipsBundle {
   summary: string;
   tips: CareerTipItem[];
   generatedAt: string;
+  notice?: string;
 }
 
 const CAREER_TIPS_CACHE_KEY = 'brickjobs_weekly_career_tips_v1';
@@ -167,4 +163,78 @@ export function saveCachedWeeklyCareerTips(bundle: WeeklyCareerTipsBundle): void
   } catch {
     // Ignore storage quota issues for non-critical weekly cache
   }
+}
+
+export function getCuratedCareerTips(params?: {
+  role?: string;
+  focus?: CareerTipFocus;
+  weekKey?: string;
+  weekLabel?: string;
+  notice?: string;
+  now?: Date;
+}): WeeklyCareerTipsBundle {
+  const roleLabel =
+    params?.role && params.role.trim()
+      ? params.role.trim()
+      : 'Profissional da Construção Civil';
+  const focus: CareerTipFocus = params?.focus ?? 'todos';
+  const weekInfo = getIsoWeekInfo(params?.now ?? new Date());
+  const weekKey = params?.weekKey || weekInfo.weekKey;
+  const weekLabel = params?.weekLabel || weekInfo.weekLabel;
+
+  const curriculumTips: CareerTipItem[] = [
+    {
+      category: 'Currículo',
+      title: `Detalhe frentes de obra como ${roleLabel}`,
+      action: `Informe os tipos de serviço executados como ${roleLabel} (ex.: residencial, galpão industrial, pré-moldados ou acabamento) e os meses trabalhados em cada obra.`,
+      impact:
+        'Facilita para o mestre de obras confirmar sua vivência prática antes mesmo da ligação.',
+    },
+    {
+      category: 'Currículo',
+      title: 'Destaque certificações e NRs válidas',
+      action:
+        'Liste treinamentos como NR-06, NR-11, NR-18 ou NR-35, além de ferramentas próprias ou leitura de planta básica no topo do cadastro.',
+      impact:
+        'Construtoras priorizam profissionais que já chegam aptos às exigências de segurança do canteiro.',
+    },
+  ];
+
+  const interviewTips: CareerTipItem[] = [
+    {
+      category: 'Entrevista',
+      title: 'Leve exemplos concretos de entrega no prazo',
+      action:
+        'Na conversa com o encarregado ou engenheiro, conte uma obra recente em que você cumpriu o cronograma sem retrabalho e com organização do local.',
+      impact:
+        'Mostra comprometimento com produtividade, limpeza do canteiro e redução de desperdício.',
+    },
+    {
+      category: 'Entrevista',
+      title: 'Confirme disponibilidade, região e EPIs',
+      action:
+        'Deixe claro seu bairro em Rondonópolis-MT, facilidade de deslocamento e o compromisso com o uso diário de capacete, botina e óculos de proteção.',
+      impact:
+        'Evita dúvidas sobre início imediato e transmite postura profissional à equipe de contratação.',
+    },
+  ];
+
+  const allTips =
+    focus === 'curriculo'
+      ? [...curriculumTips, ...interviewTips.slice(0, 1)]
+      : focus === 'entrevista'
+        ? [...interviewTips, ...curriculumTips.slice(0, 1)]
+        : [...curriculumTips, ...interviewTips];
+
+  return {
+    weekKey,
+    weekLabel,
+    role: roleLabel,
+    headline: `Boas práticas da semana para ${roleLabel}`,
+    summary:
+      'Orientações objetivas para valorizar sua experiência em obra no currículo e mandar bem na entrevista presencial.',
+    tips: allTips,
+    generatedAt: (params?.now ?? new Date()).toISOString(),
+    notice: params?.notice,
+  };
 }

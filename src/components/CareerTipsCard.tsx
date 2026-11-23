@@ -14,6 +14,7 @@ import {
 import type { WorkerProfile } from '../types/brickjobs';
 import {
   filterCareerTipsByFocus,
+  getCuratedCareerTips,
   getIsoWeekInfo,
   loadCachedWeeklyCareerTips,
   saveCachedWeeklyCareerTips,
@@ -83,18 +84,23 @@ export const CareerTipsCard: React.FC<CareerTipsCardProps> = ({
             'Orientações práticas para currículo e entrevista em obras.',
           tips: payload.tips,
           generatedAt: payload.generatedAt || new Date().toISOString(),
+          notice: typeof payload.notice === 'string' ? payload.notice : undefined,
         };
 
         setBundle(nextBundle);
         if (selectedFocus === 'todos') {
           saveCachedWeeklyCareerTips(nextBundle);
         }
-      } catch (err) {
-        const msg =
-          err instanceof Error && err.message
-            ? err.message
-            : 'Falha ao gerar dicas semanais de carreira.';
-        setErrorMsg(msg);
+      } catch {
+        const fallbackBundle = getCuratedCareerTips({
+          role: roleLabel,
+          focus: selectedFocus,
+          weekKey: weekInfo.weekKey,
+          weekLabel: weekInfo.weekLabel,
+          notice: 'Modo offline: exibindo orientações semanais verificadas para sua função.',
+        });
+        setBundle(fallbackBundle);
+        setErrorMsg('');
       } finally {
         setIsLoading(false);
       }
@@ -150,6 +156,11 @@ export const CareerTipsCard: React.FC<CareerTipsCardProps> = ({
             {bundle?.summary ??
               `Sugestões semanais personalizadas para melhorar seu currículo e entrevistas na construção civil (${roleLabel}).`}
           </p>
+          {bundle?.notice && (
+            <p className="text-xs text-[#6B7280] dark:text-[#94A3B8] mt-1.5">
+              {bundle.notice}
+            </p>
+          )}
         </div>
 
         <button

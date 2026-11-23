@@ -14,19 +14,27 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { CompanyProfile, CompanyRating, JobPosting } from '../types/brickjobs';
+import type {
+  CompanyProfile,
+  CompanyRating,
+  JobApplication,
+  JobPosting,
+} from '../types/brickjobs';
 import {
   buildCategoryFillTimeStats,
   buildCategoryOpenVsClosedStats,
   buildCategoryRatingStats,
+  buildMonthlyFinalizedHiringsHistory,
   type CategoryFillTimeStat,
   type CategoryOpenVsClosedStat,
   type CategoryRatingStat,
+  type MonthlyFinalizedHiringDatum,
 } from '../utils/employerStats';
 import { exportEmployerReportPdf } from '../utils/employerReportPdf';
 
 interface EmployerStatisticsTabProps {
   jobs: JobPosting[];
+  applications?: JobApplication[];
   companyRatings: CompanyRating[];
   companyProfile: CompanyProfile;
   companyId: string;
@@ -130,8 +138,38 @@ const OpenVsClosedChartTooltip: React.FC<OpenVsClosedTooltipProps> = ({
   );
 };
 
+interface FinalizedHiringsTooltipProps {
+  active?: boolean;
+  payload?: ReadonlyArray<{ payload?: MonthlyFinalizedHiringDatum }>;
+}
+
+const FinalizedHiringsTooltip: React.FC<FinalizedHiringsTooltipProps> = ({
+  active,
+  payload,
+}) => {
+  if (!active || !payload || payload.length === 0) return null;
+  const item = payload[0]?.payload;
+  if (!item) return null;
+
+  return (
+    <div className="rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-white dark:bg-[#0F172A] px-3.5 py-2.5 shadow-md text-xs space-y-1">
+      <p className="font-display font-bold text-[#111827] dark:text-[#F8FAFC]">
+        {item.fullMonthLabel}
+      </p>
+      <p className="text-[#047857] dark:text-[#34D399] tabular-nums font-semibold">
+        Contratações finalizadas: {item.finalizadas}
+      </p>
+      <p className="text-[11px] text-[#6B7280] dark:text-[#94A3B8] tabular-nums">
+        Vagas encerradas: {item.vagasEncerradas} · Contratos concluídos:{' '}
+        {item.candidaturasConcluidas}
+      </p>
+    </div>
+  );
+};
+
 export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
   jobs,
+  applications = [],
   companyRatings,
   companyProfile,
   companyId,
@@ -198,6 +236,17 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
         companyId: scope === 'empresa' ? companyId : undefined,
       }),
     [jobs, scope, companyId]
+  );
+
+  const finalizedHiringsHistory = useMemo(
+    () =>
+      buildMonthlyFinalizedHiringsHistory({
+        jobs,
+        applications,
+        companyId: scope === 'empresa' ? companyId : undefined,
+        monthCount: 6,
+      }),
+    [jobs, applications, scope, companyId]
   );
 
   const combinedRows = useMemo(() => {
@@ -727,6 +776,112 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
               </ResponsiveContainer>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Chart 4: Monthly Finalized Hirings History (Last 6 Months) */}
+      <section
+        aria-labelledby="stats-finalized-hirings-heading"
+        data-testid="stats-finalized-hirings-chart-card"
+        className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5 sm:p-6"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3
+              id="stats-finalized-hirings-heading"
+              className="font-display text-base sm:text-lg font-bold text-[#111827] dark:text-[#F8FAFC]"
+            >
+              Histórico mensal de contratações finalizadas (últimos 6 meses)
+            </h3>
+            <p className="text-xs sm:text-sm text-[#4B5563] dark:text-[#94A3B8] mt-1">
+              Evolução mensal de vagas preenchidas/encerradas e serviços concluídos nos últimos 6 meses em{' '}
+              {scope === 'empresa'
+                ? companyName.trim() || 'sua construtora'
+                : 'Rondonópolis-MT'}
+              .
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ECFDF5] text-[#047857] dark:bg-[#064E3B]/40 dark:text-[#34D399] text-xs font-semibold tabular-nums">
+              {finalizedHiringsHistory.totalFinalized}{' '}
+              {finalizedHiringsHistory.totalFinalized === 1
+                ? 'contratação finalizada'
+                : 'contratações finalizadas'}
+            </span>
+            {finalizedHiringsHistory.peakMonth && (
+              <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#F4F5F7] text-[#374151] dark:bg-[#1E293B] dark:text-[#CBD5E1] text-xs font-medium tabular-nums">
+                Pico: {finalizedHiringsHistory.peakMonth.shortMonthLabel} (
+                {finalizedHiringsHistory.peakMonth.finalizadas})
+              </span>
+            )}
+          </div>
+        </div>
+
+        {finalizedHiringsHistory.totalFinalized === 0 && (
+          <div className="mt-4 p-3.5 rounded-xl border border-dashed border-[#D1D5DB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#0F172A] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
+              Nenhuma contratação finalizada registrada pela sua construtora nos últimos 6 meses.
+            </p>
+            {scope === 'empresa' && (
+              <button
+                type="button"
+                onClick={() => setScope('rede')}
+                className="min-h-[36px] px-3 py-1 rounded-lg bg-[#111827] dark:bg-[#F8FAFC] text-white dark:text-[#0F172A] text-xs font-semibold cursor-pointer shrink-0 self-start sm:self-auto"
+              >
+                Ver panorama da rede
+              </button>
+            )}
+          </div>
+        )}
+
+        <div
+          className="mt-4 w-full min-w-0"
+          style={{ height: 272 }}
+          role="img"
+          aria-label="Gráfico de barras Recharts mostrando o histórico mensal de contratações finalizadas nos últimos 6 meses"
+          data-testid="recharts-finalized-hirings-chart"
+        >
+          <ResponsiveContainer width="100%" height={272} minWidth={220}>
+            <BarChart
+              data={finalizedHiringsHistory.months}
+              margin={{ top: 12, right: 16, left: -12, bottom: 4 }}
+              barSize={34}
+            >
+              <CartesianGrid
+                vertical={false}
+                stroke={gridStrokeColor}
+                strokeDasharray="3 3"
+              />
+              <XAxis
+                dataKey="shortMonthLabel"
+                interval={0}
+                axisLine={{ stroke: gridStrokeColor }}
+                tickLine={false}
+                tick={{ fill: axisTickColor, fontSize: 11, fontWeight: 500 }}
+              />
+              <YAxis
+                allowDecimals={false}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: axisTickColor, fontSize: 11 }}
+              />
+              <Tooltip
+                cursor={{
+                  fill: isDark
+                    ? 'rgba(255,255,255,0.04)'
+                    : 'rgba(17,24,39,0.04)',
+                }}
+                content={<FinalizedHiringsTooltip />}
+              />
+              <Bar
+                dataKey="finalizadas"
+                name="Contratações finalizadas"
+                fill={openBarColor}
+                radius={[6, 6, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </section>
 

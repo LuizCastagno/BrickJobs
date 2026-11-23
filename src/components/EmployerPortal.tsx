@@ -1283,6 +1283,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
           >
             <EmployerStatisticsTab
               jobs={jobs}
+              applications={applications}
               companyRatings={companyRatings}
               companyProfile={companyProfile}
               companyId={companyProfile.id}

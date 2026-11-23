@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { SEED_COMPANY_RATINGS, SEED_JOBS } from '../data/rondonopolisSeed.ts';
-import type { CompanyRating, JobPosting } from '../types/brickjobs';
+import type { CompanyRating, JobApplication, JobPosting } from '../types/brickjobs';
 import {
   buildCategoryFillTimeStats,
   buildCategoryOpenVsClosedStats,
   buildCategoryRatingStats,
+  buildMonthlyFinalizedHiringsHistory,
   computeFillTimeDays,
   mapRoleToServiceCategory,
 } from './employerStats.ts';
@@ -213,4 +214,123 @@ test('buildCategoryOpenVsClosedStats compares open vs closed vacancies per categ
   const scoped = buildCategoryOpenVsClosedStats({ jobs: sampleJobs, companyId: 'comp-2' });
   assert.equal(scoped.length, 1);
   assert.equal(scoped[0].category, 'Elétrica e Redes');
+});
+
+test('buildMonthlyFinalizedHiringsHistory returns last 6 consecutive months and merges closed jobs with completed applications without double counting', () => {
+  const referenceDate = new Date(2026, 10, 23); // Nov 23, 2026 -> Jun/26 .. Nov/26
+  const sampleJobs: JobPosting[] = [
+    {
+      id: 'j-closed-oct',
+      companyId: 'comp-1',
+      companyName: 'Construtora A',
+      funcao: 'Pedreiro',
+      quantidadeVagas: 3,
+      bairro: 'Centro',
+      regiaoInteresse: 'Centro',
+      salarioOuDiaria: 'R$ 200/dia',
+      turno: 'Comercial',
+      descricao: 'Alvenaria',
+      telefoneContato: '(66) 99999-0001',
+      status: 'encerrada',
+      createdAt: '2026-10-02',
+      closedAt: '2026-10-12',
+    },
+    {
+      id: 'j-open-nov',
+      companyId: 'comp-1',
+      companyName: 'Construtora A',
+      funcao: 'Servente de Obras',
+      quantidadeVagas: 4,
+      bairro: 'Vila Aurora',
+      regiaoInteresse: 'Vila Aurora',
+      salarioOuDiaria: 'R$ 135/dia',
+      turno: 'Comercial',
+      descricao: 'Apoio',
+      telefoneContato: '(66) 99999-0001',
+      status: 'aberta',
+      createdAt: '2026-11-01',
+    },
+    {
+      id: 'j-other-comp',
+      companyId: 'comp-2',
+      companyName: 'Construtora B',
+      funcao: 'Pintor Predial',
+      quantidadeVagas: 5,
+      bairro: 'Centro',
+      regiaoInteresse: 'Centro',
+      salarioOuDiaria: 'R$ 180/dia',
+      turno: 'Comercial',
+      descricao: 'Pintura',
+      telefoneContato: '(66) 99999-0002',
+      status: 'encerrada',
+      createdAt: '2026-09-05',
+      closedAt: '2026-09-10',
+    },
+  ];
+
+  const sampleApps: JobApplication[] = [
+    // Completed on closed job j-closed-oct (already counted in 3 vacancies)
+    {
+      id: 'a-1',
+      jobId: 'j-closed-oct',
+      workerId: 'w-1',
+      workerName: 'Marcos',
+      appliedAt: '2026-10-03',
+      completedAt: '2026-10-12',
+      status: 'concluida',
+    },
+    // Completed on open job j-open-nov (adds 1 finalized hiring in Nov)
+    {
+      id: 'a-2',
+      jobId: 'j-open-nov',
+      workerId: 'w-2',
+      workerName: 'Claudinei',
+      appliedAt: '2026-11-05',
+      completedAt: '2026-11-18',
+      status: 'concluida',
+    },
+    // Active accepted (not finalized yet) should NOT count
+    {
+      id: 'a-3',
+      jobId: 'j-open-nov',
+      workerId: 'w-3',
+      workerName: 'João',
+      appliedAt: '2026-11-10',
+      status: 'aceita',
+    },
+  ];
+
+  const companyHistory = buildMonthlyFinalizedHiringsHistory({
+    jobs: sampleJobs,
+    applications: sampleApps,
+    companyId: 'comp-1',
+    referenceDate,
+  });
+
+  assert.equal(companyHistory.months.length, 6);
+  assert.deepEqual(
+    companyHistory.months.map((m) => m.monthKey),
+    ['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11']
+  );
+  assert.deepEqual(
+    companyHistory.months.map((m) => m.shortMonthLabel),
+    ['Jun/26', 'Jul/26', 'Ago/26', 'Set/26', 'Out/26', 'Nov/26']
+  );
+  assert.equal(companyHistory.months[4].finalizadas, 3); // Oct: 3 (not 4)
+  assert.equal(companyHistory.months[5].finalizadas, 1); // Nov: 1 completed app
+  assert.equal(companyHistory.totalFinalized, 4);
+  assert.equal(companyHistory.peakMonth?.monthKey, '2026-10');
+
+  // Verify regional seed data produces rich multi-month history
+  const seedHistory = buildMonthlyFinalizedHiringsHistory({
+    jobs: SEED_JOBS,
+    applications: [],
+    referenceDate,
+  });
+  assert.equal(seedHistory.months.length, 6);
+  assert.ok(seedHistory.totalFinalized > 0);
+  assert.ok(seedHistory.months[2].finalizadas > 0); // Aug/26
+  assert.ok(seedHistory.months[3].finalizadas > 0); // Set/26
+  assert.ok(seedHistory.months[4].finalizadas > 0); // Out/26
+  assert.ok(seedHistory.months[5].finalizadas > 0); // Nov/26
 });
