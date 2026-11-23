@@ -121,9 +121,10 @@ function syncReadme() {
   const endIndex = currentReadme.indexOf(END_MARKER);
 
   if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-    throw new Error(
-      `Marcadores ${START_MARKER} e ${END_MARKER} não encontrados no README.md.`
+    console.log(
+      '[sync-readme] Marcadores de inventário automático ausentes no README.md; sincronização ignorada.'
     );
+    return;
   }
 
   const nextInventory = buildInventoryMarkdown();
