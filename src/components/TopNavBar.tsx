@@ -1,5 +1,5 @@
 /**
- * @file TopNavBar.tsx
+ * @file src/components/TopNavBar.tsx
  * @description Barra de navegação superior fixa para desktop/tablet com marca, abas de seção
  *   e ação rápida de alternância entre os portais Contratante e Contratado.
  */

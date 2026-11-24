@@ -97,7 +97,7 @@ export const GuidedTourModal: React.FC<GuidedTourModalProps> = ({
             </button>
           </div>
 
-          {/* Interactive Step Tabs ('Vagas', 'Cadastro', 'Perfil') */}
+          {/* Interactive Step Tabs */}
           <div
             role="tablist"
             aria-label="Etapas do Tour Guiado"

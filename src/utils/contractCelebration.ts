@@ -1,5 +1,5 @@
 /**
- * @file contractCelebration.ts
+ * @file src/utils/contractCelebration.ts
  * @description Regras puras para o fluxo de celebração de contrato aceito (`status === 'aceita'`).
  *   Garante que a animação de confetes e o aviso comemorativo disparem apenas uma vez por
  *   candidatura aceita no lado do trabalhador (persistido em localStorage) e imediatamente

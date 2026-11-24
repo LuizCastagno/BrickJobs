@@ -1,5 +1,5 @@
 /**
- * @file CoverScreen.tsx
+ * @file src/components/CoverScreen.tsx
  * @description Tela inicial (landing) do BrickJobs em Rondonópolis-MT com seleção de perfil
  *   (Contratante/Contratado), busca rápida por proximidade GPS e vitrine de vagas abertas.
  */

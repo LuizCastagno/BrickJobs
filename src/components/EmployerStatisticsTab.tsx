@@ -1,6 +1,6 @@
 /**
  * @file src/components/EmployerStatisticsTab.tsx
- * @description Aba de estatísticas detalhadas da construtora (avaliações por ocupação, tempo médio de preenchimento, status de vagas e exportação em PDF).
+ * @description Aba de estatísticas detalhadas da construtora (avaliações por ocupação, tempo médio de preenchimento, histórico mensal de contratações nos últimos 6 meses via Recharts, status de vagas e exportação em PDF).
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';

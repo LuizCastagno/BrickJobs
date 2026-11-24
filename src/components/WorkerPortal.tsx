@@ -1,5 +1,5 @@
 /**
- * @file WorkerPortal.tsx
+ * @file src/components/WorkerPortal.tsx
  * @description Portal do Trabalhador (Contratado): busca de vagas por proximidade/tags,
  *   dicas de segurança e EPIs, notícias de infraestrutura em MT, cadastro profissional
  *   e currículo gerado em PDF.
@@ -3085,12 +3085,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             transition={TAB_TRANSITION_CONFIG}
             className="mt-6"
           >
-            <ConstructionNewsTab
-              onOpenJobFilter={(keyword) => {
-                setSearchQuery(keyword);
-                onChangeTab('vagas');
-              }}
-            />
+            <ConstructionNewsTab />
           </motion.div>
         )}
       </AnimatePresence>

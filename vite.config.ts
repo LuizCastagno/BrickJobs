@@ -1,10 +1,10 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, type UserConfig} from 'vite';
 import {VitePWA} from 'vite-plugin-pwa';
 
-export default defineConfig(() => {
+export default defineConfig((): UserConfig => {
   return {
     plugins: [
       react(),
@@ -88,13 +88,49 @@ export default defineConfig(() => {
       }),
     ],
     resolve: {
-      dedupe: ['react', 'react-dom'],
+      dedupe: ['react', 'react-dom', 'motion', 'framer-motion'],
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(import.meta.dirname, '.'),
       },
     },
     optimizeDeps: {
       include: ['react', 'react-dom', 'react-dom/client', 'motion/react'],
+    },
+    build: {
+      cssMinify: 'lightningcss',
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: 'vendor-react',
+                test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+                priority: 30,
+              },
+              {
+                name: 'vendor-motion',
+                test: /node_modules[\\/](motion|framer-motion)[\\/]/,
+                priority: 25,
+              },
+              {
+                name: 'vendor-charts',
+                test: /node_modules[\\/](recharts|d3|d3-.*|victory-vendor|@reduxjs[\\/]toolkit|react-redux)[\\/]/,
+                priority: 20,
+              },
+              {
+                name: 'vendor-pdf',
+                test: /node_modules[\\/]jspdf[\\/]/,
+                priority: 20,
+              },
+              {
+                name: 'vendor-icons',
+                test: /node_modules[\\/]lucide-react[\\/]/,
+                priority: 15,
+              },
+            ],
+          },
+        },
+      },
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

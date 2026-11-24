@@ -1,5 +1,5 @@
 /**
- * @file SafetyWeeklyRemindersCard.tsx
+ * @file src/components/SafetyWeeklyRemindersCard.tsx
  * @description Seção educacional dinâmica "Dicas de Segurança no Canteiro" com lembretes
  *   semanais sobre EPIs (NR-06, NR-18, NR-35), geração via Gemini com fallback local e checklist.
  */
@@ -11,9 +11,6 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  Eye,
-  HardHat,
-  HelpCircle,
   RefreshCw,
   ShieldAlert,
   ShieldCheck,
@@ -27,7 +24,6 @@ import {
   toggleWeeklyEpiChecklistItem,
   type EpiCategory,
   type SafetyWeeklyPayload,
-  type SafetyWeeklyReminder,
 } from '../utils/safetyWeeklyTips';
 
 interface SafetyWeeklyRemindersCardProps {

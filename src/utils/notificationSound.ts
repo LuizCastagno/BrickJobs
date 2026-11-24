@@ -1,5 +1,5 @@
 /**
- * @file notificationSound.ts
+ * @file src/utils/notificationSound.ts
  * @description Motor de síntese sonora via Web Audio API para alertas do BrickJobs
  *   (`contract_accepted`, `job_alert` e `reminder`), com controle persistente de ligar/silenciar.
  */

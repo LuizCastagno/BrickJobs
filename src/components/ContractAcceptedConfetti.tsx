@@ -1,5 +1,5 @@
 /**
- * @file ContractAcceptedConfetti.tsx
+ * @file src/components/ContractAcceptedConfetti.tsx
  * @description Componente visual comemorativo usando `canvas-confetti`, acionado exclusivamente
  *   quando um contrato é aceito (`status === 'aceita'`) tanto para a construtora quanto para o
  *   trabalhador, respeitando `prefers-reduced-motion` e oferecendo atalho direto ao chat da obra.

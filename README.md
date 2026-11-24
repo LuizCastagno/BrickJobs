@@ -19,6 +19,7 @@ O projeto permite buscar e publicar vagas, gerenciar candidaturas, conversar ap�
 - [Testes](#testes)
 - [Estado do repositório](#estado-do-repositório)
 - [Modificações recentes](#modificações-recentes)
+- [Resumo das alterações estruturais na v1](#resumo-das-alterações-estruturais-na-v1)
 - [Histórico recente de commits](#histórico-recente-de-commits)
 - [Limitações](#limitações)
 
@@ -33,7 +34,8 @@ O projeto permite buscar e publicar vagas, gerenciar candidaturas, conversar ap�
 - Integração opcional com Gemini e Search Grounding.
 - Dados e vagas demonstrativos voltados para Rondonópolis-MT.
 - Proteções adicionadas para quedas de disponibilidade ou limite de quota da API Gemini.
-- Último push confirmado em `23/11/2026 às 14:55:50 UTC`.
+- Documentação detalhada das alterações mais recentes no código disponível em [`ALTERACOES-RECENTES-CODIGO.md`](./ALTERACOES-RECENTES-CODIGO.md).
+- Último push confirmado em `23/11/2026 às 14:55:50 UTC` (com correções locais consolidadas em `24/11/2026`).
 
 ## Funcionalidades
 
@@ -142,6 +144,7 @@ A integração com Gemini é opcional. Em caso de indisponibilidade, quota esgot
 .
 ├── .env.example
 ├── README.md
+├── ALTERACOES-RECENTES-CODIGO.md
 ├── HISTORICO-ALTERACOES-RECENTES.md
 ├── index.html
 ├── server.ts
@@ -155,19 +158,19 @@ A integração com Gemini é opcional. Em caso de indisponibilidade, quota esgot
     ├── main.tsx
     ├── App.tsx
     ├── index.css
-    ├── components/
-    ├── data/
-    ├── hooks/
-    ├── types/
-    └── utils/
+    ├── components/     # 34 componentes React (portais, painéis, gráficos e modais)
+    ├── data/           # Dados iniciais e seed regional (rondonopolisSeed.ts)
+    ├── hooks/          # Hook de instalação PWA (usePWAInstall.ts)
+    ├── types/          # Contratos TypeScript centrais (brickjobs.ts)
+    └── utils/          # 38 módulos de regras puras e 37 suítes *.test.ts
 ```
 
-- `App.tsx` centraliza estado e navegação.
-- `WorkerPortal.tsx` concentra o fluxo do trabalhador.
-- `EmployerPortal.tsx` concentra o fluxo da construtora.
+- `App.tsx` centraliza estado, transição entre portais, tour guiado, modais e persistência.
+- `WorkerPortal.tsx` concentra o fluxo do trabalhador (busca, segurança, notícias, cadastro e perfil).
+- `EmployerPortal.tsx` concentra o fluxo da construtora (vagas, estatísticas, empresa e profissionais).
 - `rondonopolisSeed.ts` fornece dados iniciais.
 - `storage.ts` realiza leitura, migração e persistência.
-- `server.ts` expõe APIs e serve o frontend.
+- `server.ts` expõe APIs (`/api/*`) com guarda de quota Gemini e serve o frontend.
 - `scripts/sync-readme.mjs` sincroniza o inventário quando os marcadores existirem no README; na ausência deles, encerra sem falhar.
 
 ## Persistência e APIs
@@ -215,6 +218,7 @@ npm run build
 
 | Data/hora UTC | Commit | Alteração |
 | --- | --- | --- |
+| 24/11/2026 (local) | — | Correções gerais de fluxo e interface: guardas de transição de candidaturas, sincronização do tour guiado com abas externas, correção do toggle de notificações, reset de input PDF, `AbortController` em fetches, fechamento por `Escape`/backdrop no modal da empresa e ajustes de contraste/acessibilidade. Detalhes em [`ALTERACOES-RECENTES-CODIGO.md`](./ALTERACOES-RECENTES-CODIGO.md). |
 | 23/11/2026 14:55:50 | [`b4df2a2`](https://github.com/LuizCastagno/BrickJobs/commit/b4df2a259462e577c3db1b87f1ced98b596403e4) | O sincronizador deixa de lançar erro quando os marcadores de inventário do README estão ausentes e registra uma mensagem informativa. |
 | 23/11/2026 14:54:36 | [`0b74ccc`](https://github.com/LuizCastagno/BrickJobs/commit/0b74cccdc29be4415eaa0c296499a9a1dc68092e) | Proteção com cooldown para erros de quota/limitação 429 da API Gemini, evitando requisições redundantes e oferecendo fallback local. |
 | 23/11/2026 14:49:44 | [`baa155f`](https://github.com/LuizCastagno/BrickJobs/commit/baa155f1817e2cd8ce173503b995461e5a2b2b1d) | Inclusão do histórico completo de commits no README. |
@@ -228,6 +232,17 @@ npm run build
 | 20/11/2026 | [`0acf91d`](https://github.com/LuizCastagno/BrickJobs/commit/0acf91d60b857b6788f7d49f2022c85812ec0f06) | Currículo em PDF. |
 | 20/11/2026 | [`4d912fe`](https://github.com/LuizCastagno/BrickJobs/commit/4d912febbfb9d2d05a9aef2c183f0e707822b9be) | Confetes e sons de notificação. |
 | 18/11/2026 | [`be4fe6c`](https://github.com/LuizCastagno/BrickJobs/commit/be4fe6cdee9ae94a891510709615f1a0e4451860) | Lembretes semanais de segurança e notícias da construção. |
+
+## Resumo das alterações estruturais na v1
+
+Ao longo da primeira versão (`v1`), a arquitetura do **BrickJobs** evoluiu de uma estrutura enxuta centrada nos fluxos principais de cadastro e vagas para uma organização modular em camadas, acompanhando o crescimento dos portais sem perder compatibilidade com dados salvos localmente:
+
+1. **Separação de domínio, contratos e persistência versionada (`src/types/`, `src/data/`, `src/utils/storage.ts`):** os modelos centrais (`JobPosting`, `WorkerProfile`, `CompanyProfile`, `JobApplication`, `CompanyRating`, `ChatMessage`) foram isolados em `src/types/brickjobs.ts`, com seed regional em `src/data/rondonopolisSeed.ts` e leitura/normalização retrocompatível em `src/utils/storage.ts` para novos campos (prioridades, tags de habilidades, fotos de perfil, documentos e categorias de notificação).
+2. **Desacoplamento da lógica de negócio para módulos puros testáveis (`src/utils/`):** cálculos de duração de obras, rescisão CLT, filtros avançados, ordenação por prioridade, exportação PDF/CSV, métricas mensais e regras de avaliação/onboarding foram extraídos dos componentes React para **38 módulos utilitários** acompanhados por **37 suítes de testes automatizados** (`*.test.ts`).
+3. **Componentização dos portais e visualizações (`src/components/`):** a interface passou a contar com **34 componentes** especializados, separando os portais (`EmployerPortal`, `WorkerPortal`), navegação adaptativa (`TopNavBar`, `MobileBottomNav`), painéis analíticos em D3/Recharts (`EmployerMonthlyDashboard`, `EmployerStatisticsTab`, `WorkerEarningsPanel`, `WorkerProductivityPanel`), educação/notícias (`SafetyTipsCard`, `SafetyWeeklyRemindersCard`, `ConstructionNewsTab`, `CareerTipsCard`) e modais de fluxo (`ApplicationChatModal`, `CompanyRatingModal`, `LgpdPrivacyModal`, `GuidedTourModal`).
+4. **Reorganização de abas e diretrizes de navegação:** a aba redundante de utilidades da construtora foi removida e substituída pelo diretório somente leitura `Profissionais Registrados/Disponíveis` (com exportação CSV/PDF), os controles de rescisão/chuva foram consolidados em modal dedicado e o atalho de configurações foi retirado da barra do portal do contratado.
+5. **Camada de servidor e resiliência de APIs (`server.ts`, `src/utils/geminiQuota.ts`):** o servidor Express passou a centralizar rotas internas (`/api/rain-alerts`, `/api/career-tips`, `/api/safety-weekly-reminders`, `/api/construction-news`) com cache em memória, guarda compartilhada de cooldown contra erros `429` da API Gemini e fallback curado local para funcionamento offline.
+6. **Automação de build e proteção de ciclo de vida:** inclusão do plugin PWA (`vite-plugin-pwa`), script pré-build resiliente em `scripts/sync-readme.mjs`, além de guardas formais de transição de candidaturas, coordenação entre tour guiado e abas externas, cancelamento de requisições com `AbortController` e limpeza de timers nos componentes.
 
 ## Histórico recente de commits
 

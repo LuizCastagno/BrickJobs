@@ -1,6 +1,6 @@
 /**
- * Utilitários, tipagem e dados para a aba "Notícias da Construção"
- * Alimentada via API de pesquisa do Gemini com Grounding (Google Search) e feed verificado de Mato Grosso.
+ * @file src/utils/constructionNews.ts
+ * @description Utilitários, tipagem e feed curado/via Search Grounding para a aba "Notícias da Construção" em Mato Grosso.
  */
 
 export type ConstructionNewsCategory =

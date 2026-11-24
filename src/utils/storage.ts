@@ -1,5 +1,5 @@
 /**
- * @file storage.ts
+ * @file src/utils/storage.ts
  * @description Persistência e migração retrocompatível do estado principal do BrickJobs em
  *   `localStorage` (`brickjobs_rondonopolis_state_v1`).
  */
@@ -10,7 +10,7 @@ import {
 } from './requiredDocuments';
 import { normalizeJobPriority } from './jobPriority';
 
-const STORAGE_KEY = 'brickjobs_rondonopolis_state_v1';
+export const BRICKJOBS_STORAGE_KEY = 'brickjobs_rondonopolis_state_v1';
 
 export function loadBrickJobsState(): BrickJobsAppState {
   if (typeof window === 'undefined') {
@@ -18,7 +18,7 @@ export function loadBrickJobsState(): BrickJobsAppState {
   }
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(BRICKJOBS_STORAGE_KEY);
     if (!raw) return DEFAULT_APP_STATE;
     const parsed = JSON.parse(raw) as Partial<BrickJobsAppState>;
     return {
@@ -136,7 +136,7 @@ export function saveBrickJobsState(state: BrickJobsAppState): { ok: boolean; err
   if (typeof window === 'undefined') return { ok: true };
 
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    window.localStorage.setItem(BRICKJOBS_STORAGE_KEY, JSON.stringify(state));
     return { ok: true };
   } catch {
     return {

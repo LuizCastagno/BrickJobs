@@ -1,6 +1,6 @@
 /**
- * Utilitários e dados para a seção "Dicas de Segurança no Canteiro"
- * com conteúdo dinâmico e lembretes semanais sobre uso de EPIs (Normas Regulamentadoras NR-6, NR-18, NR-35).
+ * @file src/utils/safetyWeeklyTips.ts
+ * @description Utilitários e catálogo semanal de lembretes sobre EPIs (NRs 06, 18 e 35) para a seção "Dicas de Segurança no Canteiro".
  */
 
 export type EpiCategory =

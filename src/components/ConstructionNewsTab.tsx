@@ -1,14 +1,12 @@
 /**
- * @file ConstructionNewsTab.tsx
+ * @file src/components/ConstructionNewsTab.tsx
  * @description Aba "Notícias da Construção" do Portal do Trabalhador com headlines sobre obras e
  *   infraestrutura em Mato Grosso, filtragem por categoria/texto e busca via Search Grounding.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ExternalLink,
-  Filter,
   Globe,
-  HardHat,
   Newspaper,
   RefreshCw,
   Search,
@@ -20,18 +18,15 @@ import {
   filterConstructionNews,
   getCuratedConstructionNews,
   type ConstructionNewsCategory,
-  type ConstructionNewsItem,
   type ConstructionNewsPayload,
 } from '../utils/constructionNews';
 
 interface ConstructionNewsTabProps {
   className?: string;
-  onOpenJobFilter?: (keyword: string) => void;
 }
 
 export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
   className = '',
-  onOpenJobFilter,
 }) => {
   const [payload, setPayload] = useState<ConstructionNewsPayload>(() =>
     getCuratedConstructionNews()

@@ -1,10 +1,10 @@
 /**
- * @file App.tsx
+ * @file src/App.tsx
  * @description Componente raiz da aplicação BrickJobs. Orquestra estado local persistido,
- *   alternância entre capa/Contratante/Contratado, sincronização entre abas, lembretes de obra,
- *   chat, sons de notificação e celebração com confetes exclusivamente na aceitação de contrato.
+ *   alternância entre capa/Contratante/Contratado, sincronização entre abas, LGPD, PWA,
+ *   tour guiado, notificações push, lembretes de obra, chat, sons e celebração de contrato.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import {
   BarChart3,
@@ -23,17 +23,30 @@ import { CoverScreen } from './components/CoverScreen';
 import { ApplicationChatModal } from './components/ApplicationChatModal';
 import { CompanyRatingModal } from './components/CompanyRatingModal';
 import { ContractAcceptedConfetti } from './components/ContractAcceptedConfetti';
-import { EmployerPortal, type EmployerTab } from './components/EmployerPortal';
+import type { EmployerTab } from './components/EmployerPortal';
 import { GuidedTourModal } from './components/GuidedTourModal';
 import { LgpdPrivacyModal } from './components/LgpdPrivacyModal';
 import { MobileBottomNav, type MobileTabItem } from './components/MobileBottomNav';
 import { TopNavBar, type NavTabItem } from './components/TopNavBar';
 import { UserSettingsMenu } from './components/UserSettingsMenu';
-import { WorkerPortal, type WorkerTab } from './components/WorkerPortal';
+import type { WorkerTab } from './components/WorkerPortal';
+
+const EmployerPortal = lazy(() =>
+  import('./components/EmployerPortal').then((m) => ({
+    default: m.EmployerPortal,
+  }))
+);
+
+const WorkerPortal = lazy(() =>
+  import('./components/WorkerPortal').then((m) => ({
+    default: m.WorkerPortal,
+  }))
+);
 import { usePWAInstall } from './hooks/usePWAInstall';
 import type { BrickJobsAppState } from './data/rondonopolisSeed';
 import type {
   CompanyProfile,
+  JobApplication,
   JobPosting,
   UserRole,
   WorkerProfile,
@@ -46,7 +59,11 @@ import {
   markNotificationAsRead,
   shouldNotifyWorkerForNewJob,
 } from './utils/notifications';
-import { loadBrickJobsState, saveBrickJobsState } from './utils/storage';
+import {
+  BRICKJOBS_STORAGE_KEY,
+  loadBrickJobsState,
+  saveBrickJobsState,
+} from './utils/storage';
 import {
   applyThemeToDocument,
   loadThemePreference,
@@ -192,6 +209,16 @@ export default function App() {
   const [celebrationEvent, setCelebrationEvent] =
     useState<ContractCelebrationEvent | null>(null);
   const pwaInstall = usePWAInstall();
+  const stateRef = useRef<BrickJobsAppState>(state);
+  const lgpdConsentRef = useRef<LgpdConsentState>(lgpdConsent);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    lgpdConsentRef.current = lgpdConsent;
+  }, [lgpdConsent]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -245,44 +272,46 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const handleCrossTabStorage = (e: StorageEvent) => {
-      if (e.key !== 'brickjobs_rondonopolis_state_v1' || !e.newValue) return;
+      if (e.key !== BRICKJOBS_STORAGE_KEY || !e.newValue) return;
+      const prev = stateRef.current;
       const nextState = loadBrickJobsState();
-      setState((prev) => {
-        const prevNotifIds = new Set(prev.notifications.map((n) => n.id));
-        const incomingNotifs = nextState.notifications.filter(
-          (n) => !prevNotifIds.has(n.id)
+
+      const prevNotifIds = new Set(prev.notifications.map((n) => n.id));
+      const incomingNotifs = nextState.notifications.filter(
+        (n) => !prevNotifIds.has(n.id)
+      );
+      for (const notif of incomingNotifs) {
+        playNotificationSound(
+          resolveSoundProfileForNotification(notif.type),
+          soundEnabled
         );
-        for (const notif of incomingNotifs) {
-          playNotificationSound(
-            resolveSoundProfileForNotification(notif.type),
-            soundEnabled
-          );
+        void dispatchNativeBrowserNotification(
+          formatNativeNotificationPayload(notif),
+          pushPreference
+        );
+      }
+
+      const prevChatIds = new Set(prev.chatMessages.map((m) => m.id));
+      const incomingChats = nextState.chatMessages.filter(
+        (m) => !prevChatIds.has(m.id)
+      );
+      for (const msg of incomingChats) {
+        if (screen !== 'cover' && msg.senderRole !== screen) {
+          playNotificationSound('job_alert', soundEnabled);
           void dispatchNativeBrowserNotification(
-            formatNativeNotificationPayload(notif),
+            {
+              title: `BrickJobs · Nova mensagem de ${msg.senderName}`,
+              body: msg.text,
+              tag: `brickjobs-chat-${msg.applicationId}`,
+              url: `/?autostart=${screen}`,
+            },
             pushPreference
           );
         }
+      }
 
-        const prevChatIds = new Set(prev.chatMessages.map((m) => m.id));
-        const incomingChats = nextState.chatMessages.filter(
-          (m) => !prevChatIds.has(m.id)
-        );
-        for (const msg of incomingChats) {
-          if (screen !== 'cover' && msg.senderRole !== screen) {
-            playNotificationSound('job_alert', soundEnabled);
-            void dispatchNativeBrowserNotification(
-              {
-                title: `BrickJobs · Nova mensagem de ${msg.senderName}`,
-                body: msg.text,
-                tag: `brickjobs-chat-${msg.applicationId}`,
-                url: `/?autostart=${screen}`,
-              },
-              pushPreference
-            );
-          }
-        }
-        return nextState;
-      });
+      stateRef.current = nextState;
+      setState(nextState);
     };
     window.addEventListener('storage', handleCrossTabStorage);
     return () => window.removeEventListener('storage', handleCrossTabStorage);
@@ -582,26 +611,59 @@ export default function App() {
     }
   };
 
+  const resolveApplicationContext = (
+    applicationId: string
+  ):
+    | { ok: true; application: JobApplication; job: JobPosting }
+    | { ok: false; error: string } => {
+    const application = state.applications.find((a) => a.id === applicationId);
+    if (!application) {
+      return { ok: false, error: 'Candidatura não encontrada.' };
+    }
+    const job = state.jobs.find((j) => j.id === application.jobId);
+    if (!job) {
+      return { ok: false, error: 'Vaga associada não encontrada.' };
+    }
+    return { ok: true, application, job };
+  };
+
+  const resolveChatSenderName = (
+    role: UserRole,
+    application: JobApplication,
+    job?: JobPosting | null,
+    companyNameOverride?: string
+  ): string => {
+    if (role === 'contratante') {
+      return (
+        companyNameOverride?.trim() ||
+        state.companyProfile.nomeFantasia.trim() ||
+        job?.companyName ||
+        'Construtora'
+      );
+    }
+    return (
+      state.workerProfile.nomeCompleto.trim() ||
+      application.workerName ||
+      'Candidato'
+    );
+  };
+
   const handleSubmitCompanyRating = (params: {
     applicationId: string;
     stars: number;
     comment: string;
   }): { ok: boolean; error?: string } => {
-    const targetApp = state.applications.find((a) => a.id === params.applicationId);
-    if (!targetApp) {
-      return { ok: false, error: 'Candidatura não encontrada.' };
-    }
-    const relatedJob = state.jobs.find((j) => j.id === targetApp.jobId);
-    if (!relatedJob) {
-      return { ok: false, error: 'Vaga associada não encontrada.' };
+    const context = resolveApplicationContext(params.applicationId);
+    if (!context.ok) {
+      return { ok: false, error: context.error };
     }
 
     const result = createCompanyRating({
-      application: targetApp,
-      job: relatedJob,
+      application: context.application,
+      job: context.job,
       stars: params.stars,
       comment: params.comment,
-      workerName: state.workerProfile.nomeCompleto || targetApp.workerName,
+      workerName: state.workerProfile.nomeCompleto || context.application.workerName,
       existingRatings: state.companyRatings,
     });
 
@@ -668,15 +730,13 @@ export default function App() {
   };
 
   const handleTogglePushEnabled = () => {
-    setPushPreference((prev) => {
-      const nextEnabled = !prev.enabled;
-      setPushFeedback(
-        nextEnabled
-          ? 'Alertas em segundo plano reativados.'
-          : 'Alertas nativos pausados neste navegador.'
-      );
-      return { ...prev, enabled: nextEnabled };
-    });
+    const nextEnabled = !pushPreference.enabled;
+    setPushPreference((prev) => ({ ...prev, enabled: nextEnabled }));
+    setPushFeedback(
+      nextEnabled
+        ? 'Alertas em segundo plano reativados.'
+        : 'Alertas nativos pausados neste navegador.'
+    );
   };
 
   const handleDismissPushBanner = () => {
@@ -684,14 +744,12 @@ export default function App() {
   };
 
   const handleToggleSoundEnabled = () => {
-    setSoundEnabled((prev) => {
-      const next = !prev;
-      saveNotificationSoundEnabled(next);
-      if (next) {
-        playNotificationSound('job_alert', true);
-      }
-      return next;
-    });
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    saveNotificationSoundEnabled(next);
+    if (next) {
+      playNotificationSound('job_alert', true);
+    }
   };
 
   const handleTestNativePush = async () => {
@@ -739,14 +797,7 @@ export default function App() {
       return { ok: false, error: 'Candidatura não encontrada.' };
     }
     const relatedJob = state.jobs.find((j) => j.id === targetApp.jobId);
-    const senderName =
-      screen === 'contratante'
-        ? state.companyProfile.nomeFantasia.trim() ||
-          relatedJob?.companyName ||
-          'Construtora'
-        : state.workerProfile.nomeCompleto.trim() ||
-          targetApp.workerName ||
-          'Candidato';
+    const senderName = resolveChatSenderName(screen, targetApp, relatedJob);
 
     const result = createChatMessage({
       application: targetApp,
@@ -773,14 +824,11 @@ export default function App() {
     if (screen === 'cover') {
       return { ok: false, error: 'Selecione um perfil para agendar o início.' };
     }
-    const targetApp = state.applications.find((a) => a.id === params.applicationId);
-    if (!targetApp) {
-      return { ok: false, error: 'Candidatura não encontrada.' };
+    const context = resolveApplicationContext(params.applicationId);
+    if (!context.ok) {
+      return { ok: false, error: context.error };
     }
-    const relatedJob = state.jobs.find((j) => j.id === targetApp.jobId);
-    if (!relatedJob) {
-      return { ok: false, error: 'Vaga associada não encontrada.' };
-    }
+    const { application: targetApp, job: relatedJob } = context;
 
     const resolvedCompanyName =
       state.companyProfile.nomeFantasia.trim() || relatedJob.companyName;
@@ -799,12 +847,12 @@ export default function App() {
       return { ok: false, error: reminderResult.error };
     }
 
-    const senderName =
-      screen === 'contratante'
-        ? resolvedCompanyName
-        : state.workerProfile.nomeCompleto.trim() ||
-          targetApp.workerName ||
-          'Candidato';
+    const senderName = resolveChatSenderName(
+      screen,
+      targetApp,
+      relatedJob,
+      resolvedCompanyName
+    );
 
     const chatResult = createChatMessage({
       application: targetApp,
@@ -907,13 +955,23 @@ export default function App() {
     }
   };
 
+  const setActiveTabForRole = (role: UserRole, tabId: string) => {
+    if (role === 'contratante') setEmployerTab(tabId as EmployerTab);
+    else setWorkerTab(tabId as WorkerTab);
+  };
+
+  const resetTransientOverlays = () => {
+    setCelebrationEvent(null);
+    setIsChatOpen(false);
+    setActiveChatApplicationId(null);
+  };
+
   const enterRoleScreen = (role: UserRole) => {
     navigateWithTransition(role, () => {
       if (!onboardingSeen[role]) {
         setTourStepIndex(0);
         setIsTourOpen(true);
-        if (role === 'contratante') setEmployerTab('vagas');
-        else setWorkerTab('vagas');
+        setActiveTabForRole(role, 'vagas');
       } else {
         setIsTourOpen(false);
       }
@@ -925,66 +983,48 @@ export default function App() {
     setIsLgpdModalOpen(true);
   };
 
+  const updateLgpdConsent = (
+    updater: (prev: LgpdConsentState) => LgpdConsentState
+  ) => {
+    const next = updater(lgpdConsentRef.current);
+    lgpdConsentRef.current = next;
+    saveLgpdConsent(next);
+    setLgpdConsent(next);
+  };
+
   const handleAcceptAllCookies = () => {
-    setLgpdConsent((prev) => {
-      const next = acceptAllCookiesConsent(prev);
-      saveLgpdConsent(next);
-      return next;
-    });
+    updateLgpdConsent(acceptAllCookiesConsent);
   };
 
   const handleRejectOptionalCookies = () => {
-    setLgpdConsent((prev) => {
-      const next = rejectOptionalCookiesConsent(prev);
-      saveLgpdConsent(next);
-      return next;
-    });
+    updateLgpdConsent(rejectOptionalCookiesConsent);
   };
 
   const handleSaveCustomCookies = (prefs: {
     funcionais: boolean;
     analiticos: boolean;
   }) => {
-    setLgpdConsent((prev) => {
-      const next = saveCookiePreferences(prev, prefs);
-      saveLgpdConsent(next);
-      return next;
-    });
+    updateLgpdConsent((prev) => saveCookiePreferences(prev, prefs));
   };
 
   const handleSetSensitiveConsent = (granted: boolean) => {
-    setLgpdConsent((prev) => {
-      const next = setSensitiveDataConsent(prev, granted);
-      saveLgpdConsent(next);
-      return next;
-    });
+    updateLgpdConsent((prev) => setSensitiveDataConsent(prev, granted));
   };
 
   const handleResetAllLgpd = () => {
     const next = resetAllLgpdData();
+    lgpdConsentRef.current = next;
     setLgpdConsent(next);
   };
 
   const handleSelectTourStep = (nextIndex: number) => {
-    if (screen === 'cover') return;
-    const steps = getOnboardingStepsForRole(screen);
-    const clamped = Math.max(0, Math.min(nextIndex, steps.length - 1));
+    if (screen === 'cover' || activeTourSteps.length === 0) return;
+    const clamped = Math.max(0, Math.min(nextIndex, activeTourSteps.length - 1));
     setTourStepIndex(clamped);
-    const targetTab = steps[clamped]?.tabId;
+    const targetTab = activeTourSteps[clamped]?.tabId;
     if (targetTab) {
-      if (screen === 'contratante') setEmployerTab(targetTab as EmployerTab);
-      else setWorkerTab(targetTab as WorkerTab);
+      setActiveTabForRole(screen, targetTab);
     }
-  };
-
-  const handleCompleteTour = () => {
-    if (screen !== 'cover') {
-      setOnboardingSeen((prev) => markRoleOnboardingSeen(prev, screen));
-      if (screen === 'contratante') setEmployerTab('vagas');
-      else setWorkerTab('vagas');
-    }
-    setIsTourOpen(false);
-    setTourStepIndex(0);
   };
 
   const handleDismissTour = () => {
@@ -995,11 +1035,16 @@ export default function App() {
     setTourStepIndex(0);
   };
 
+  const handleCompleteTour = () => {
+    if (screen !== 'cover') {
+      setActiveTabForRole(screen, 'vagas');
+    }
+    handleDismissTour();
+  };
+
   const handlePortalTabSelect = (tabId: string) => {
-    if (screen === 'contratante') {
-      setEmployerTab(tabId as EmployerTab);
-    } else if (screen === 'contratado') {
-      setWorkerTab(tabId as WorkerTab);
+    if (screen !== 'cover') {
+      setActiveTabForRole(screen, tabId);
     }
 
     const tourResolution = resolveTourTabSelection(
@@ -1017,8 +1062,7 @@ export default function App() {
   const handleRestartTour = () => {
     if (screen === 'cover') return;
     setTourStepIndex(0);
-    if (screen === 'contratante') setEmployerTab('vagas');
-    else setWorkerTab('vagas');
+    setActiveTabForRole(screen, 'vagas');
     setIsTourOpen(true);
   };
 
@@ -1116,17 +1160,13 @@ export default function App() {
               highlightedTabId={highlightedTourTabId}
               onSelectTab={handlePortalTabSelect}
               onBackToCover={() => {
-                setCelebrationEvent(null);
+                resetTransientOverlays();
                 navigateWithTransition('cover', () => {
                   setIsTourOpen(false);
-                  setIsChatOpen(false);
-                  setActiveChatApplicationId(null);
                 });
               }}
               onSwitchRole={() => {
-                setCelebrationEvent(null);
-                setIsChatOpen(false);
-                setActiveChatApplicationId(null);
+                resetTransientOverlays();
                 enterRoleScreen(
                   activePortalRole === 'contratante' ? 'contratado' : 'contratante'
                 );
@@ -1145,59 +1185,67 @@ export default function App() {
             )}
 
             <main className="flex-1">
-              {activePortalRole === 'contratante' ? (
-                <EmployerPortal
-                  activeTab={employerTab}
-                  onChangeTab={setEmployerTab}
-                  companyProfile={state.companyProfile}
-                  onSaveCompanyProfile={handleSaveCompanyProfile}
-                  jobs={state.jobs}
-                  onCreateJob={handleCreateJob}
-                  onUpdateJobVacancies={handleUpdateJobVacancies}
-                  onToggleJobStatus={handleToggleJobStatus}
-                  workers={allWorkers}
-                  applications={state.applications}
-                  companyRatings={state.companyRatings}
-                  onAcceptApplication={handleAcceptApplication}
-                  onCompleteApplication={handleCompleteApplication}
-                  chatMessages={state.chatMessages}
-                  onOpenChat={handleOpenChat}
-                  selectedRegion={state.selectedRegion}
-                  onChangeRegion={handleChangeRegion}
-                />
-              ) : (
-                <WorkerPortal
-                  activeTab={workerTab}
-                  onChangeTab={setWorkerTab}
-                  workerProfile={state.workerProfile}
-                  onSaveWorkerProfile={handleSaveWorkerProfile}
-                  jobs={state.jobs}
-                  applications={state.applications}
-                  companyRatings={state.companyRatings}
-                  onApplyJob={handleApplyJob}
-                  onCompleteApplication={handleCompleteApplication}
-                  onOpenRatingModal={(appId) => setActiveRatingApplicationId(appId)}
-                  chatMessages={state.chatMessages}
-                  onOpenChat={handleOpenChat}
-                  notifications={state.notifications}
-                  onMarkNotificationRead={handleMarkNotificationRead}
-                  onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
-                  selectedRegion={state.selectedRegion}
-                  onChangeRegion={handleChangeRegion}
-                  initialSearchQuery={coverSearchQuery}
-                  initialProximityFilter={coverProximityFilter}
-                  pushPermission={pushPermission}
-                  pushPreference={pushPreference}
-                  isRequestingPush={isRequestingPush}
-                  pushFeedback={pushFeedback}
-                  onRequestPushPermission={handleRequestPushPermission}
-                  onTogglePushEnabled={handleTogglePushEnabled}
-                  onDismissPushBanner={handleDismissPushBanner}
-                  onTestNativePush={handleTestNativePush}
-                  workReminders={state.workReminders}
-                  onCancelWorkReminder={handleCancelWorkReminder}
-                />
-              )}
+              <Suspense
+                fallback={
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 text-sm text-[#6B7280] dark:text-[#94A3B8]">
+                    Carregando portal...
+                  </div>
+                }
+              >
+                {activePortalRole === 'contratante' ? (
+                  <EmployerPortal
+                    activeTab={employerTab}
+                    onChangeTab={setEmployerTab}
+                    companyProfile={state.companyProfile}
+                    onSaveCompanyProfile={handleSaveCompanyProfile}
+                    jobs={state.jobs}
+                    onCreateJob={handleCreateJob}
+                    onUpdateJobVacancies={handleUpdateJobVacancies}
+                    onToggleJobStatus={handleToggleJobStatus}
+                    workers={allWorkers}
+                    applications={state.applications}
+                    companyRatings={state.companyRatings}
+                    onAcceptApplication={handleAcceptApplication}
+                    onCompleteApplication={handleCompleteApplication}
+                    chatMessages={state.chatMessages}
+                    onOpenChat={handleOpenChat}
+                    selectedRegion={state.selectedRegion}
+                    onChangeRegion={handleChangeRegion}
+                  />
+                ) : (
+                  <WorkerPortal
+                    activeTab={workerTab}
+                    onChangeTab={setWorkerTab}
+                    workerProfile={state.workerProfile}
+                    onSaveWorkerProfile={handleSaveWorkerProfile}
+                    jobs={state.jobs}
+                    applications={state.applications}
+                    companyRatings={state.companyRatings}
+                    onApplyJob={handleApplyJob}
+                    onCompleteApplication={handleCompleteApplication}
+                    onOpenRatingModal={(appId) => setActiveRatingApplicationId(appId)}
+                    chatMessages={state.chatMessages}
+                    onOpenChat={handleOpenChat}
+                    notifications={state.notifications}
+                    onMarkNotificationRead={handleMarkNotificationRead}
+                    onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
+                    selectedRegion={state.selectedRegion}
+                    onChangeRegion={handleChangeRegion}
+                    initialSearchQuery={coverSearchQuery}
+                    initialProximityFilter={coverProximityFilter}
+                    pushPermission={pushPermission}
+                    pushPreference={pushPreference}
+                    isRequestingPush={isRequestingPush}
+                    pushFeedback={pushFeedback}
+                    onRequestPushPermission={handleRequestPushPermission}
+                    onTogglePushEnabled={handleTogglePushEnabled}
+                    onDismissPushBanner={handleDismissPushBanner}
+                    onTestNativePush={handleTestNativePush}
+                    workReminders={state.workReminders}
+                    onCancelWorkReminder={handleCancelWorkReminder}
+                  />
+                )}
+              </Suspense>
             </main>
 
             <MobileBottomNav

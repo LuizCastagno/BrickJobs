@@ -1,8 +1,8 @@
 /**
- * @file EmployerPortal.tsx
+ * @file src/components/EmployerPortal.tsx
  * @description Portal da Construtora (Contratante): cadastro da empresa, publicação de vagas,
- *   monitoramento meteorológico, calculadora de rescisão CLT,
- *   dashboards mensais, gestão de candidaturas e busca de profissionais.
+ *   estatísticas e ferramentas em modal (clima e rescisão CLT), gestão de candidaturas,
+ *   diretório somente leitura de profissionais e exportação CSV/PDF.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
@@ -46,7 +46,6 @@ import type {
 import { countUnreadMessagesForApplication } from '../utils/chat';
 import {
   calculateExperienceMonths,
-  calculateTotalExperienceMonths,
   formatDurationPtBr,
   formatMonthYearPtBr,
 } from '../utils/duration';

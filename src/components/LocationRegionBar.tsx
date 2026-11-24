@@ -1,5 +1,5 @@
 /**
- * @file LocationRegionBar.tsx
+ * @file src/components/LocationRegionBar.tsx
  * @description Barra de busca com seleção de região em Rondonópolis-MT, filtro de proximidade via
  *   geolocalização (km) e pesquisa por comando de voz (Web Speech API).
  */

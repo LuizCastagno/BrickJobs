@@ -1,5 +1,5 @@
 /**
- * @file SelectWrapper.tsx
+ * @file src/components/SelectWrapper.tsx
  * @description Wrapper reutilizável para controles `<select>` nativos com seta vetorial ChevronDown
  *   uniformemente alinhada à direita.
  */

@@ -1,5 +1,5 @@
 /**
- * @file UserSettingsMenu.tsx
+ * @file src/components/UserSettingsMenu.tsx
  * @description Modal responsivo (bottom sheet no mobile, diálogo central no desktop) com tema
  *   claro/escuro, instalação PWA, push nativo, controle de sons de notificação, LGPD e tour guiado.
  */
