@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
+import { AppErrorBoundary } from './components/AppErrorBoundary';
 import { AppLoadingOverlay } from './components/AppLoadingOverlay';
 import { CookieConsentBanner } from './components/CookieConsentBanner';
 import { CoverScreen } from './components/CoverScreen';
@@ -208,6 +209,8 @@ export default function App() {
   );
   const [celebrationEvent, setCelebrationEvent] =
     useState<ContractCelebrationEvent | null>(null);
+  const [portalRetryNonce, setPortalRetryNonce] = useState<number>(0);
+  const [hasPortalError, setHasPortalError] = useState<boolean>(false);
   const pwaInstall = usePWAInstall();
   const stateRef = useRef<BrickJobsAppState>(state);
   const lgpdConsentRef = useRef<LgpdConsentState>(lgpdConsent);
@@ -964,6 +967,7 @@ export default function App() {
     setCelebrationEvent(null);
     setIsChatOpen(false);
     setActiveChatApplicationId(null);
+    setHasPortalError(false);
   };
 
   const enterRoleScreen = (role: UserRole) => {
@@ -1185,67 +1189,84 @@ export default function App() {
             )}
 
             <main className="flex-1">
-              <Suspense
-                fallback={
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 text-sm text-[#6B7280] dark:text-[#94A3B8]">
-                    Carregando portal...
-                  </div>
-                }
+              <AppErrorBoundary
+                scope="portal"
+                resetKeys={[activePortalRole, portalRetryNonce]}
+                onError={() => setHasPortalError(true)}
+                onRetry={() => {
+                  setHasPortalError(false);
+                  setPortalRetryNonce((prev) => prev + 1);
+                }}
+                onBackToCover={() => {
+                  resetTransientOverlays();
+                  navigateWithTransition('cover', () => {
+                    setIsTourOpen(false);
+                  });
+                }}
               >
-                {activePortalRole === 'contratante' ? (
-                  <EmployerPortal
-                    activeTab={employerTab}
-                    onChangeTab={setEmployerTab}
-                    companyProfile={state.companyProfile}
-                    onSaveCompanyProfile={handleSaveCompanyProfile}
-                    jobs={state.jobs}
-                    onCreateJob={handleCreateJob}
-                    onUpdateJobVacancies={handleUpdateJobVacancies}
-                    onToggleJobStatus={handleToggleJobStatus}
-                    workers={allWorkers}
-                    applications={state.applications}
-                    companyRatings={state.companyRatings}
-                    onAcceptApplication={handleAcceptApplication}
-                    onCompleteApplication={handleCompleteApplication}
-                    chatMessages={state.chatMessages}
-                    onOpenChat={handleOpenChat}
-                    selectedRegion={state.selectedRegion}
-                    onChangeRegion={handleChangeRegion}
-                  />
-                ) : (
-                  <WorkerPortal
-                    activeTab={workerTab}
-                    onChangeTab={setWorkerTab}
-                    workerProfile={state.workerProfile}
-                    onSaveWorkerProfile={handleSaveWorkerProfile}
-                    jobs={state.jobs}
-                    applications={state.applications}
-                    companyRatings={state.companyRatings}
-                    onApplyJob={handleApplyJob}
-                    onCompleteApplication={handleCompleteApplication}
-                    onOpenRatingModal={(appId) => setActiveRatingApplicationId(appId)}
-                    chatMessages={state.chatMessages}
-                    onOpenChat={handleOpenChat}
-                    notifications={state.notifications}
-                    onMarkNotificationRead={handleMarkNotificationRead}
-                    onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
-                    selectedRegion={state.selectedRegion}
-                    onChangeRegion={handleChangeRegion}
-                    initialSearchQuery={coverSearchQuery}
-                    initialProximityFilter={coverProximityFilter}
-                    pushPermission={pushPermission}
-                    pushPreference={pushPreference}
-                    isRequestingPush={isRequestingPush}
-                    pushFeedback={pushFeedback}
-                    onRequestPushPermission={handleRequestPushPermission}
-                    onTogglePushEnabled={handleTogglePushEnabled}
-                    onDismissPushBanner={handleDismissPushBanner}
-                    onTestNativePush={handleTestNativePush}
-                    workReminders={state.workReminders}
-                    onCancelWorkReminder={handleCancelWorkReminder}
-                  />
-                )}
-              </Suspense>
+                <Suspense
+                  key={`${activePortalRole}-${portalRetryNonce}`}
+                  fallback={
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 text-sm text-[#6B7280] dark:text-[#94A3B8]">
+                      Carregando portal...
+                    </div>
+                  }
+                >
+                  {activePortalRole === 'contratante' ? (
+                    <EmployerPortal
+                      activeTab={employerTab}
+                      onChangeTab={setEmployerTab}
+                      companyProfile={state.companyProfile}
+                      onSaveCompanyProfile={handleSaveCompanyProfile}
+                      jobs={state.jobs}
+                      onCreateJob={handleCreateJob}
+                      onUpdateJobVacancies={handleUpdateJobVacancies}
+                      onToggleJobStatus={handleToggleJobStatus}
+                      workers={allWorkers}
+                      applications={state.applications}
+                      companyRatings={state.companyRatings}
+                      onAcceptApplication={handleAcceptApplication}
+                      onCompleteApplication={handleCompleteApplication}
+                      chatMessages={state.chatMessages}
+                      onOpenChat={handleOpenChat}
+                      selectedRegion={state.selectedRegion}
+                      onChangeRegion={handleChangeRegion}
+                    />
+                  ) : (
+                    <WorkerPortal
+                      activeTab={workerTab}
+                      onChangeTab={setWorkerTab}
+                      workerProfile={state.workerProfile}
+                      onSaveWorkerProfile={handleSaveWorkerProfile}
+                      jobs={state.jobs}
+                      applications={state.applications}
+                      companyRatings={state.companyRatings}
+                      onApplyJob={handleApplyJob}
+                      onCompleteApplication={handleCompleteApplication}
+                      onOpenRatingModal={(appId) => setActiveRatingApplicationId(appId)}
+                      chatMessages={state.chatMessages}
+                      onOpenChat={handleOpenChat}
+                      notifications={state.notifications}
+                      onMarkNotificationRead={handleMarkNotificationRead}
+                      onMarkAllNotificationsRead={handleMarkAllNotificationsRead}
+                      selectedRegion={state.selectedRegion}
+                      onChangeRegion={handleChangeRegion}
+                      initialSearchQuery={coverSearchQuery}
+                      initialProximityFilter={coverProximityFilter}
+                      pushPermission={pushPermission}
+                      pushPreference={pushPreference}
+                      isRequestingPush={isRequestingPush}
+                      pushFeedback={pushFeedback}
+                      onRequestPushPermission={handleRequestPushPermission}
+                      onTogglePushEnabled={handleTogglePushEnabled}
+                      onDismissPushBanner={handleDismissPushBanner}
+                      onTestNativePush={handleTestNativePush}
+                      workReminders={state.workReminders}
+                      onCancelWorkReminder={handleCancelWorkReminder}
+                    />
+                  )}
+                </Suspense>
+              </AppErrorBoundary>
             </main>
 
             <MobileBottomNav
@@ -1269,6 +1290,7 @@ export default function App() {
           !isInitialLoading &&
           !routeTransitionTarget &&
           !isLgpdModalOpen &&
+          !hasPortalError &&
           shouldShowCookieBanner(lgpdConsent)
         }
         hasMobileBottomNav={screen !== 'cover'}
@@ -1316,7 +1338,12 @@ export default function App() {
       />
 
       <GuidedTourModal
-        isOpen={isTourOpen && !isInitialLoading && !routeTransitionTarget}
+        isOpen={
+          isTourOpen &&
+          !isInitialLoading &&
+          !routeTransitionTarget &&
+          !hasPortalError
+        }
         steps={activeTourSteps}
         currentStepIndex={tourStepIndex}
         onSelectStep={handleSelectTourStep}
