@@ -127,6 +127,8 @@ import {
   type WorkerSafetyQuizStats,
 } from '../utils/safetyTips';
 import { CareerTipsCard } from './CareerTipsCard';
+import { ConstructionNewsTab } from './ConstructionNewsTab';
+import { ConstructionSiteSafetySection } from './ConstructionSiteSafetySection';
 import { LocationRegionBar } from './LocationRegionBar';
 import { NativePushPermissionCard } from './NativePushPermissionCard';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -135,7 +137,6 @@ import { RequiredDocumentsSection } from './RequiredDocumentsSection';
 import { SafetyLeaderboardCard } from './SafetyLeaderboardCard';
 import { SafetyTipsCard } from './SafetyTipsCard';
 import { SafetyWeeklyRemindersCard } from './SafetyWeeklyRemindersCard';
-import { ConstructionNewsTab } from './ConstructionNewsTab';
 import { SelectWrapper } from './SelectWrapper';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
 import { WorkerEarningsPanel } from './WorkerEarningsPanel';
@@ -3051,6 +3052,10 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
             transition={TAB_TRANSITION_CONFIG}
             className="mt-6 space-y-6"
           >
+            <ConstructionSiteSafetySection
+              workerRole={workerProfile.funcaoPrincipal || 'Operário da Construção Civil'}
+            />
+
             <SafetyWeeklyRemindersCard
               workerRole={workerProfile.funcaoPrincipal || 'Operário da Construção Civil'}
             />

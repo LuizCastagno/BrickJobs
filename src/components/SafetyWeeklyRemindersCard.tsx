@@ -20,7 +20,9 @@ import {
   formatCategoryBadgeStyle,
   getCuratedSafetyWeeklyReminders,
   getIsoWeekString,
+  loadCachedSafetyWeeklyPayload,
   loadWeeklyEpiChecklist,
+  saveCachedSafetyWeeklyPayload,
   toggleWeeklyEpiChecklistItem,
   type EpiCategory,
   type SafetyWeeklyPayload,
@@ -37,9 +39,11 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
   onOpenQuiz,
   className = '',
 }) => {
-  const [payload, setPayload] = useState<SafetyWeeklyPayload>(() =>
-    getCuratedSafetyWeeklyReminders()
-  );
+  const weekInfo = getIsoWeekString(new Date());
+  const [payload, setPayload] = useState<SafetyWeeklyPayload>(() => {
+    const cached = loadCachedSafetyWeeklyPayload(weekInfo.weekKey);
+    return cached ?? getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
+  });
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string>('');
   const [selectedFilter, setSelectedFilter] = useState<EpiCategory | 'todos'>('todos');
@@ -48,7 +52,6 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
     loadWeeklyEpiChecklist()
   );
 
-  const weekInfo = getIsoWeekString(new Date());
   const isMountedRef = useRef<boolean>(true);
   const requestControllerRef = useRef<AbortController | null>(null);
 
@@ -61,6 +64,18 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
   }, []);
 
   const fetchAiReminders = async (forced = false) => {
+    const cached = loadCachedSafetyWeeklyPayload(weekInfo.weekKey);
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      const offlinePayload =
+        cached ?? getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
+      setPayload(offlinePayload);
+      saveCachedSafetyWeeklyPayload(offlinePayload);
+      if (forced) {
+        setFeedback('Modo offline: exibindo diretrizes de EPIs salvas localmente.');
+      }
+      return;
+    }
+
     requestControllerRef.current?.abort();
     const controller = new AbortController();
     requestControllerRef.current = controller;
@@ -81,6 +96,7 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
         const data = (await res.json()) as SafetyWeeklyPayload;
         if (!isMountedRef.current || controller.signal.aborted) return;
         setPayload(data);
+        saveCachedSafetyWeeklyPayload(data);
         setFeedback(
           forced
             ? data.source === 'gemini'
@@ -89,14 +105,20 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
             : ''
         );
       } else {
-        setPayload(getCuratedSafetyWeeklyReminders(weekInfo.weekNumber));
+        const fallback =
+          cached ?? getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
+        setPayload(fallback);
+        saveCachedSafetyWeeklyPayload(fallback);
         if (forced) {
           setFeedback('Modo offline: exibindo diretrizes de segurança verificadas.');
         }
       }
     } catch {
       if (!isMountedRef.current || controller.signal.aborted) return;
-      setPayload(getCuratedSafetyWeeklyReminders(weekInfo.weekNumber));
+      const fallback =
+        cached ?? getCuratedSafetyWeeklyReminders(weekInfo.weekNumber);
+      setPayload(fallback);
+      saveCachedSafetyWeeklyPayload(fallback);
       if (forced) {
         setFeedback('Modo offline: diretrizes de EPIs carregadas localmente.');
       }

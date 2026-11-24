@@ -683,3 +683,41 @@ export function toggleWeeklyEpiChecklistItem(
   saveWeeklyEpiChecklist(next);
   return next;
 }
+
+const SAFETY_WEEKLY_CACHE_KEY = 'brickjobs_safety_weekly_payload_v1';
+
+export function loadCachedSafetyWeeklyPayload(
+  weekKey: string
+): SafetyWeeklyPayload | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(SAFETY_WEEKLY_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SafetyWeeklyPayload;
+    if (
+      parsed &&
+      parsed.weekKey === weekKey &&
+      Array.isArray(parsed.weeklyHighlights) &&
+      parsed.weeklyHighlights.length > 0
+    ) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedSafetyWeeklyPayload(
+  payload: SafetyWeeklyPayload
+): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(
+      SAFETY_WEEKLY_CACHE_KEY,
+      JSON.stringify(payload)
+    );
+  } catch {
+    // Ignore storage quota errors
+  }
+}
