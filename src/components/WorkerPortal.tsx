@@ -129,6 +129,7 @@ import {
 import { CareerTipsCard } from './CareerTipsCard';
 import { ConstructionNewsTab } from './ConstructionNewsTab';
 import { ConstructionSiteSafetySection } from './ConstructionSiteSafetySection';
+import { FeaturedCompaniesSection } from './FeaturedCompaniesSection';
 import { LocationRegionBar } from './LocationRegionBar';
 import { NativePushPermissionCard } from './NativePushPermissionCard';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -1755,6 +1756,17 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
               </motion.div>
             )}
           </AnimatePresence>
+
+            <FeaturedCompaniesSection
+              companyRatings={companyRatings}
+              jobs={jobs}
+              onFilterByCompany={(companyName) => {
+                setSearchQuery(companyName);
+                if (typeof window !== 'undefined') {
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+            />
 
             <SafetyTipsCard
               workerProfile={workerProfile}
