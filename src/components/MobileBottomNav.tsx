@@ -3,11 +3,6 @@
  * @description Barra inferior de navegação mobile com suporte a rolagem horizontal sem barra
  *   visível quando há 6+ abas no Portal do Trabalhador e botão de configurações.
  */
-/**
- * @file MobileBottomNav.tsx
- * @description Barra inferior de navegação mobile com suporte a rolagem horizontal sem barra
- *   visível quando há 6+ abas no Portal do Trabalhador e botão de configurações.
- */
 import React from 'react';
 import { Settings } from 'lucide-react';
 

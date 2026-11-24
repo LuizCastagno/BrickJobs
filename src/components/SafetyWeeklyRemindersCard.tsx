@@ -3,7 +3,7 @@
  * @description Seção educacional dinâmica "Dicas de Segurança no Canteiro" com lembretes
  *   semanais sobre EPIs (NR-06, NR-18, NR-35), geração via Gemini com fallback local e checklist.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Award,
@@ -53,21 +53,37 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
   );
 
   const weekInfo = getIsoWeekString(new Date());
+  const isMountedRef = useRef<boolean>(true);
+  const requestControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      requestControllerRef.current?.abort();
+    };
+  }, []);
 
   const fetchAiReminders = async (forced = false) => {
+    requestControllerRef.current?.abort();
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
     setIsLoading(true);
     setFeedback('');
     try {
       const res = await fetch('/api/safety-weekly-reminders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           role: workerRole,
           weekKey: weekInfo.weekKey,
         }),
       });
+      if (!isMountedRef.current || controller.signal.aborted) return;
       if (res.ok) {
         const data = (await res.json()) as SafetyWeeklyPayload;
+        if (!isMountedRef.current || controller.signal.aborted) return;
         setPayload(data);
         setFeedback(
           forced
@@ -83,12 +99,15 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
         }
       }
     } catch {
+      if (!isMountedRef.current || controller.signal.aborted) return;
       setPayload(getCuratedSafetyWeeklyReminders(weekInfo.weekNumber));
       if (forced) {
         setFeedback('Modo offline: diretrizes de EPIs carregadas localmente.');
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current && !controller.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -109,10 +128,12 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
     (acc, h) => acc + h.inspectionChecklist.length,
     0
   );
-  const completedChecks = Object.keys(checklist).filter((key) =>
-    payload.weeklyHighlights.some((h) =>
-      h.inspectionChecklist.some((_, idx) => `${h.id}-check-${idx}` === key)
-    )
+  const completedChecks = Object.entries(checklist).filter(
+    ([key, checked]) =>
+      Boolean(checked) &&
+      payload.weeklyHighlights.some((h) =>
+        h.inspectionChecklist.some((_, idx) => `${h.id}-check-${idx}` === key)
+      )
   ).length;
 
   return (
@@ -123,11 +144,11 @@ export const SafetyWeeklyRemindersCard: React.FC<SafetyWeeklyRemindersCardProps>
       <div className="bg-gradient-to-r from-[#1E293B] via-[#0F172A] to-[#C93B1E]/90 text-white p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-lg bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-sm">
-              <ShieldAlert className="w-3.5 h-3.5 text-[#F06449] shrink-0" aria-hidden="true" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-lg bg-white/15 text-white text-xs font-semibold backdrop-blur-sm">
+              <ShieldAlert className="w-3.5 h-3.5 text-[#FDE68A] shrink-0" aria-hidden="true" />
               <span>{payload.weekLabel || weekInfo.weekLabel}</span>
-              <span className="text-white/40">·</span>
-              <span className="text-[#F06449]">Normas NR-06, NR-11, NR-12, NR-18 & NR-35</span>
+              <span className="text-white/50">·</span>
+              <span className="text-[#FDE68A]">Normas NR-06, NR-11, NR-12, NR-18 & NR-35</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight font-display [text-wrap:balance]">
               {payload.themeTitle}

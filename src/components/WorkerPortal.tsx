@@ -265,22 +265,59 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     [notifications]
   );
 
+  const visibleApplications = useMemo(
+    () =>
+      applications
+        .map((app) => {
+          const job = jobs.find((j) => j.id === app.jobId);
+          return job ? { app, job } : null;
+        })
+        .filter((item): item is { app: JobApplication; job: JobPosting } =>
+          Boolean(item)
+        ),
+    [applications, jobs]
+  );
+
+  const prevUnreadCountRef = useRef<number>(unreadCount);
+
+  useEffect(() => {
+    if (unreadCount > prevUnreadCountRef.current) {
+      setShowNotifications(true);
+    }
+    prevUnreadCountRef.current = unreadCount;
+  }, [unreadCount]);
+
   const visibleReminders = useMemo(
     () => getVisibleWorkerReminders(workReminders),
     [workReminders]
   );
 
   // Editable worker registration state
-  const [form, setForm] = useState<WorkerProfile>(() => ({
-    ...workerProfile,
+  const normalizeWorkerFormState = (profile: WorkerProfile): WorkerProfile => ({
+    ...profile,
     experiencias:
-      workerProfile.experiencias.length > 0
-        ? workerProfile.experiencias
+      profile.experiencias.length > 0
+        ? profile.experiencias
         : [createBlankExperience()],
-    categoriasNotificacao: Array.isArray(workerProfile.categoriasNotificacao)
-      ? workerProfile.categoriasNotificacao
+    categoriasNotificacao: Array.isArray(profile.categoriasNotificacao)
+      ? profile.categoriasNotificacao
       : [],
-  }));
+  });
+
+  const [form, setForm] = useState<WorkerProfile>(() =>
+    normalizeWorkerFormState(workerProfile)
+  );
+  const lastSyncedWorkerProfileRef = useRef<string>(
+    JSON.stringify(workerProfile)
+  );
+
+  useEffect(() => {
+    const serialized = JSON.stringify(workerProfile);
+    if (serialized !== lastSyncedWorkerProfileRef.current) {
+      lastSyncedWorkerProfileRef.current = serialized;
+      setForm(normalizeWorkerFormState(workerProfile));
+    }
+  }, [workerProfile]);
   const [activeExpIndex, setActiveExpIndex] = useState<number>(0);
   const [formError, setFormError] = useState<string>('');
   const [missingDocKeys, setMissingDocKeys] = useState<RequiredDocumentKey[]>([]);
@@ -559,7 +596,9 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
 
   const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormError('');
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
+    input.value = '';
     if (!file) return;
 
     const isPdf =
@@ -577,6 +616,10 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result) {
+        setFormError('Não foi possível ler o arquivo PDF. Tente novamente.');
+        return;
+      }
       setForm((prev) => ({
         ...prev,
         tipoHistorico: 'pdf',
@@ -834,7 +877,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
       </div>
 
       {/* Inline Native Push Prompt Banner when notifications panel is closed */}
-      {!(showNotifications || unreadCount > 0) &&
+      {!showNotifications &&
         shouldShowPushPromptBanner(pushPermission, pushPreference) && (
           <div className="mt-5">
             <NativePushPermissionCard
@@ -851,7 +894,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
         )}
 
       {/* Worker Notifications Center */}
-      {(showNotifications || unreadCount > 0) && (
+      {showNotifications && (
         <section
           aria-label="Notificações do trabalhador"
           data-testid="worker-notifications-panel"
@@ -1566,7 +1609,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         <div className="text-right shrink-0">
                           <span className="font-display text-lg font-bold text-[#C93B1E] dark:text-[#F06449] tabular-nums">
                             {job.quantidadeVagas}
-                          </span>
+                          </span>{' '}
                           <span className="text-xs text-[#4B5563] dark:text-[#94A3B8] ml-1">
                             {job.quantidadeVagas === 1 ? 'vaga' : 'vagas'}
                           </span>
@@ -2913,17 +2956,15 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                   </div>
                   <div className="p-4">
                     <p className="text-sm font-semibold text-[#111827] dark:text-[#F8FAFC]">
-                      Candidaturas enviadas ({applications.length})
+                      Candidaturas enviadas ({visibleApplications.length})
                     </p>
-                    {applications.length === 0 ? (
+                    {visibleApplications.length === 0 ? (
                       <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] mt-1">
                         Você ainda não se candidatou a nenhuma vaga. Veja as oportunidades na sua região.
                       </p>
                     ) : (
                       <ul className="mt-2.5 space-y-2.5">
-                        {applications.map((app) => {
-                          const job = jobs.find((j) => j.id === app.jobId);
-                          if (!job) return null;
+                        {visibleApplications.map(({ app, job }) => {
                           const appRating = getRatingForApplication(companyRatings, app.id);
                           return (
                             <li

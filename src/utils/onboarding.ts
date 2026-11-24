@@ -42,8 +42,8 @@ export function getOnboardingStepsForRole(role: UserRole): OnboardingStep[] {
       {
         id: 'employer-cadastro',
         tabId: 'cadastro',
-        tabLabel: 'Cadastro',
-        title: 'Aba Cadastro: dados gerais da construtora',
+        tabLabel: 'Dados da Empresa',
+        title: 'Aba Dados da Empresa: perfil da construtora',
         summary:
           'Mantenha o perfil da empresa atualizado para transmitir confiança aos trabalhadores da região.',
         highlights: [
@@ -55,14 +55,14 @@ export function getOnboardingStepsForRole(role: UserRole): OnboardingStep[] {
       {
         id: 'employer-perfil',
         tabId: 'profissionais',
-        tabLabel: 'Perfil',
-        title: 'Aba Perfil: profissionais disponíveis',
+        tabLabel: 'Profissionais',
+        title: 'Aba Profissionais: registrados e disponíveis',
         summary:
-          'Consulte os perfis gerados pelos colaboradores na região de interesse da sua obra.',
+          'Visualize os contratados registrados na empresa e os profissionais disponíveis para serviço na região.',
         highlights: [
-          'Filtre trabalhadores por bairro de Rondonópolis, nome ou ocupação.',
-          'Visualize currículos anexados em PDF ou experiências com tempo total calculado.',
-          'Entre em contato direto por telefone ou aprove candidaturas recebidas.',
+          'Consulte contratados registrados com exportação rápida em PDF ou CSV.',
+          'Filtre trabalhadores disponíveis por bairro de Rondonópolis, nome ou ocupação.',
+          'Veja currículos anexados em PDF ou experiências com tempo total calculado.',
         ],
       },
     ];
@@ -109,6 +109,26 @@ export function getOnboardingStepsForRole(role: UserRole): OnboardingStep[] {
       ],
     },
   ];
+}
+
+export interface TourTabResolution {
+  nextStepIndex: number | null;
+  shouldDismissTour: boolean;
+}
+
+export function resolveTourTabSelection(
+  isTourOpen: boolean,
+  steps: OnboardingStep[],
+  clickedTabId: string
+): TourTabResolution {
+  if (!isTourOpen) {
+    return { nextStepIndex: null, shouldDismissTour: false };
+  }
+  const matchingIndex = steps.findIndex((step) => step.tabId === clickedTabId);
+  if (matchingIndex >= 0) {
+    return { nextStepIndex: matchingIndex, shouldDismissTour: false };
+  }
+  return { nextStepIndex: null, shouldDismissTour: true };
 }
 
 export function parseOnboardingSeenMap(raw: string | null): OnboardingSeenMap {

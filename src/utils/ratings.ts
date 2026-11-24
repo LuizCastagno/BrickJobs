@@ -20,10 +20,26 @@ export function isValidStarRating(stars: number): boolean {
   return Number.isInteger(stars) && stars >= 1 && stars <= 5;
 }
 
+export function canAcceptApplication(
+  application: Pick<JobApplication, 'status'> | null | undefined
+): boolean {
+  return Boolean(application && application.status === 'pendente');
+}
+
 export function canCompleteWork(
   application: Pick<JobApplication, 'status'> | null | undefined
 ): boolean {
   return Boolean(application && application.status === 'aceita');
+}
+
+export function canApplyToJob(
+  job: Pick<JobPosting, 'id' | 'status'> | null | undefined,
+  existingApplications: Pick<JobApplication, 'jobId'>[]
+): boolean {
+  if (!job || job.status !== 'aberta') {
+    return false;
+  }
+  return !existingApplications.some((app) => app.jobId === job.id);
 }
 
 export function hasApplicationBeenRated(

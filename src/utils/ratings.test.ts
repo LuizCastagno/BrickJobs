@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import type { CompanyRating, JobApplication, JobPosting } from '../types/brickjobs';
 import {
+  canAcceptApplication,
+  canApplyToJob,
   canCompleteWork,
   canRateCompanyForApplication,
   computeCompanyRatingSummary,
@@ -26,6 +28,15 @@ const sampleJob: JobPosting = {
   createdAt: '2026-11-10',
 };
 
+const pendingApp: JobApplication = {
+  id: 'app-0',
+  jobId: 'job-1',
+  workerId: 'worker-1',
+  workerName: 'João Carlos',
+  appliedAt: '2026-11-11',
+  status: 'pendente',
+};
+
 const acceptedApp: JobApplication = {
   id: 'app-1',
   jobId: 'job-1',
@@ -48,7 +59,16 @@ test('isValidStarRating validates integers 1 through 5 only', () => {
   assert.equal(isValidStarRating(3.5), false);
 });
 
-test('canCompleteWork and canRateCompanyForApplication enforce workflow transitions', () => {
+test('canAcceptApplication, canApplyToJob, canCompleteWork, and canRateCompanyForApplication enforce workflow transitions', () => {
+  assert.equal(canAcceptApplication(pendingApp), true);
+  assert.equal(canAcceptApplication(acceptedApp), false);
+  assert.equal(canAcceptApplication(completedApp), false);
+  assert.equal(canAcceptApplication(null), false);
+
+  assert.equal(canApplyToJob(sampleJob, []), true);
+  assert.equal(canApplyToJob({ ...sampleJob, status: 'encerrada' }, []), false);
+  assert.equal(canApplyToJob(sampleJob, [pendingApp]), false);
+
   assert.equal(canCompleteWork(acceptedApp), true);
   assert.equal(canCompleteWork(completedApp), false);
   assert.equal(canRateCompanyForApplication(acceptedApp, []), false);

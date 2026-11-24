@@ -3,7 +3,7 @@
  * @description Aba de estatísticas detalhadas da construtora (avaliações por ocupação, tempo médio de preenchimento, status de vagas e exportação em PDF).
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, Clock, FileText, Star, TrendingUp } from 'lucide-react';
 import {
   Bar,
@@ -184,11 +184,32 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
   );
   const [pdfExportMsg, setPdfExportMsg] = useState<string>('');
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const exportTimerRef = useRef<number | null>(null);
+  const feedbackTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (exportTimerRef.current !== null) {
+        window.clearTimeout(exportTimerRef.current);
+      }
+      if (feedbackTimerRef.current !== null) {
+        window.clearTimeout(feedbackTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleExportReport = () => {
+    if (isExportingPdf) return;
     setPdfExportMsg('');
     setIsExportingPdf(true);
-    setTimeout(() => {
+    if (exportTimerRef.current !== null) {
+      window.clearTimeout(exportTimerRef.current);
+    }
+    if (feedbackTimerRef.current !== null) {
+      window.clearTimeout(feedbackTimerRef.current);
+    }
+    exportTimerRef.current = window.setTimeout(() => {
+      exportTimerRef.current = null;
       const res = exportEmployerReportPdf(companyProfile, jobs, companyRatings);
       setIsExportingPdf(false);
       if (res.ok) {
@@ -196,7 +217,10 @@ export const EmployerStatisticsTab: React.FC<EmployerStatisticsTabProps> = ({
       } else {
         setPdfExportMsg(res.error);
       }
-      setTimeout(() => setPdfExportMsg(''), 5000);
+      feedbackTimerRef.current = window.setTimeout(() => {
+        feedbackTimerRef.current = null;
+        setPdfExportMsg('');
+      }, 5000);
     }, 250);
   };
 

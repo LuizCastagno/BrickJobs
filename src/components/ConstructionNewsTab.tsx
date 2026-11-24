@@ -3,7 +3,7 @@
  * @description Aba "Notícias da Construção" do Portal do Trabalhador com headlines sobre obras e
  *   infraestrutura em Mato Grosso, filtragem por categoria/texto e busca via Search Grounding.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ExternalLink,
   Filter,
@@ -42,13 +42,31 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<string>('');
 
+  const isMountedRef = useRef<boolean>(true);
+  const requestControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      requestControllerRef.current?.abort();
+    };
+  }, []);
+
   const fetchNews = async (forced = false) => {
+    requestControllerRef.current?.abort();
+    const controller = new AbortController();
+    requestControllerRef.current = controller;
     setIsLoading(true);
     setFeedback('');
     try {
-      const res = await fetch('/api/construction-news');
+      const res = await fetch('/api/construction-news', {
+        signal: controller.signal,
+      });
+      if (!isMountedRef.current || controller.signal.aborted) return;
       if (res.ok) {
         const data = (await res.json()) as ConstructionNewsPayload;
+        if (!isMountedRef.current || controller.signal.aborted) return;
         setPayload(data);
         if (forced) {
           setFeedback(
@@ -64,12 +82,15 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
         }
       }
     } catch {
+      if (!isMountedRef.current || controller.signal.aborted) return;
       setPayload(getCuratedConstructionNews());
       if (forced) {
         setFeedback('Feed local carregado com dados verificados de Mato Grosso.');
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current && !controller.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -88,11 +109,11 @@ export const ConstructionNewsTab: React.FC<ConstructionNewsTabProps> = ({
       <div className="rounded-2xl bg-gradient-to-r from-[#111827] via-[#1E293B] to-[#C93B1E]/80 text-white p-5 sm:p-7 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1.5 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-lg bg-white/10 text-white/90 text-xs font-semibold backdrop-blur-sm">
-              <Newspaper className="w-3.5 h-3.5 text-[#F06449] shrink-0" aria-hidden="true" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-lg bg-white/15 text-white text-xs font-semibold backdrop-blur-sm">
+              <Newspaper className="w-3.5 h-3.5 text-[#FDE68A] shrink-0" aria-hidden="true" />
               <span>Headlines de Mato Grosso</span>
-              <span className="text-white/40">·</span>
-              <span className="text-[#F06449]">Google Search Grounding</span>
+              <span className="text-white/50">·</span>
+              <span className="text-[#FDE68A]">Google Search Grounding</span>
             </div>
             <h2 className="text-xl sm:text-3xl font-bold tracking-tight font-display [text-wrap:balance]">
               Notícias da Construção e Infraestrutura

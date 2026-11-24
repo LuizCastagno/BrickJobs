@@ -4,7 +4,7 @@
  *   monitoramento meteorológico, calculadora de rescisão CLT,
  *   dashboards mensais, gestão de candidaturas e busca de profissionais.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Building2,
@@ -146,12 +146,21 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
 }) => {
   // Company registration state
   const [companyForm, setCompanyForm] = useState<CompanyProfile>(companyProfile);
+  const lastSyncedCompanyProfileRef = useRef<string>(JSON.stringify(companyProfile));
   const [companyError, setCompanyError] = useState('');
   const [companySavedMsg, setCompanySavedMsg] = useState('');
   const [companyMissingDocKeys, setCompanyMissingDocKeys] = useState<
     RequiredDocumentKey[]
   >([]);
   const [companySexError, setCompanySexError] = useState(false);
+
+  useEffect(() => {
+    const serialized = JSON.stringify(companyProfile);
+    if (serialized !== lastSyncedCompanyProfileRef.current) {
+      lastSyncedCompanyProfileRef.current = serialized;
+      setCompanyForm(companyProfile);
+    }
+  }, [companyProfile]);
 
   // Job posting form state
   const [selectedRoleOption, setSelectedRoleOption] = useState<string>('Pedreiro');
@@ -233,10 +242,49 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
     [workers, applications, jobs, companyProfile.nomeFantasia]
   );
 
+  const visibleApplications = useMemo(
+    () =>
+      applications
+        .map((app) => {
+          const relatedJob = jobs.find((j) => j.id === app.jobId);
+          return relatedJob ? { app, relatedJob } : null;
+        })
+        .filter((item): item is { app: JobApplication; relatedJob: JobPosting } =>
+          Boolean(item)
+        ),
+    [applications, jobs]
+  );
+
+  const exportRegisteredTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (exportRegisteredTimerRef.current !== null) {
+        window.clearTimeout(exportRegisteredTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!employerModalMode) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setEmployerModalMode(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [employerModalMode]);
+
   const handleExportRegisteredPdf = () => {
+    if (isExportingRegistered) return;
     setRegisteredExportFeedback(null);
     setIsExportingRegistered(true);
-    setTimeout(() => {
+    if (exportRegisteredTimerRef.current !== null) {
+      window.clearTimeout(exportRegisteredTimerRef.current);
+    }
+    exportRegisteredTimerRef.current = window.setTimeout(() => {
+      exportRegisteredTimerRef.current = null;
       const res = exportRegisteredProfessionalsPdf(
         companyProfile,
         professionalsDirectory.registrados
@@ -497,14 +545,14 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             </p>
             <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">Suas vagas abertas</p>
           </div>
-          <div className="h-8 w-px bg-[#E5E7EB] dark:bg-[#1E293B]" aria-hidden="true" />
+          <div className="hidden sm:block h-8 w-px bg-[#E5E7EB] dark:bg-[#1E293B]" aria-hidden="true" />
           <div>
             <p className="font-display text-2xl font-bold text-[#111827] dark:text-[#F8FAFC] tabular-nums">
               {professionalsDirectory.disponiveis.length}
             </p>
             <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">Profissionais disponíveis</p>
           </div>
-          <div className="h-8 w-px bg-[#E5E7EB] dark:bg-[#1E293B]" aria-hidden="true" />
+          <div className="hidden sm:block h-8 w-px bg-[#E5E7EB] dark:bg-[#1E293B]" aria-hidden="true" />
           <div data-testid="employer-header-rating">
             <p className="font-display text-2xl font-bold text-[#111827] dark:text-[#F8FAFC] tabular-nums inline-flex items-center gap-1.5">
               <Star
@@ -1081,7 +1129,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                       <div className="text-right">
                         <span className="font-display text-xl font-bold text-[#111827] dark:text-[#F8FAFC] tabular-nums">
                           {job.quantidadeVagas}
-                        </span>
+                        </span>{' '}
                         <span className="text-xs text-[#4B5563] dark:text-[#94A3B8] ml-1">
                           {job.quantidadeVagas === 1 ? 'vaga' : 'vagas'}
                         </span>
@@ -1161,10 +1209,10 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
             {/* Received Worker Applications */}
             <div className="pt-4 border-t border-[#E5E7EB] dark:border-[#1E293B] space-y-3" data-testid="employer-applications-list">
               <h2 className="font-display text-lg font-bold text-[#111827] dark:text-[#F8FAFC]">
-                Candidaturas recebidas ({applications.length})
+                Candidaturas recebidas ({visibleApplications.length})
               </h2>
 
-              {applications.length === 0 ? (
+              {visibleApplications.length === 0 ? (
                 <div className="bg-white dark:bg-[#111827] border border-[#E5E7EB] dark:border-[#1E293B] rounded-2xl p-5">
                   <p className="text-sm text-[#4B5563] dark:text-[#94A3B8]">
                     Nenhuma candidatura recebida ainda. Quando um colaborador se candidatar a uma vaga, ela aparecerá aqui para aprovação.
@@ -1172,9 +1220,7 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {applications.map((app) => {
-                    const relatedJob = jobs.find((j) => j.id === app.jobId);
-                    if (!relatedJob) return null;
+                  {visibleApplications.map(({ app, relatedJob }) => {
                     const isAccepted = app.status === 'aceita';
                     const isCompleted = app.status === 'concluida';
                     const canOpenChat = isAccepted || isCompleted;
@@ -2132,9 +2178,13 @@ export const EmployerPortal: React.FC<EmployerPortalProps> = ({
               : 'Avisos de Chuva no Canteiro e na Cidade'
           }
           data-testid="employer-tools-modal"
+          onClick={() => setEmployerModalMode(null)}
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/55 backdrop-blur-sm"
         >
-          <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#F4F5F7] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] p-4 sm:p-6 space-y-4">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-[#F4F5F7] dark:bg-[#0B1120] border border-[#E5E7EB] dark:border-[#1E293B] p-4 sm:p-6 space-y-4"
+          >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div
                 role="group"

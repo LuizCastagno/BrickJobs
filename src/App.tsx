@@ -58,6 +58,7 @@ import {
   getOnboardingStepsForRole,
   loadOnboardingSeenState,
   markRoleOnboardingSeen,
+  resolveTourTabSelection,
   type OnboardingSeenMap,
 } from './utils/onboarding';
 import {
@@ -76,7 +77,12 @@ import {
   type NativePushPermission,
   type NativePushPreference,
 } from './utils/nativeNotifications';
-import { canCompleteWork, createCompanyRating } from './utils/ratings';
+import {
+  canAcceptApplication,
+  canApplyToJob,
+  canCompleteWork,
+  createCompanyRating,
+} from './utils/ratings';
 import {
   cancelWorkReminder,
   collectDueReminders,
@@ -429,7 +435,7 @@ export default function App() {
     const newJob: JobPosting = {
       ...jobInput,
       prioridade: normalizeJobPriority(jobInput.prioridade),
-      id: `job-${Date.now()}`,
+      id: `job-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       status: 'aberta',
       createdAt: new Date().toISOString().slice(0, 10),
     };
@@ -495,14 +501,14 @@ export default function App() {
 
   const handleApplyJob = (job: JobPosting) => {
     setState((prev) => {
-      if (prev.applications.some((a) => a.jobId === job.id)) {
+      if (!canApplyToJob(job, prev.applications)) {
         return prev;
       }
       return {
         ...prev,
         applications: [
           {
-            id: `app-${Date.now()}`,
+            id: `app-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             jobId: job.id,
             workerId: prev.workerProfile.id,
             workerName: prev.workerProfile.nomeCompleto,
@@ -517,7 +523,7 @@ export default function App() {
 
   const handleAcceptApplication = (applicationId: string) => {
     const targetApp = state.applications.find((a) => a.id === applicationId);
-    if (!targetApp || targetApp.status === 'aceita') {
+    if (!targetApp || !canAcceptApplication(targetApp)) {
       return;
     }
     const targetJob = state.jobs.find((j) => j.id === targetApp.jobId);
@@ -971,7 +977,7 @@ export default function App() {
     }
   };
 
-  const handleDismissTour = () => {
+  const handleCompleteTour = () => {
     if (screen !== 'cover') {
       setOnboardingSeen((prev) => markRoleOnboardingSeen(prev, screen));
       if (screen === 'contratante') setEmployerTab('vagas');
@@ -979,6 +985,33 @@ export default function App() {
     }
     setIsTourOpen(false);
     setTourStepIndex(0);
+  };
+
+  const handleDismissTour = () => {
+    if (screen !== 'cover') {
+      setOnboardingSeen((prev) => markRoleOnboardingSeen(prev, screen));
+    }
+    setIsTourOpen(false);
+    setTourStepIndex(0);
+  };
+
+  const handlePortalTabSelect = (tabId: string) => {
+    if (screen === 'contratante') {
+      setEmployerTab(tabId as EmployerTab);
+    } else if (screen === 'contratado') {
+      setWorkerTab(tabId as WorkerTab);
+    }
+
+    const tourResolution = resolveTourTabSelection(
+      isTourOpen,
+      activeTourSteps,
+      tabId
+    );
+    if (tourResolution.nextStepIndex !== null) {
+      setTourStepIndex(tourResolution.nextStepIndex);
+    } else if (tourResolution.shouldDismissTour) {
+      handleDismissTour();
+    }
   };
 
   const handleRestartTour = () => {
@@ -1081,13 +1114,7 @@ export default function App() {
                 activePortalRole === 'contratante' ? employerTab : workerTab
               }
               highlightedTabId={highlightedTourTabId}
-              onSelectTab={(tabId) => {
-                if (activePortalRole === 'contratante') {
-                  setEmployerTab(tabId as EmployerTab);
-                } else {
-                  setWorkerTab(tabId as WorkerTab);
-                }
-              }}
+              onSelectTab={handlePortalTabSelect}
               onBackToCover={() => {
                 setCelebrationEvent(null);
                 navigateWithTransition('cover', () => {
@@ -1183,13 +1210,7 @@ export default function App() {
                 activePortalRole === 'contratante' ? employerTab : workerTab
               }
               highlightedTabId={highlightedTourTabId}
-              onSelectTab={(tabId) => {
-                if (activePortalRole === 'contratante') {
-                  setEmployerTab(tabId as EmployerTab);
-                } else {
-                  setWorkerTab(tabId as WorkerTab);
-                }
-              }}
+              onSelectTab={handlePortalTabSelect}
             />
           </motion.div>
         )}
@@ -1251,7 +1272,7 @@ export default function App() {
         steps={activeTourSteps}
         currentStepIndex={tourStepIndex}
         onSelectStep={handleSelectTourStep}
-        onComplete={handleDismissTour}
+        onComplete={handleCompleteTour}
         onSkip={handleDismissTour}
       />
 

@@ -4,9 +4,10 @@ import {
   getOnboardingStepsForRole,
   markRoleOnboardingSeen,
   parseOnboardingSeenMap,
+  resolveTourTabSelection,
 } from './onboarding.ts';
 
-test('getOnboardingStepsForRole provides Vagas, Cadastro, and Perfil steps for both roles', () => {
+test('getOnboardingStepsForRole provides aligned step labels and tabIds for both roles', () => {
   const workerSteps = getOnboardingStepsForRole('contratado');
   assert.equal(workerSteps.length, 3);
   assert.deepEqual(
@@ -22,12 +23,31 @@ test('getOnboardingStepsForRole provides Vagas, Cadastro, and Perfil steps for b
   assert.equal(employerSteps.length, 3);
   assert.deepEqual(
     employerSteps.map((s) => s.tabLabel),
-    ['Vagas', 'Cadastro', 'Perfil']
+    ['Vagas', 'Dados da Empresa', 'Profissionais']
   );
   assert.deepEqual(
     employerSteps.map((s) => s.tabId),
     ['vagas', 'cadastro', 'profissionais']
   );
+});
+
+test('resolveTourTabSelection syncs step index or closes tour on non-tour tabs', () => {
+  const employerSteps = getOnboardingStepsForRole('contratante');
+
+  assert.deepEqual(resolveTourTabSelection(false, employerSteps, 'estatisticas'), {
+    nextStepIndex: null,
+    shouldDismissTour: false,
+  });
+
+  assert.deepEqual(resolveTourTabSelection(true, employerSteps, 'profissionais'), {
+    nextStepIndex: 2,
+    shouldDismissTour: false,
+  });
+
+  assert.deepEqual(resolveTourTabSelection(true, employerSteps, 'estatisticas'), {
+    nextStepIndex: null,
+    shouldDismissTour: true,
+  });
 });
 
 test('parseOnboardingSeenMap handles null, malformed JSON, and valid role flags', () => {
