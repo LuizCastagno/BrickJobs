@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Clock,
   Download,
+  Eye,
   FileText,
   Flame,
   HardHat,
@@ -130,6 +131,7 @@ import { CareerTipsCard } from './CareerTipsCard';
 import { ConstructionNewsTab } from './ConstructionNewsTab';
 import { ConstructionSiteSafetySection } from './ConstructionSiteSafetySection';
 import { FeaturedCompaniesSection } from './FeaturedCompaniesSection';
+import { JobDetailsModal } from './JobDetailsModal';
 import { LocationRegionBar } from './LocationRegionBar';
 import { NativePushPermissionCard } from './NativePushPermissionCard';
 import { ProfileAvatar } from './ProfileAvatar';
@@ -178,6 +180,7 @@ interface WorkerPortalProps {
   onChangeRegion: (region: string) => void;
   initialSearchQuery?: string;
   initialProximityFilter?: ProximityFilterState | null;
+  initialJobId?: string;
   pushPermission: NativePushPermission;
   pushPreference: NativePushPreference;
   isRequestingPush: boolean;
@@ -222,6 +225,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
   onChangeRegion,
   initialSearchQuery = '',
   initialProximityFilter = null,
+  initialJobId = '',
   pushPermission,
   pushPreference,
   isRequestingPush,
@@ -253,6 +257,17 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
     loadWorkerSafetyStats()
   );
   const [lastPointsEarned, setLastPointsEarned] = useState<number | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(() =>
+    initialJobId.trim() ? initialJobId.trim() : null
+  );
+
+  const selectedJob = useMemo(
+    () =>
+      selectedJobId
+        ? jobs.find((item) => item.id === selectedJobId) ?? null
+        : null,
+    [jobs, selectedJobId]
+  );
 
   const handleSafetyQuizComplete = (summary: SafetyQuizSummary) => {
     setSafetyStats((prev) => {
@@ -1678,76 +1693,88 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                         <span>{job.telefoneContato}</span>
                       </span>
 
-                      {existingApplication ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-semibold text-[#047857] dark:text-[#34D399] inline-flex items-center gap-1.5">
-                            <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
-                            <span>
-                              {isCompleted
-                                ? 'Trabalho concluído'
-                                : isAccepted
-                                  ? 'Candidatura aceita'
-                                  : 'Candidatura enviada'}
-                            </span>
-                          </span>
-
-                          {canOpenChat && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenChat(existingApplication.id)}
-                              data-testid={`worker-open-chat-${job.id}`}
-                              className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                            >
-                              <MessageSquare className="w-3.5 h-3.5 shrink-0 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
-                              <span>
-                                Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
-                              </span>
-                            </button>
-                          )}
-
-                          {canCompleteWork(existingApplication) && (
-                            <button
-                              type="button"
-                              onClick={() => onCompleteApplication(existingApplication.id)}
-                              data-testid={`worker-complete-work-${job.id}`}
-                              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-1.5 active:scale-[0.98] transition-all cursor-pointer"
-                            >
-                              <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                              <span>Concluir trabalho</span>
-                            </button>
-                          )}
-
-                          {canRateCompanyForApplication(existingApplication, companyRatings) && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenRatingModal(existingApplication.id)}
-                              data-testid={`worker-rate-company-${job.id}`}
-                              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-xs font-semibold inline-flex items-center gap-1.5 active:scale-[0.98] transition-all cursor-pointer"
-                            >
-                              <Star className="w-3.5 h-3.5 shrink-0 fill-current" aria-hidden="true" />
-                              <span>Avaliar empresa</span>
-                            </button>
-                          )}
-
-                          {existingRating && (
-                            <span
-                              className="text-xs font-semibold text-amber-700 dark:text-amber-400 inline-flex items-center gap-1 tabular-nums"
-                              data-testid={`worker-rated-badge-${job.id}`}
-                            >
-                              <Star className="w-3.5 h-3.5 fill-current shrink-0" aria-hidden="true" />
-                              <span>Sua nota: {existingRating.stars}/5</span>
-                            </span>
-                          )}
-                        </div>
-                      ) : (
+                      <div className="flex flex-wrap items-center gap-2">
                         <button
                           type="button"
-                          onClick={() => handleApplyClick(job)}
-                          className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
+                          onClick={() => setSelectedJobId(job.id)}
+                          data-testid={`job-details-btn-${job.id}`}
+                          className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
-                          Candidatar-se
+                          <Eye className="w-3.5 h-3.5 text-[#C93B1E] dark:text-[#F06449] shrink-0" aria-hidden="true" />
+                          <span>Ver detalhes</span>
                         </button>
-                      )}
+
+                        {existingApplication ? (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-semibold text-[#047857] dark:text-[#34D399] inline-flex items-center gap-1.5">
+                              <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+                              <span>
+                                {isCompleted
+                                  ? 'Trabalho concluído'
+                                  : isAccepted
+                                    ? 'Candidatura aceita'
+                                    : 'Candidatura enviada'}
+                              </span>
+                            </span>
+
+                            {canOpenChat && (
+                              <button
+                                type="button"
+                                onClick={() => onOpenChat(existingApplication.id)}
+                                data-testid={`worker-open-chat-${job.id}`}
+                                className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#0F172A] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 shrink-0 text-[#C93B1E] dark:text-[#F06449]" aria-hidden="true" />
+                                <span>
+                                  Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+                                </span>
+                              </button>
+                            )}
+
+                            {canCompleteWork(existingApplication) && (
+                              <button
+                                type="button"
+                                onClick={() => onCompleteApplication(existingApplication.id)}
+                                data-testid={`worker-complete-work-${job.id}`}
+                                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs font-semibold inline-flex items-center gap-1.5 active:scale-[0.98] transition-all cursor-pointer"
+                              >
+                                <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                                <span>Concluir trabalho</span>
+                              </button>
+                            )}
+
+                            {canRateCompanyForApplication(existingApplication, companyRatings) && (
+                              <button
+                                type="button"
+                                onClick={() => onOpenRatingModal(existingApplication.id)}
+                                data-testid={`worker-rate-company-${job.id}`}
+                                className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#C93B1E] hover:bg-[#B23319] text-white text-xs font-semibold inline-flex items-center gap-1.5 active:scale-[0.98] transition-all cursor-pointer"
+                              >
+                                <Star className="w-3.5 h-3.5 shrink-0 fill-current" aria-hidden="true" />
+                                <span>Avaliar empresa</span>
+                              </button>
+                            )}
+
+                            {existingRating && (
+                              <span
+                                className="text-xs font-semibold text-amber-700 dark:text-amber-400 inline-flex items-center gap-1 tabular-nums"
+                                data-testid={`worker-rated-badge-${job.id}`}
+                              >
+                                <Star className="w-3.5 h-3.5 fill-current shrink-0" aria-hidden="true" />
+                                <span>Sua nota: {existingRating.stars}/5</span>
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleApplyClick(job)}
+                            className="min-h-[44px] px-4 py-2 rounded-xl bg-[#111827] hover:bg-[#1F2937] dark:bg-[#F8FAFC] dark:hover:bg-[#E2E8F0] text-white dark:text-[#0F172A] text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] cursor-pointer"
+                          >
+                            Candidatar-se
+                          </button>
+                        )}
+                      </div>
                     </div>
                       </motion.article>
                     );
@@ -3106,6 +3133,38 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <JobDetailsModal
+        job={selectedJob}
+        distanceKm={selectedJob ? distanceByJobId.get(selectedJob.id) : undefined}
+        existingApplication={
+          selectedJob ? applicationsByJobId.get(selectedJob.id) : undefined
+        }
+        companyRatings={companyRatings}
+        unreadChatCount={
+          selectedJob && applicationsByJobId.get(selectedJob.id)
+            ? countUnreadMessagesForApplication(
+                chatMessages,
+                applicationsByJobId.get(selectedJob.id)!.id,
+                'contratado'
+              )
+            : 0
+        }
+        onClose={() => setSelectedJobId(null)}
+        onApply={(targetJob) => {
+          setSelectedJobId(null);
+          handleApplyClick(targetJob);
+        }}
+        onOpenChat={(appId) => {
+          setSelectedJobId(null);
+          onOpenChat(appId);
+        }}
+        onCompleteApplication={(appId) => onCompleteApplication(appId)}
+        onOpenRatingModal={(appId) => {
+          setSelectedJobId(null);
+          onOpenRatingModal(appId);
+        }}
+      />
     </div>
   );
 };

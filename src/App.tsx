@@ -152,8 +152,15 @@ function getInitialScreen(): AppScreen {
   const params = new URLSearchParams(window.location.search);
   const autostart = params.get('autostart');
   if (autostart === 'contratante') return 'contratante';
-  if (autostart === 'contratado' || autostart === '1') return 'contratado';
+  if (autostart === 'contratado' || autostart === '1' || params.get('vaga')) {
+    return 'contratado';
+  }
   return 'cover';
+}
+
+function getInitialJobId(): string {
+  if (typeof window === 'undefined') return '';
+  return new URLSearchParams(window.location.search).get('vaga')?.trim() || '';
 }
 
 export default function App() {
@@ -162,6 +169,7 @@ export default function App() {
   const [employerTab, setEmployerTab] = useState<EmployerTab>('vagas');
   const [workerTab, setWorkerTab] = useState<WorkerTab>('vagas');
   const [coverSearchQuery, setCoverSearchQuery] = useState<string>('');
+  const [initialJobId] = useState<string>(() => getInitialJobId());
   const [coverProximityFilter, setCoverProximityFilter] =
     useState<ProximityFilterState | null>(null);
   const [storageWarning, setStorageWarning] = useState<string>('');
@@ -1253,6 +1261,7 @@ export default function App() {
                       onChangeRegion={handleChangeRegion}
                       initialSearchQuery={coverSearchQuery}
                       initialProximityFilter={coverProximityFilter}
+                      initialJobId={initialJobId}
                       pushPermission={pushPermission}
                       pushPreference={pushPreference}
                       isRequestingPush={isRequestingPush}
