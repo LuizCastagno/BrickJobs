@@ -143,7 +143,9 @@ import { SafetyWeeklyRemindersCard } from './SafetyWeeklyRemindersCard';
 import { SelectWrapper } from './SelectWrapper';
 import { SkillTagFilterBar } from './SkillTagFilterBar';
 import { WorkerEarningsPanel } from './WorkerEarningsPanel';
+import { WorkerCompetencySuggestionsCard } from './WorkerCompetencySuggestionsCard';
 import { WorkerProductivityPanel } from './WorkerProductivityPanel';
+import { normalizeAppliedCompetencies } from '../utils/workerCompetencySuggestions';
 import {
   formatRegistrantSexLabel,
   getResolvedDocumentRequirements,
@@ -316,6 +318,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
       profile.experiencias.length > 0
         ? profile.experiencias
         : [createBlankExperience()],
+    competencias: normalizeAppliedCompetencies(profile.competencias),
     categoriasNotificacao: Array.isArray(profile.categoriasNotificacao)
       ? profile.categoriasNotificacao
       : [],
@@ -746,6 +749,7 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
       telefone: form.telefone.trim(),
       email: form.email.trim(),
       resumoProfissional: form.resumoProfissional.trim(),
+      competencias: normalizeAppliedCompetencies(form.competencias),
       experiencias: sanitizedExperiences,
       documentosAnexos: form.documentosAnexos ?? {},
       categoriasNotificacao: form.categoriasNotificacao ?? [],
@@ -2500,6 +2504,17 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                 )}
               </div>
             )}
+
+            <WorkerCompetencySuggestionsCard
+              funcaoPrincipal={form.funcaoPrincipal}
+              resumoProfissional={form.resumoProfissional}
+              experiencias={form.experiencias}
+              tipoHistorico={form.tipoHistorico}
+              appliedCompetencies={form.competencias ?? []}
+              onChangeAppliedCompetencies={(next) =>
+                setForm((prev) => ({ ...prev, competencias: next }))
+              }
+            />
           </section>
 
           <RequiredDocumentsSection
@@ -2803,6 +2818,27 @@ export const WorkerPortal: React.FC<WorkerPortalProps> = ({
                     </div>
                   )}
                 </div>
+
+                {workerProfile.competencias && workerProfile.competencias.length > 0 && (
+                  <div
+                    className="p-5 sm:p-6 border-b border-[#E5E7EB] dark:border-[#1E293B]"
+                    data-testid="worker-profile-competencies-summary"
+                  >
+                    <h3 className="font-display text-base font-bold text-[#111827] dark:text-[#F8FAFC]">
+                      Competências técnicas selecionadas ({workerProfile.competencias.length})
+                    </h3>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      {workerProfile.competencias.map((comp) => (
+                        <span
+                          key={comp}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#F3F4F6] dark:bg-[#1E293B] text-[#111827] dark:text-[#F8FAFC] border border-[#E5E7EB] dark:border-[#334155]"
+                        >
+                          {comp}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Attached Required Documents Summary */}
                 <div

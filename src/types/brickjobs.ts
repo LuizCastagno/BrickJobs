@@ -109,6 +109,7 @@ export interface WorkerProfile {
   pdfCurriculo: PdfResume | null;
   experiencias: WorkExperience[];
   resumoProfissional: string;
+  competencias?: string[];
   fotoPerfilUrl?: string;
   documentosAnexos?: RequiredDocumentsMap;
   categoriasNotificacao?: string[];

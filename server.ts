@@ -1,14 +1,15 @@
 /**
  * @file server.ts
  * @description Servidor Express do BrickJobs. Fornece rotas `/api/rain-alerts`, `/api/career-tips`,
- *   `/api/safety-weekly-reminders` e `/api/construction-news`, além de servir o Vite em dev e `dist/` em produção.
+ *   `/api/safety-weekly-reminders`, `/api/construction-news` e `/api/worker-competencies`,
+ *   além de servir o Vite em dev e `dist/` em produção.
  */
 import 'dotenv/config';
 import http from 'node:http';
 import express, { type Request, type Response } from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 import {
   getCuratedCareerTips,
   getIsoWeekInfo,
@@ -34,7 +35,12 @@ import {
   parseConstructionNewsPayload,
   type ConstructionNewsPayload,
 } from './src/utils/constructionNews.ts';
-import { createGeminiCooldownGuard } from './src/utils/geminiQuota.ts';
+import { createGeminiCooldownGuard, extractErrorMessage, isGeminiQuotaError } from './src/utils/geminiQuota.ts';
+import {
+  buildCompetencyAnalysisRequestPayload,
+  parseGeminiCompetencySuggestions,
+  type WorkerCompetencyAnalysisResult,
+} from './src/utils/workerCompetencySuggestions.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,7 +69,92 @@ const safetyWeeklyCache = new Map<
   { expiresAt: number; payload: SafetyWeeklyPayload }
 >();
 
+const WORKER_COMPETENCIES_CACHE_TTL_MS = 30 * 60 * 1000;
+const workerCompetenciesCache = new Map<
+  string,
+  { expiresAt: number; payload: WorkerCompetencyAnalysisResult }
+>();
+
 const geminiCooldown = createGeminiCooldownGuard();
+
+function extractHttpStatus(err: unknown): number | null {
+  if (err && typeof err === 'object') {
+    const obj = err as {
+      status?: unknown;
+      code?: unknown;
+      error?: { code?: unknown };
+    };
+    if (typeof obj.status === 'number' && obj.status >= 400 && obj.status < 600) {
+      return obj.status;
+    }
+    if (typeof obj.code === 'number' && obj.code >= 400 && obj.code < 600) {
+      return obj.code;
+    }
+    if (
+      typeof obj.error?.code === 'number' &&
+      obj.error.code >= 400 &&
+      obj.error.code < 600
+    ) {
+      return obj.error.code;
+    }
+  }
+  const msg = extractErrorMessage(err);
+  if (/API_KEY_INVALID/i.test(msg)) return 400;
+  if (/PERMISSION_DENIED/i.test(msg)) return 403;
+  if (/NOT_FOUND/i.test(msg)) return 404;
+  if (isGeminiQuotaError(err)) return 429;
+  return null;
+}
+
+function isRetryableGeminiError(err: unknown): boolean {
+  const status = extractHttpStatus(err);
+  if (status === 400 || status === 401 || status === 403 || status === 404) {
+    return false;
+  }
+  return true;
+}
+
+function formatGeminiCompetencyError(err: unknown): {
+  status: number;
+  error: string;
+} {
+  const status = extractHttpStatus(err);
+  const rawMessage = extractErrorMessage(err);
+
+  if (status === 403 || /PERMISSION_DENIED/i.test(rawMessage)) {
+    return {
+      status: 403,
+      error:
+        'A chave da Gemini API não tem permissão para esta solicitação. Verifique a chave configurada em Settings > Secrets.',
+    };
+  }
+  if (status === 400 || /API_KEY_INVALID/i.test(rawMessage)) {
+    return {
+      status: 400,
+      error:
+        'Chave da Gemini API inválida ou solicitação malformada. Confira a chave configurada em Settings > Secrets.',
+    };
+  }
+  if (status === 404 || /NOT_FOUND/i.test(rawMessage)) {
+    return {
+      status: 404,
+      error:
+        'Modelo Gemini selecionado não encontrado ou indisponível no momento.',
+    };
+  }
+  if (status === 429 || isGeminiQuotaError(err)) {
+    return {
+      status: 429,
+      error:
+        'Limite de requisições da Gemini API atingido no momento. Aguarde alguns instantes ou verifique o nível da sua chave em Settings > Secrets.',
+    };
+  }
+  return {
+    status: status && status >= 500 ? status : 502,
+    error:
+      'Não foi possível analisar as experiências com a Gemini API agora. Tente novamente em instantes.',
+  };
+}
 
 async function fetchOpenMeteoWeather(lat: number, lng: number): Promise<unknown> {
   const controller = new AbortController();
@@ -589,6 +680,162 @@ async function startServer() {
       };
       res.json(fallback);
     }
+  });
+
+  app.post('/api/worker-competencies', async (req: Request, res: Response) => {
+    const body = (req.body ?? {}) as {
+      role?: string;
+      summary?: string;
+      experiences?: Array<{
+        empresaLocal?: string;
+        funcao?: string;
+        dataInicio?: string;
+        dataFim?: string;
+        atual?: boolean;
+        atividades?: string;
+      }>;
+      forceRefresh?: boolean;
+    };
+
+    const payloadInput = buildCompetencyAnalysisRequestPayload({
+      funcaoPrincipal: typeof body.role === 'string' ? body.role : '',
+      resumoProfissional: typeof body.summary === 'string' ? body.summary : '',
+      experiencias: Array.isArray(body.experiences) ? body.experiences : [],
+    });
+
+    if (payloadInput.experiences.length === 0) {
+      res.status(400).json({
+        error:
+          'Cadastre ao menos uma experiência profissional com função, local da obra ou atividades para gerar 3 competências.',
+      });
+      return;
+    }
+
+    if (!body.forceRefresh) {
+      const cached = workerCompetenciesCache.get(payloadInput.fingerprint);
+      if (cached && cached.expiresAt > Date.now()) {
+        res.json(cached.payload);
+        return;
+      }
+    }
+
+    const ai = getGeminiClient();
+    if (!ai) {
+      res.status(503).json({
+        error:
+          'A análise automática requer GEMINI_API_KEY configurada no servidor (Settings > Secrets).',
+      });
+      return;
+    }
+
+    const experiencesBlock = payloadInput.experiences
+      .map((exp, idx) => {
+        const periodo = exp.atual
+          ? `${exp.dataInicio || 'início não informado'} até Atual`
+          : `${exp.dataInicio || 'início não informado'} até ${exp.dataFim || 'fim não informado'}`;
+        return [
+          `Experiência ${idx + 1}:`,
+          `- Função exercida: ${exp.funcao || 'Não informada'}`,
+          `- Empresa / Local da obra: ${exp.empresaLocal || 'Não informado'}`,
+          `- Período: ${periodo}`,
+          `- Atividades realizadas: ${exp.atividades || 'Não detalhadas'}`,
+        ].join('\n');
+      })
+      .join('\n\n');
+
+    const prompt = [
+      'Analise o perfil do trabalhador da construção civil abaixo e sugira EXATAMENTE 3 competências profissionais concretas e relevantes para o mercado de obras em Rondonópolis-MT.',
+      `Função principal declarada: ${payloadInput.role}`,
+      payloadInput.summary
+        ? `Resumo / observações do profissional: ${payloadInput.summary}`
+        : '',
+      experiencesBlock,
+      'Regras:',
+      '1. Baseie cada competência diretamente nas funções, locais de obra e atividades descritas acima.',
+      '2. Use nomes objetivos de competência (2 a 5 palavras, ex: "Alvenaria Estrutural", "Leitura de Planta Baixa", "Assentamento de Porcelanato", "NR-35 Trabalho em Altura").',
+      '3. Retorne exatamente 3 competências distintas no campo competencies.',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
+    const maxAttempts = 3;
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-4-hydrogen',
+          contents: prompt,
+          config: {
+            thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+            systemInstruction:
+              'Você é um especialista em recrutamento técnico da construção civil no Brasil (Rondonópolis-MT). Analise históricos de obra e devolva sempre exatamente 3 competências técnicas objetivas, claras e diretamente comprovadas pelas experiências cadastradas do trabalhador, em português do Brasil.',
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                summary: {
+                  type: Type.STRING,
+                  description:
+                    'Síntese curta (1 a 2 frases) do ponto forte identificado nas experiências cadastradas.',
+                },
+                competencies: {
+                  type: Type.ARRAY,
+                  description:
+                    'Lista com exatamente 3 competências técnicas distintas sugeridas a partir das experiências.',
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      name: {
+                        type: Type.STRING,
+                        description:
+                          'Nome curto e claro da competência técnica (2 a 5 palavras).',
+                      },
+                      category: {
+                        type: Type.STRING,
+                        description:
+                          'Área técnica da obra (ex: Estrutura e Alvenaria, Acabamento, Projetos e Medidas, Segurança NR, Instalações).',
+                      },
+                      rationale: {
+                        type: Type.STRING,
+                        description:
+                          'Explicação objetiva em 1 frase conectando a competência às experiências cadastradas.',
+                      },
+                    },
+                    required: ['name', 'category', 'rationale'],
+                  },
+                },
+              },
+              required: ['summary', 'competencies'],
+            },
+          },
+        });
+
+        const parsed = parseGeminiCompetencySuggestions(
+          response.text ?? '',
+          payloadInput.fingerprint
+        );
+
+        workerCompetenciesCache.set(payloadInput.fingerprint, {
+          expiresAt: Date.now() + WORKER_COMPETENCIES_CACHE_TTL_MS,
+          payload: parsed,
+        });
+
+        res.json(parsed);
+        return;
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxAttempts && isRetryableGeminiError(err)) {
+          const delayMs = 350 * Math.pow(2, attempt - 1);
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          continue;
+        }
+        break;
+      }
+    }
+
+    const mapped = formatGeminiCompetencyError(lastError);
+    res.status(mapped.status).json({ error: mapped.error });
   });
 
   const httpServer = http.createServer(app);

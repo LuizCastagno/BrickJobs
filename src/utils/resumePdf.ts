@@ -33,6 +33,7 @@ export interface ResumePdfData {
   totalMonths: number;
   historyMode: WorkerProfile['tipoHistorico'];
   attachedPdfName: string | null;
+  competencies: string[];
   experiences: FormattedExperienceEntry[];
   generatedDateLabel: string;
 }
@@ -109,6 +110,9 @@ export function buildResumePdfData(
     attachedPdfName: profile.pdfCurriculo?.fileName
       ? sanitizePdfText(profile.pdfCurriculo.fileName)
       : null,
+    competencies: Array.isArray(profile.competencias)
+      ? profile.competencias.map((c) => sanitizePdfText(c)).filter(Boolean)
+      : [],
     experiences,
     generatedDateLabel: sanitizePdfText(dateStr),
   };
@@ -252,6 +256,26 @@ export function createWorkerResumePdfDocument(
     const summaryLines = doc.splitTextToSize(data.summary, contentWidth);
     doc.text(summaryLines, marginX, cursorY);
     cursorY += summaryLines.length * 5 + 6;
+  }
+
+  // Applied competencies if present
+  if (data.competencies.length > 0) {
+    ensureSpace(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39);
+    doc.text('Competências Técnicas', marginX, cursorY);
+    cursorY += 5.5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(55, 65, 81);
+    const compLines = doc.splitTextToSize(
+      data.competencies.join('  ·  '),
+      contentWidth
+    );
+    doc.text(compLines, marginX, cursorY);
+    cursorY += compLines.length * 5 + 6;
   }
 
   // Divider before experiences

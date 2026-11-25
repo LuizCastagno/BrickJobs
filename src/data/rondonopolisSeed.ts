@@ -690,6 +690,7 @@ export const EMPTY_WORKER_PROFILE: WorkerProfile = {
   pdfCurriculo: null,
   experiencias: [],
   resumoProfissional: '',
+  competencias: [],
   fotoPerfilUrl: '',
   documentosAnexos: {},
   categoriasNotificacao: [],
