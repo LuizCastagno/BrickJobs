@@ -10,6 +10,7 @@ export type RegistrantSex = 'masculino' | 'feminino' | 'outro';
 export type RequiredDocumentKey =
   | 'historicoCriminal'
   | 'tituloEleitor'
+  | 'testeToxicologico'
   | 'reservistaOuCdi';
 
 export interface DocumentAttachment {

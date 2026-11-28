@@ -162,7 +162,7 @@ export const RequiredDocumentsSection: React.FC<
             {sex === 'masculino'
               ? 'Inclui Reservista/CDI (sexo masculino)'
               : sex === 'feminino' || sex === 'outro'
-                ? 'Histórico Criminal e Título de Eleitor'
+                ? 'Histórico Criminal, Título de Eleitor e Teste Toxicológico'
                 : 'Selecione o sexo acima para confirmar'}
           </p>
         </div>
@@ -333,8 +333,8 @@ export const RequiredDocumentsSection: React.FC<
       <p className="text-xs text-[#4B5563] dark:text-[#94A3B8] flex items-start gap-2">
         <FileText className="w-4 h-4 text-[#6B7280] dark:text-[#94A3B8] shrink-0 mt-0.5" aria-hidden="true" />
         <span>
-          Regra padrão das duas categorias: <strong>Comprovante de Histórico Criminal</strong> e{' '}
-          <strong>Título de Eleitor</strong> são obrigatórios para ambos os sexos;{' '}
+          Regra padrão das duas categorias: <strong>Comprovante de Histórico Criminal</strong>,{' '}
+          <strong>Título de Eleitor</strong> e <strong>Teste Toxicológico</strong> são obrigatórios para ambos os sexos;{' '}
           <strong>Reservista ou Certificado de Dispensa de Incorporação (CDI)</strong> é obrigatório para candidatos do sexo masculino.
         </span>
       </p>

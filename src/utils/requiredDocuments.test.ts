@@ -21,15 +21,17 @@ const sampleDoc = (name: string): DocumentAttachment => ({
   dataUrl: 'data:application/pdf;base64,JVBERi0xLjQK',
 });
 
-test('both sexes require historicoCriminal and tituloEleitor', () => {
+test('both sexes require historicoCriminal, tituloEleitor, and testeToxicologico', () => {
   const femaleReqs = getResolvedDocumentRequirements('feminino', {});
   assert.equal(femaleReqs.find((r) => r.key === 'historicoCriminal')?.required, true);
   assert.equal(femaleReqs.find((r) => r.key === 'tituloEleitor')?.required, true);
+  assert.equal(femaleReqs.find((r) => r.key === 'testeToxicologico')?.required, true);
   assert.equal(femaleReqs.find((r) => r.key === 'reservistaOuCdi')?.required, false);
 
   const outroReqs = getResolvedDocumentRequirements('outro', {});
   assert.equal(outroReqs.find((r) => r.key === 'historicoCriminal')?.required, true);
   assert.equal(outroReqs.find((r) => r.key === 'tituloEleitor')?.required, true);
+  assert.equal(outroReqs.find((r) => r.key === 'testeToxicologico')?.required, true);
   assert.equal(outroReqs.find((r) => r.key === 'reservistaOuCdi')?.required, false);
 });
 
@@ -37,6 +39,7 @@ test('male registrants additionally require reservistaOuCdi', () => {
   const maleReqs = getResolvedDocumentRequirements('masculino', {});
   assert.equal(maleReqs.find((r) => r.key === 'historicoCriminal')?.required, true);
   assert.equal(maleReqs.find((r) => r.key === 'tituloEleitor')?.required, true);
+  assert.equal(maleReqs.find((r) => r.key === 'testeToxicologico')?.required, true);
   assert.equal(maleReqs.find((r) => r.key === 'reservistaOuCdi')?.required, true);
 });
 
@@ -45,7 +48,11 @@ test('validation fails with missingSex and missing common document keys when sex
   assert.equal(result.valid, false);
   if (!result.valid) {
     assert.equal(result.missingSex, true);
-    assert.deepEqual(result.missingKeys, ['historicoCriminal', 'tituloEleitor']);
+    assert.deepEqual(result.missingKeys, [
+      'historicoCriminal',
+      'tituloEleitor',
+      'testeToxicologico',
+    ]);
     assert.match(result.errorMessage, /Selecione o sexo/);
   }
 });
@@ -74,14 +81,19 @@ test('validation rejects empty or zero-byte document attachments', () => {
   assert.equal(result.valid, false);
   if (!result.valid) {
     assert.equal(result.missingSex, false);
-    assert.deepEqual(result.missingKeys, ['historicoCriminal', 'tituloEleitor']);
+    assert.deepEqual(result.missingKeys, [
+      'historicoCriminal',
+      'tituloEleitor',
+      'testeToxicologico',
+    ]);
   }
 });
 
-test('validation fails when male registrant is missing reservistaOuCdi even with both common docs attached', () => {
+test('validation fails when male registrant is missing reservistaOuCdi even with all 3 common docs attached', () => {
   const docs: RequiredDocumentsMap = {
     historicoCriminal: sampleDoc('antecedentes.pdf'),
     tituloEleitor: sampleDoc('titulo.pdf'),
+    testeToxicologico: sampleDoc('toxicologico.pdf'),
   };
   const maleResult = validateRequiredRegistrationDocuments('masculino', docs, 'contratante');
   assert.equal(maleResult.valid, false);
@@ -95,10 +107,11 @@ test('validation fails when male registrant is missing reservistaOuCdi even with
   assert.equal(femaleResult.valid, true);
 });
 
-test('validation passes for male registrant when all 3 documents are attached', () => {
+test('validation passes for male registrant when all 4 documents are attached', () => {
   const docs: RequiredDocumentsMap = {
     historicoCriminal: sampleDoc('antecedentes.pdf'),
     tituloEleitor: sampleDoc('titulo.pdf'),
+    testeToxicologico: sampleDoc('toxicologico.pdf'),
     reservistaOuCdi: sampleDoc('cdi.pdf'),
   };
   const result = validateRequiredRegistrationDocuments('masculino', docs, 'contratado');
@@ -106,31 +119,32 @@ test('validation passes for male registrant when all 3 documents are attached', 
 });
 
 test('countAttachedRequiredDocuments computes accurate progress per sex', () => {
-  const partialDocs: RequiredDocumentsMap = {
+  const commonDocs: RequiredDocumentsMap = {
     historicoCriminal: sampleDoc('antecedentes.pdf'),
     tituloEleitor: sampleDoc('titulo.pdf'),
+    testeToxicologico: sampleDoc('toxicologico.pdf'),
   };
 
-  assert.deepEqual(countAttachedRequiredDocuments('feminino', partialDocs), {
-    attachedCount: 2,
-    totalRequired: 2,
+  assert.deepEqual(countAttachedRequiredDocuments('feminino', commonDocs), {
+    attachedCount: 3,
+    totalRequired: 3,
     isComplete: true,
   });
 
-  assert.deepEqual(countAttachedRequiredDocuments('masculino', partialDocs), {
-    attachedCount: 2,
-    totalRequired: 3,
+  assert.deepEqual(countAttachedRequiredDocuments('masculino', commonDocs), {
+    attachedCount: 3,
+    totalRequired: 4,
     isComplete: false,
   });
 
   assert.deepEqual(
     countAttachedRequiredDocuments('masculino', {
-      ...partialDocs,
+      ...commonDocs,
       reservistaOuCdi: sampleDoc('reservista.pdf'),
     }),
     {
-      attachedCount: 3,
-      totalRequired: 3,
+      attachedCount: 4,
+      totalRequired: 4,
       isComplete: true,
     }
   );
@@ -189,8 +203,10 @@ test('normalizeRegistrantSex, formatRegistrantSexLabel, getDocumentFieldErrorMes
   const sanitized = sanitizeRequiredDocumentsMap({
     historicoCriminal: sampleDoc('ok.pdf'),
     tituloEleitor: { fileName: '', fileSizeBytes: 0, mimeType: '', uploadedAt: '', dataUrl: '' },
+    testeToxicologico: sampleDoc('toxicologico.pdf'),
   });
   assert.equal(sanitized.historicoCriminal?.fileName, 'ok.pdf');
   assert.equal(sanitized.tituloEleitor, null);
+  assert.equal(sanitized.testeToxicologico?.fileName, 'toxicologico.pdf');
   assert.equal(sanitized.reservistaOuCdi, null);
 });

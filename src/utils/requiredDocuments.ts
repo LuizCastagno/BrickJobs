@@ -65,6 +65,14 @@ export const REQUIRED_DOCUMENT_SPECS: ReadonlyArray<RequiredDocumentSpec> = [
     audienceLabel: 'Obrigatório para ambos os sexos',
   },
   {
+    key: 'testeToxicologico',
+    label: 'Teste toxicológico',
+    description:
+      'Laudo ou exame toxicológico recente emitido por laboratório credenciado.',
+    audienceRule: 'ambos',
+    audienceLabel: 'Obrigatório para ambos os sexos',
+  },
+  {
     key: 'reservistaOuCdi',
     label: 'Reservista ou Certificado de Dispensa de Incorporação (CDI)',
     description:
