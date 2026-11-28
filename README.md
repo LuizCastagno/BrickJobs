@@ -34,8 +34,9 @@ O projeto permite buscar e publicar vagas, gerenciar candidaturas, conversar ap�
 - Integração opcional com Gemini e Search Grounding.
 - Dados e vagas demonstrativos voltados para Rondonópolis-MT.
 - Proteções adicionadas para quedas de disponibilidade ou limite de quota da API Gemini.
+- Documentação acadêmica e técnica consolidada (ABNT) refatorada disponível em [`public/BrickJobs_Documentacao_Refatorada.pdf`](./public/BrickJobs_Documentacao_Refatorada.pdf) (download direto no app e no repositório).
 - Documentação detalhada das alterações mais recentes no código disponível em [`ALTERACOES-RECENTES-CODIGO.md`](./ALTERACOES-RECENTES-CODIGO.md).
-- Último push confirmado em `23/11/2026 às 14:55:50 UTC` (com correções locais consolidadas em `24/11/2026`).
+- Último push confirmado no GitHub em `23/11/2026 às 14:55:50 UTC` (com evoluções consolidadas até `27/11/2026` no repositório do Google AI Studio).
 
 ## Funcionalidades
 
@@ -64,6 +65,10 @@ O projeto permite buscar e publicar vagas, gerenciar candidaturas, conversar ap�
 - Notificações nativas por categorias compatíveis.
 - Produtividade por obra e mês, estimativa de ganhos e calculadora de rescisão.
 - Alertas de chuva, lembretes semanais de segurança, EPIs, notícias e dicas de carreira.
+- Seção **Dicas de Segurança no Canteiro de Obras** (NRs 06, 10, 11, 12, 18, 21 e 35) disponível integralmente offline.
+- Seção **Construtoras em Destaque** baseada na média de avaliações em gráfico Recharts.
+- Compartilhamento de vagas pela **Web Share API**, WhatsApp e deep link (`?vaga=<id>`).
+- Sugestão automática de **3 competências** a partir das experiências via Gemini API (`POST /api/worker-competencies`).
 - Dicas de carreira com conteúdo curado disponível offline.
 - Avaliação das construtoras após a conclusão do trabalho.
 - Onboarding guiado para os dois perfis.
@@ -73,9 +78,11 @@ O projeto permite buscar e publicar vagas, gerenciar candidaturas, conversar ap�
 - Temas claro e escuro e controle de privacidade LGPD.
 - Sincronização do estado entre abas.
 - Navegação adaptada por portal.
+- Tela dedicada de recuperação para falhas de carregamento (`AppErrorScreen` + `AppErrorBoundary`).
 - Instalação PWA e notificações em segundo plano quando suportadas.
 - Sons sintetizados pela Web Audio API.
 - Animação comemorativa com `canvas-confetti` ao aceitar contratos.
+- Link para download direto da documentação técnica refatorada (`public/BrickJobs_Documentacao_Refatorada.pdf`).
 - Componentes responsivos padronizados e interface preparada para celular.
 
 ## Tecnologias
@@ -152,17 +159,18 @@ A integração com Gemini é opcional. Em caso de indisponibilidade, quota esgot
 ├── package.json
 ├── bun.lock
 ├── public/
+│   └── BrickJobs_Documentacao_Refatorada.pdf  # Documentação técnica e acadêmica refatorada (ABNT)
 ├── scripts/
 │   └── sync-readme.mjs
 └── src/
     ├── main.tsx
     ├── App.tsx
     ├── index.css
-    ├── components/     # 34 componentes React (portais, painéis, gráficos e modais)
+    ├── components/     # 40 componentes React (portais, painéis, gráficos e modais)
     ├── data/           # Dados iniciais e seed regional (rondonopolisSeed.ts)
     ├── hooks/          # Hook de instalação PWA (usePWAInstall.ts)
     ├── types/          # Contratos TypeScript centrais (brickjobs.ts)
-    └── utils/          # 38 módulos de regras puras e 37 suítes *.test.ts
+    └── utils/          # 43 módulos de regras puras e 42 suítes *.test.ts
 ```
 
 - `App.tsx` centraliza estado, transição entre portais, tour guiado, modais e persistência.
@@ -189,6 +197,7 @@ APIs internas:
 - `POST /api/career-tips` — dicas com Gemini e fallback local.
 - `POST /api/safety-weekly-reminders` — lembretes semanais de segurança.
 - `GET /api/construction-news` — notícias por Search Grounding ou feed curado.
+- `POST /api/worker-competencies` — análise de experiências do trabalhador com sugestão automática de 3 competências via Gemini API.
 
 ## Testes
 
@@ -218,6 +227,7 @@ npm run build
 
 | Data/hora UTC | Commit | Alteração |
 | --- | --- | --- |
+| 27/11/2026 (AI Studio) | — | Tela de erro de carregamento (`AppErrorScreen`), dicas de segurança no canteiro offline (NRs 06–35), seção `Construtoras em Destaque` (Recharts), compartilhamento de vaga via Web Share API (`?vaga=`), sugestão automática de 3 competências via Gemini API (`POST /api/worker-competencies`) e documentação ABNT refatorada em [`public/BrickJobs_Documentacao_Refatorada.pdf`](./public/BrickJobs_Documentacao_Refatorada.pdf) com download direto no app. |
 | 24/11/2026 (local) | — | Correções gerais de fluxo e interface: guardas de transição de candidaturas, sincronização do tour guiado com abas externas, correção do toggle de notificações, reset de input PDF, `AbortController` em fetches, fechamento por `Escape`/backdrop no modal da empresa e ajustes de contraste/acessibilidade. Detalhes em [`ALTERACOES-RECENTES-CODIGO.md`](./ALTERACOES-RECENTES-CODIGO.md). |
 | 23/11/2026 14:55:50 | [`b4df2a2`](https://github.com/LuizCastagno/BrickJobs/commit/b4df2a259462e577c3db1b87f1ced98b596403e4) | O sincronizador deixa de lançar erro quando os marcadores de inventário do README estão ausentes e registra uma mensagem informativa. |
 | 23/11/2026 14:54:36 | [`0b74ccc`](https://github.com/LuizCastagno/BrickJobs/commit/0b74cccdc29be4415eaa0c296499a9a1dc68092e) | Proteção com cooldown para erros de quota/limitação 429 da API Gemini, evitando requisições redundantes e oferecendo fallback local. |

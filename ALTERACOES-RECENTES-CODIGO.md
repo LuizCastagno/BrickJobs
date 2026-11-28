@@ -71,8 +71,19 @@ Registro técnico das modificações mais recentes implementadas no código-font
 
 ---
 
-## 5. Resumo da verificação após as alterações
+## 5. Evoluções adicionais e documentação consolidada (24/11/2026 – 27/11/2026)
 
-- **Testes automatizados (`npx tsx --test src/utils/*.test.ts`):** 37 arquivos de teste / 190 casos aprovados.
+- **Resiliência de carregamento (`src/components/AppErrorScreen.tsx`, `src/components/AppErrorBoundary.tsx`, `index.html`):** tela diagnóstica de erro com detecção de status offline e recuperação de inicialização.
+- **Dicas de Segurança no Canteiro de Obras offline (`src/utils/siteSafetyGuides.ts`, `src/components/ConstructionSiteSafetySection.tsx`):** guias práticos das NRs 06, 10, 11, 12, 18, 21 e 35 armazenados localmente para consulta offline.
+- **Construtoras em Destaque (`src/utils/featuredCompanies.ts`, `src/components/FeaturedCompaniesSection.tsx`):** gráfico comparativo em Recharts com média das avaliações por empresa e atalho de filtro.
+- **Compartilhamento de vagas (`src/utils/jobShare.ts`, `src/components/JobDetailsModal.tsx`):** integração com Web Share API, WhatsApp, cópia e deep link `?vaga=<id>`.
+- **Sugestão de 3 competências via Gemini API (`src/utils/workerCompetencySuggestions.ts`, `src/components/WorkerCompetencySuggestionsCard.tsx`, `server.ts`):** endpoint `POST /api/worker-competencies` analisando experiências para recomendar 3 competências aplicáveis ao perfil e ao currículo PDF.
+- **Documentação refatorada em PDF (`public/BrickJobs_Documentacao_Refatorada.pdf`, `vite.config.ts`, `CoverScreen.tsx`, `UserSettingsMenu.tsx`):** arquivo ABNT completo com exclusão de fallback `.pdf` no Workbox e links diretos de download no aplicativo.
+
+---
+
+## 6. Resumo da verificação após as alterações
+
+- **Testes automatizados (`npx tsx --test src/utils/*.test.ts`):** 42 suítes / 214 casos aprovados.
 - **Checagem de tipos (`npm run lint`):** `tsc --noEmit` sem erros.
 - **Build de produção (`npm run build`):** `sync-readme.mjs` e `vite build` executados com saída `0`.

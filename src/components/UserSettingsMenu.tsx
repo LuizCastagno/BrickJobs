@@ -10,6 +10,7 @@ import {
   Compass,
   Cookie,
   Download,
+  FileText,
   Moon,
   Share,
   ShieldCheck,
@@ -500,6 +501,37 @@ export const UserSettingsMenu: React.FC<UserSettingsMenuProps> = ({
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="mt-5 space-y-2">
+          <span className="block text-xs font-semibold text-[#374151] dark:text-[#CBD5E1]">
+            Documentação Técnica do Projeto
+          </span>
+          <a
+            href="/BrickJobs_Documentacao_Refatorada.pdf"
+            download="BrickJobs_Documentacao_Refatorada.pdf"
+            data-testid="settings-download-project-pdf"
+            className="w-full min-h-[48px] rounded-xl border border-[#E5E7EB] dark:border-[#334155] bg-[#F9FAFB] dark:bg-[#0F172A] hover:border-[#111827] dark:hover:border-[#64748B] px-3.5 py-2.5 flex items-center justify-between gap-3 text-left transition-colors"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <FileText
+                className="w-4 h-4 text-[#C93B1E] dark:text-[#F06449] shrink-0"
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[#111827] dark:text-[#F8FAFC]">
+                  Baixar Documentação Completa (PDF)
+                </p>
+                <p className="text-[11px] text-[#4B5563] dark:text-[#94A3B8]">
+                  Versão refatorada ABNT com recursos, APIs e evolução técnica.
+                </p>
+              </div>
+            </div>
+            <Download
+              className="w-4 h-4 text-[#4B5563] dark:text-[#94A3B8] shrink-0"
+              aria-hidden="true"
+            />
+          </a>
         </div>
 
         <div className="mt-6 pt-4 border-t border-[#E5E7EB] dark:border-[#1E293B] flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2.5">

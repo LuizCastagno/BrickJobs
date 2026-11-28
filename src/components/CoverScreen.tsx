@@ -7,6 +7,7 @@ import React, { useMemo, useState } from 'react';
 import {
   ArrowRight,
   Building2,
+  FileText,
   Flame,
   HardHat,
   LocateFixed,
@@ -699,26 +700,40 @@ export const CoverScreen: React.FC<CoverScreenProps> = ({
           <p className="text-xs text-[#4B5563] dark:text-[#94A3B8]">
             BrickJobs · Rondonópolis-MT · Tratamento de dados em conformidade com a LGPD (Lei nº 13.709/2018).
           </p>
-          {onOpenLgpdModal && (
-            <div className="flex flex-wrap items-center gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => onOpenLgpdModal('cookies')}
-                data-testid="cover-footer-cookies-button"
-                className="min-h-[44px] sm:min-h-[40px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#111827] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] cursor-pointer"
-              >
-                Preferências de Cookies
-              </button>
-              <button
-                type="button"
-                onClick={() => onOpenLgpdModal('dados-sensiveis')}
-                data-testid="cover-footer-lgpd-button"
-                className="min-h-[44px] sm:min-h-[40px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#111827] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#C93B1E] dark:text-[#F06449] cursor-pointer"
-              >
-                Dados Sensíveis (LGPD)
-              </button>
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 shrink-0">
+            <a
+              href="/BrickJobs_Documentacao_Refatorada.pdf"
+              download="BrickJobs_Documentacao_Refatorada.pdf"
+              data-testid="cover-download-project-pdf"
+              className="min-h-[44px] sm:min-h-[40px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#111827] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <FileText
+                className="w-3.5 h-3.5 text-[#C93B1E] dark:text-[#F06449] shrink-0"
+                aria-hidden="true"
+              />
+              <span>Documentação do Projeto (PDF)</span>
+            </a>
+            {onOpenLgpdModal && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onOpenLgpdModal('cookies')}
+                  data-testid="cover-footer-cookies-button"
+                  className="min-h-[44px] sm:min-h-[40px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#111827] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#111827] dark:text-[#F8FAFC] cursor-pointer"
+                >
+                  Preferências de Cookies
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenLgpdModal('dados-sensiveis')}
+                  data-testid="cover-footer-lgpd-button"
+                  className="min-h-[44px] sm:min-h-[40px] px-3.5 py-2 rounded-xl border border-[#D1D5DB] dark:border-[#334155] bg-white dark:bg-[#111827] hover:bg-[#F9FAFB] dark:hover:bg-[#1E293B] text-xs font-semibold text-[#C93B1E] dark:text-[#F06449] cursor-pointer"
+                >
+                  Dados Sensíveis (LGPD)
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </footer>
     </div>
